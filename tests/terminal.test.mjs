@@ -8,13 +8,13 @@ test("system terminal opens project directory as a separate argument", () => {
     args: ["-a", "Terminal", folder],
   });
 });
-test("Warp receives the exact directory through its documented URI without query injection", () => {
+test("Warp opens the exact directory in a tab without query injection", () => {
   const folder = "/Users/developer/项目 #1 & test?x=2";
   const launch = terminalLaunch("warp", folder);
   const url = new URL(launch.url);
   assert.equal(url.protocol, "warp:");
   assert.equal(url.hostname, "action");
-  assert.equal(url.pathname, "/new_window");
+  assert.equal(url.pathname, "/new_tab");
   assert.equal(url.searchParams.get("path"), folder);
   assert.equal([...url.searchParams].length, 1);
   assert.throws(() => terminalLaunch("arbitrary", folder), /不支持/);

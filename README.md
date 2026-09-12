@@ -2,6 +2,8 @@
 
 一个本地优先的桌面项目管理中心。Node.js、Go、Python，公司项目、个人作品与临时实验，都有自己的位置。
 
+[Download for macOS](https://github.com/Howlcn1997/codedog/releases/latest)
+
 ## 运行
 
 需要 Node.js 22.12+、npm，以及相应项目使用的 Git、语言运行时与包管理器。
@@ -81,4 +83,10 @@ node scripts/smoke.mjs
 
 项目右键菜单：精简列表、标准列表与卡片均支持选择 VS Code、Cursor、WebStorm、GoLand、PyCharm 或项目默认 IDE 打开，以及在终端中打开。单次选择不修改默认 IDE。聚焦项目项后也可以按 Shift+F10 打开菜单。IDE 需要已安装在电脑上。
 
-默认终端可在「设置 → 默认终端」中选择系统终端或 Warp；默认使用系统终端，选择会持久保存，并统一应用于项目详情和右键菜单。Warp 通过官方目录 URI 打开项目，路径会进行 URL 编码，需预先安装 Warp。参考：https://docs.warp.dev/terminal/more-features/uri-scheme 。
+默认终端可在「设置 → 默认终端」中选择系统终端或 Warp；默认使用系统终端，选择会持久保存，并统一应用于项目详情和右键菜单。Warp 通过官方目录 URI 打开项目：已有窗口时在当前窗口新建标签页，否则启动 Warp 窗口。路径会进行 URL 编码，需预先安装 Warp。参考：https://docs.warp.dev/terminal/more-features/uri-scheme 。
+
+## 发布与更新
+
+推送与 `package.json` 版本一致的 Git 标签（例如 `v0.2.0`）后，GitHub Actions 会构建 Intel 和 Apple Silicon 两种 macOS DMG/ZIP，并自动创建 GitHub Release。已安装的发布版会在启动时和每 10 分钟检查一次新版本，下载完成后提示重启安装。
+
+要让 macOS Gatekeeper 和应用内自动更新正常工作，需在仓库 Actions secrets 配置 `CSC_LINK`、`CSC_KEY_PASSWORD`、`APPLE_ID`、`APPLE_APP_SPECIFIC_PASSWORD` 和 `APPLE_TEAM_ID`。未配置时仍会发布未签名 DMG，但用户需手动允许安装，且无法完成应用内自动替换。

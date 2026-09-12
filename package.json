@@ -5,6 +5,7 @@
   "type": "module",
   "description": "A quiet home for all your projects",
   "author": "codedog",
+  "repository": "https://github.com/Howlcn1997/codedog",
   "main": "electron/main.mjs",
   "scripts": {
     "dev": "node scripts/dev.mjs",
@@ -14,6 +15,7 @@
     "test": "node --test tests/*.test.mjs",
     "pack": "npm run build && node scripts/package.mjs --dir",
     "dist": "npm run build && node scripts/package.mjs",
+    "release:mac": "npm run build && electron-builder --mac dmg zip --publish never",
     "format": "prettier --write src electron scripts tests vite.config.ts tsconfig.json package.json docs README.md"
   },
   "dependencies": {
@@ -48,8 +50,10 @@
     "mac": {
       "category": "public.app-category.developer-tools",
       "icon": "public/icon.png",
+      "artifactName": "${productName}-${version}-mac-${arch}.${ext}",
       "target": [
-        "dmg"
+        "dmg",
+        "zip"
       ]
     },
     "win": {

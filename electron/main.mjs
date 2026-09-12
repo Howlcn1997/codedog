@@ -1,7 +1,9 @@
 import { terminalLaunch } from "./terminal.mjs";
 import { chooseEditor, projectMenuTemplate } from "./project-menu.mjs";
+import { setupAutoUpdates } from "./updates.mjs";
 import {
   app,
+  autoUpdater,
   BrowserWindow,
   ipcMain,
   dialog,
@@ -348,6 +350,7 @@ app
       if (error) throw Error(error);
     });
     createWindow();
+    setupAutoUpdates({ app, autoUpdater, dialog });
     app.on("activate", () => {
       if (BrowserWindow.getAllWindows().length === 0) createWindow();
     });

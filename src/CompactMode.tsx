@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Search,
   PanelsTopLeft,
-  ArrowUpRight,
   CornerDownLeft,
   Star,
   Code2,
@@ -143,7 +142,7 @@ export default function CompactMode({
     <main className="compact-shell" aria-label="精简模式">
       <div className="compact-search-row">
         <div className="compact-search">
-          <Search size={20} />
+          <Search size={16} />
           <input
             ref={input}
             autoFocus
@@ -250,6 +249,7 @@ export default function CompactMode({
               ref={p.id === current?.id ? selectedRow : undefined}
               className={`compact-project ${p.id === current?.id ? "selected" : ""}`}
               aria-label={`打开项目 ${p.name}`}
+              title={`${p.name}\n${p.path}\nEnter：IDE 打开 · ⌘ Enter：终端打开`}
               aria-current={p.id === current?.id ? "true" : undefined}
               disabled={busy || p.missing}
               onFocus={() => setSelected(p.id)}
@@ -286,7 +286,7 @@ export default function CompactMode({
               </span>
               <span className="compact-project-info">
                 <span className="compact-project-name">
-                  {p.name}
+                  <span className="compact-name-text">{p.name}</span>
                   {p.favorite && (
                     <Star size={13} fill="currentColor" className="starred" />
                   )}
@@ -310,13 +310,8 @@ export default function CompactMode({
                 {busy && p.id === current?.id ? (
                   <Loader2 size={15} className="spin" />
                 ) : p.id === current?.id ? (
-                  <>
-                    <CornerDownLeft size={14} />
-                    <span>打开</span>
-                  </>
-                ) : (
-                  <ArrowUpRight size={17} />
-                )}
+                  <CornerDownLeft size={14} />
+                ) : null}
               </span>
             </button>
           </li>
