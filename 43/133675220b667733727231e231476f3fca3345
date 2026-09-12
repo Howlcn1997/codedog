@@ -1,0 +1,19 @@
+.github/workflows/release.yml
+  s_200a536b899237::t_eb9476be3fdd1f 29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.44-trip",
+  "base_commit_sha": "43133675220b667733727231e231476f3fca3345",
+  "prompts": {},
+  "sessions": {
+    "s_200a536b899237": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0937f-d1df-78e1-a6f6-5fc8f3f1be73",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "w.ning <w.ning@trip.com>"
+    }
+  }
+}
