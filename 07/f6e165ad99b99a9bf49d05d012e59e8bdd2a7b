@@ -1,0 +1,37 @@
+README.md
+  s_200a536b899237::t_1949c8820ecc87 86
+  s_200a536b899237::t_d6b2b349ef1eb3 87-92
+  s_200a536b899237::t_d6ccdec5bc6739 5-6
+package.json
+  s_200a536b899237::t_d6b2b349ef1eb3 8,18,53,55-56
+tests/updates.test.mjs
+  s_200a536b899237::t_d6b2b349ef1eb3 1-72
+.github/workflows/release.yml
+  s_200a536b899237::t_d6b2b349ef1eb3 1-65
+tests/terminal.test.mjs
+  s_200a536b899237::t_1949c8820ecc87 11,17
+electron/updates.mjs
+  s_200a536b899237::t_d6b2b349ef1eb3 1-55
+electron/terminal.mjs
+  s_200a536b899237::t_1949c8820ecc87 4
+electron/main.mjs
+  s_200a536b899237::t_d6b2b349ef1eb3 3,6,353
+tests/startup.test.mjs
+  s_200a536b899237::t_d6b2b349ef1eb3 17,39-42
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.44-trip",
+  "base_commit_sha": "07f6e165ad99b99a9bf49d05d012e59e8bdd2a7b",
+  "prompts": {},
+  "sessions": {
+    "s_200a536b899237": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0937f-d1df-78e1-a6f6-5fc8f3f1be73",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "w.ning <w.ning@trip.com>"
+    }
+  }
+}
