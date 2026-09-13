@@ -30,6 +30,12 @@ const methods = [
   "openRoot",
 ];
 const api = {};
+const initialModeArgument = process.argv.find((argument) =>
+  argument.startsWith("--codedog-ui-mode="),
+);
+api.initialMode = initialModeArgument?.endsWith("=compact")
+  ? "compact"
+  : "standard";
 for (const method of methods)
   api[method] = async (...args) => {
     const response = await ipcRenderer.invoke("codedog:" + method, ...args);

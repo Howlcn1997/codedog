@@ -69,3 +69,43 @@ test("main module finishes evaluation before Electron emits ready", async (t) =>
     clearTimeout(timer);
   }
 });
+
+test("native startup passes the persisted UI mode into the first render", async () => {
+  const [main, preload, app] = await Promise.all([
+    fs.readFile(new URL("../electron/main.mjs", import.meta.url), "utf8"),
+    fs.readFile(new URL("../electron/preload.cjs", import.meta.url), "utf8"),
+    fs.readFile(new URL("../src/App.tsx", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(
+    main,
+    /additionalArguments: \[`--codedog-ui-mode=\$\{currentMode\}`\]/,
+  );
+  assert.match(preload, /api\.initialMode =/);
+  assert.match(app, /if \(api\) return api\.initialMode;/);
+  assert.match(
+    app,
+    /const sequence = \+\+modeChangeSequence\.current;\s+const previousMode = uiMode;\s+setUiMode\(mode\);\s+try \{/,
+  );
+  assert.match(
+    app,
+    /if \(sequence === modeChangeSequence\.current\) \{\s+setUiMode\(previousMode\);\s+setError/,
+  );
+  assert.match(
+    main,
+    /const sequence = \+\+modeChangeSequence;\s+const previousMode = currentMode;\s+resizeMode\(mode\);/,
+  );
+  assert.match(
+    main,
+    /if \(sequence === modeChangeSequence\) resizeMode\(previousMode\);/,
+  );
+  const refreshBody = app.match(
+    /async function refresh\(\) \{([\s\S]*?)\n  \}\n  useEffect/,
+  )?.[1];
+  assert.ok(refreshBody, "App refresh function should be present");
+  assert.doesNotMatch(
+    refreshBody,
+    /setUiMode/,
+    "project data refreshes must not overwrite the independently managed UI mode",
+  );
+});

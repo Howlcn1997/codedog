@@ -4,6 +4,18 @@
 
 [Download for macOS](https://github.com/Howlcn1997/codedog/releases/latest)
 
+> [!IMPORTANT]
+> 当前发布包尚未经过 Apple 签名与公证。首次打开时，macOS 可能提示
+> “codedog 已损坏，无法打开”。从本仓库的 GitHub Releases 下载并将
+> `codedog.app` 移入“应用程序”后，可在终端运行以下命令移除 macOS 添加的
+> 下载隔离标识，再重新打开应用：
+>
+> ```sh
+> xattr -dr com.apple.quarantine /Applications/codedog.app
+> ```
+>
+> 仅应对你确认来自本仓库官方 Release 的应用执行此命令。
+
 第一次使用？请阅读 [Code Dog 用户指南](docs/user-guide.md)。
 
 ## 特色功能

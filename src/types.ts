@@ -81,6 +81,7 @@ export type ImportInput = {
   group: Group;
 };
 export type Api = {
+  initialMode: "standard" | "compact";
   createGroup: (name: string) => Promise<{ id: string; name: string }>;
   setTheme: (theme: Theme) => Promise<void>;
   setTerminal: (terminal: "system" | "warp") => Promise<void>;

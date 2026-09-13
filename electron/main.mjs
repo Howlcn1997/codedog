@@ -187,6 +187,7 @@ app
         );
     });
     let currentMode = store.state.uiMode === "compact" ? "compact" : "standard";
+    let modeChangeSequence = 0;
     let launcherShortcut;
     try {
       launcherShortcut = normalizeLauncherShortcut(
@@ -271,6 +272,7 @@ app
         icon: path.join(here, "../public/icon.png"),
         webPreferences: {
           preload: path.join(here, "preload.cjs"),
+          additionalArguments: [`--codedog-ui-mode=${currentMode}`],
           contextIsolation: true,
           nodeIntegration: false,
           sandbox: true,
@@ -296,20 +298,31 @@ app
       app.dock.setIcon(
         nativeImage.createFromPath(path.join(here, "../public/icon.png")),
       );
-    handle("state", async () => ({
-      uiMode: store.state.uiMode || "standard",
-      root: store.state.root,
-      ide: store.state.ide,
-      groups: store.groups(),
-      theme: store.state.theme || "system",
-      terminal: store.state.terminal || "system",
-      launcherShortcut,
-      savedFilters: store.state.savedFilters || [],
-      projects: await store.list(),
-    }));
+    handle("state", async () => {
+      const projects = await store.list();
+      return {
+        uiMode: store.state.uiMode || "standard",
+        root: store.state.root,
+        ide: store.state.ide,
+        groups: store.groups(),
+        theme: store.state.theme || "system",
+        terminal: store.state.terminal || "system",
+        launcherShortcut,
+        savedFilters: store.state.savedFilters || [],
+        projects,
+      };
+    });
     handle("setMode", async (mode) => {
-      await store.setMode(mode);
+      sizeForMode(mode);
+      const sequence = ++modeChangeSequence;
+      const previousMode = currentMode;
       resizeMode(mode);
+      try {
+        await store.setMode(mode);
+      } catch (error) {
+        if (sequence === modeChangeSequence) resizeMode(previousMode);
+        throw error;
+      }
     });
     handle("setSavedFilters", (filters) => store.setSavedFilters(filters));
     handle("setLauncherShortcut", async (shortcut) => {

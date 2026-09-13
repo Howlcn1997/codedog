@@ -207,18 +207,24 @@ function Status({ value }: { value: string }) {
 }
 export default function App() {
   const [uiMode, setUiMode] = useState<"standard" | "compact">(() => {
-    if (api) return "standard";
+    if (api) return api.initialMode;
     return localStorage.getItem("codedog-ui-mode") === "compact"
       ? "compact"
       : "standard";
   });
+  const modeChangeSequence = useRef(0);
   async function switchMode(mode: "standard" | "compact") {
+    const sequence = ++modeChangeSequence.current;
+    const previousMode = uiMode;
+    setUiMode(mode);
     try {
       if (api) await api.setMode(mode);
       else localStorage.setItem("codedog-ui-mode", mode);
-      setUiMode(mode);
     } catch (e) {
-      setError((e as Error).message);
+      if (sequence === modeChangeSequence.current) {
+        setUiMode(previousMode);
+        setError((e as Error).message);
+      }
     }
   }
   const [state, setState] = useState<State>(empty),
@@ -295,7 +301,6 @@ export default function App() {
     if (api) {
       const value = await api.state();
       setState(value);
-      setUiMode(value.uiMode === "compact" ? "compact" : "standard");
       setSelected(
         (s) => s || value.projects.find((p) => !p.archived)?.id || "",
       );
