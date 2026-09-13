@@ -14,6 +14,9 @@ import {
   installPlan,
   dependencyCleanupPlan,
   cleanProjectDependencies,
+  createSearchIndex,
+  defaultLauncherShortcut,
+  normalizeLauncherShortcut,
 } from "../electron/core.mjs";
 async function fixture(t) {
   const dir = await fs.realpath(
@@ -105,8 +108,52 @@ test("search aliases and saved launcher filters are normalized and persisted", a
     /筛选名称/,
   );
 });
-test("move and register enforce root containment; duplicates cannot overwrite", async (t) => {
+test("search index stores root README, description and dependency names and refreshes safely", async (t) => {
+  const { store, source, dir } = await fixture(t);
+  await fs.writeFile(
+    path.join(source, "README.md"),
+    "# Utility\n\n支持图片压缩与批量转换。",
+  );
+  const packageFile = path.join(source, "package.json");
+  const manifest = JSON.parse(await fs.readFile(packageFile, "utf8"));
+  manifest.description = "An image toolkit";
+  manifest.dependencies.sharp = "^0.34.0";
+  await fs.writeFile(packageFile, JSON.stringify(manifest));
+  const project = await store.importProject({
+    name: "toolbox",
+    source,
+    group: "personal",
+    mode: "copy",
+  });
+  assert.match(project.searchIndex.readme.text, /图片压缩/);
+  assert.equal(project.searchIndex.description, "An image toolkit");
+  assert.ok(project.searchIndex.dependencies.includes("sharp"));
+
+  await fs.writeFile(path.join(project.path, "README.md"), "新版音频压缩功能");
+  assert.equal(await store.refreshSearchIndex(project.id), 1);
+  assert.match(store.state.projects[0].searchIndex.readme.text, /音频压缩/);
+  assert.doesNotMatch(
+    store.state.projects[0].searchIndex.readme.text,
+    /图片压缩/,
+  );
+
+  await fs.rm(project.path, { recursive: true });
+  const missing = await createSearchIndex(project.path);
+  assert.deepEqual(missing.dependencies, []);
+  assert.equal(missing.readme, undefined);
+  const reopened = new ProjectStore(path.join(dir, "data.json"));
+  await reopened.init();
+  assert.equal(reopened.state.projects.length, 1);
+});
+test("register supports external projects; duplicates cannot overwrite", async (t) => {
   const { store, source, root } = await fixture(t);
+  const external = await store.importProject({
+    name: "test",
+    source,
+    group: "company",
+    mode: "register",
+  });
+  assert.equal(external.path, source);
   await assert.rejects(
     store.importProject({
       name: "test",
@@ -114,8 +161,9 @@ test("move and register enforce root containment; duplicates cannot overwrite", 
       group: "company",
       mode: "register",
     }),
-    /根目录/,
+    /管理中/,
   );
+  await store.forget(external.id);
   const p = await store.importProject({
     name: "hello",
     source,
@@ -401,6 +449,24 @@ test("UI mode persists across restarts without changing project records", async 
   await reopened.setMode("standard");
   await assert.rejects(reopened.setMode("invalid"), /无效的界面模式/);
   assert.equal(reopened.state.uiMode, "standard");
+});
+
+test("launcher shortcut is normalized, validated and persisted", async (t) => {
+  const { store, dir } = await fixture(t);
+  assert.equal(
+    normalizeLauncherShortcut("shift + commandorcontrol + k"),
+    "CommandOrControl+Shift+K",
+  );
+  assert.equal(defaultLauncherShortcut, "CommandOrControl+Shift+Space");
+  await assert.rejects(store.setLauncherShortcut("Shift+K"), /Command\/Ctrl/);
+  await assert.rejects(
+    store.setLauncherShortcut("CommandOrControl+?"),
+    /不支持/,
+  );
+  await store.setLauncherShortcut("Alt+F8");
+  const reopened = new ProjectStore(path.join(dir, "data.json"));
+  await reopened.init();
+  assert.equal(reopened.state.launcherShortcut, "Alt+F8");
 });
 
 test("default terminal preference persists and rejects unknown applications", async (t) => {

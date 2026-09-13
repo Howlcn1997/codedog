@@ -500,6 +500,15 @@ h1 {
   color: light-dark(#a1a4b4, #aeb3c5);
   margin-top: 6px;
 }
+.project-name-cell small.search-match {
+  color: light-dark(#675cc3, #b5aff0);
+  font-family: inherit;
+  margin-top: 3px;
+}
+.project-card p.search-match,
+.compact-path.search-match {
+  color: light-dark(#675cc3, #b5aff0);
+}
 .project-mark {
   display: flex;
   align-items: center;
@@ -1416,16 +1425,51 @@ h1 {
   font-size: 10px;
   line-height: 1.8;
 }
+.shortcut-editor {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
 .shortcut-display {
   display: flex;
   align-items: center;
   gap: 5px;
+  min-height: 32px;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: light-dark(#fff, #20222c);
   color: var(--muted);
   white-space: nowrap;
+}
+.shortcut-display:not(:disabled):hover {
+  border-color: light-dark(#cfcaf4, #5c5681);
+  color: var(--accent);
+}
+.shortcut-display.recording {
+  min-width: 190px;
+  justify-content: center;
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
 }
 .shortcut-display > svg {
   margin-right: 3px;
   color: var(--accent);
+}
+.shortcut-part {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.shortcut-part i {
+  color: var(--muted);
+  font-size: 9px;
+  font-style: normal;
+}
+.shortcut-reset {
+  width: 28px;
+  height: 28px;
 }
 @media (max-width: 720px) {
   .settings-layout {

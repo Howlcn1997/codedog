@@ -2,6 +2,7 @@ import { terminalLaunch } from "./terminal.mjs";
 import { chooseEditor, projectMenuTemplate } from "./project-menu.mjs";
 import { setupAutoUpdates } from "./updates.mjs";
 import { applyWindowMode, sizeForMode } from "./window-mode.mjs";
+import { executeCli } from "./cli.mjs";
 import {
   app,
   autoUpdater,
@@ -30,6 +31,8 @@ import {
   installPlan,
   exists,
   isSearchSource,
+  defaultLauncherShortcut,
+  normalizeLauncherShortcut,
 } from "./core.mjs";
 const here = path.dirname(fileURLToPath(import.meta.url));
 if (process.env.CODEDOG_DATA_DIR)
@@ -38,6 +41,7 @@ app.setName("codedog");
 let window;
 let store;
 let busy = false;
+const cliMarker = process.argv.indexOf("--codedog-cli");
 const IDE = ["Cursor", "Visual Studio Code", "WebStorm", "GoLand", "PyCharm"];
 const cli = {
   Cursor: "cursor",
@@ -144,6 +148,13 @@ async function openProject(id, kind, editorOverride) {
 app
   .whenReady()
   .then(async () => {
+    if (cliMarker !== -1) {
+      const code = await executeCli(process.argv.slice(cliMarker + 1), {
+        dataFile: path.join(app.getPath("userData"), "projects.json"),
+      });
+      app.exit(code);
+      return;
+    }
     // Finder-launched apps need the login shell's tool paths. Never evaluate project text in a shell.
     if (process.platform === "darwin" && !process.env.CODEDOG_SKIP_PATH) {
       try {
@@ -176,6 +187,39 @@ app
         );
     });
     let currentMode = store.state.uiMode === "compact" ? "compact" : "standard";
+    let launcherShortcut;
+    try {
+      launcherShortcut = normalizeLauncherShortcut(
+        store.state.launcherShortcut || defaultLauncherShortcut,
+      );
+    } catch {
+      launcherShortcut = defaultLauncherShortcut;
+    }
+    async function toggleLauncher() {
+      if (
+        window?.isVisible() &&
+        window.isFocused() &&
+        currentMode === "compact"
+      ) {
+        window.hide();
+        return;
+      }
+      if (!window || window.isDestroyed()) createWindow();
+      if (currentMode !== "compact") {
+        await store.setMode("compact");
+        resizeMode("compact");
+        window.webContents.send("codedog:mode", "compact");
+      }
+      window.show();
+      window.focus();
+      if (process.platform === "darwin") app.focus({ steal: true });
+    }
+    const registerLauncher = (shortcut) =>
+      globalShortcut.register(shortcut, () => {
+        void toggleLauncher().catch((error) =>
+          console.error("[codedog] 无法打开项目启动器:", error),
+        );
+      });
     let indexWatchers = [];
     const indexTimers = new Map();
     function resetSearchWatchers() {
@@ -259,6 +303,7 @@ app
       groups: store.groups(),
       theme: store.state.theme || "system",
       terminal: store.state.terminal || "system",
+      launcherShortcut,
       savedFilters: store.state.savedFilters || [],
       projects: await store.list(),
     }));
@@ -267,6 +312,50 @@ app
       resizeMode(mode);
     });
     handle("setSavedFilters", (filters) => store.setSavedFilters(filters));
+    handle("setLauncherShortcut", async (shortcut) => {
+      const next = normalizeLauncherShortcut(shortcut);
+      if (next === launcherShortcut && globalShortcut.isRegistered(next))
+        return next;
+      const previous = launcherShortcut;
+      globalShortcut.unregister(previous);
+      if (!registerLauncher(next)) {
+        registerLauncher(previous);
+        throw Error("这个快捷键已被其他应用占用，请换一个组合");
+      }
+      try {
+        await store.setLauncherShortcut(next);
+        launcherShortcut = next;
+        return next;
+      } catch (error) {
+        globalShortcut.unregister(next);
+        registerLauncher(previous);
+        throw error;
+      }
+    });
+    handle("cliStatus", async () => {
+      const target = path.join(app.getPath("home"), ".local", "bin", "codedog");
+      const content = await fs.readFile(target, "utf8").catch(() => "");
+      return { installed: content.includes("--codedog-cli"), path: target };
+    });
+    handle("installCli", async () => {
+      if (process.platform !== "darwin")
+        throw Error("命令行工具安装目前仅支持 macOS");
+      const folder = path.join(app.getPath("home"), ".local", "bin");
+      const target = path.join(folder, "codedog");
+      const existing = await fs.readFile(target, "utf8").catch(() => "");
+      if (existing && !existing.includes("--codedog-cli"))
+        throw Error(`${target} 已存在，且不是 codedog 安装的命令`);
+      const quotedExecutable = process.execPath.replace(/'/g, `'"'"'`);
+      const developmentApp = path.join(here, "..").replace(/'/g, `'"'"'`);
+      const appArgument = app.isPackaged ? "" : ` '${developmentApp}'`;
+      const script = `#!/bin/sh\nexec '${quotedExecutable}'${appArgument} --codedog-cli "$@"\n`;
+      await fs.mkdir(folder, { recursive: true });
+      const temp = `${target}.${process.pid}.tmp`;
+      await fs.writeFile(temp, script, { mode: 0o755 });
+      await fs.rename(temp, target);
+      await fs.chmod(target, 0o755);
+      return { path: target };
+    });
     handle("hideLauncher", async () => {
       if (currentMode === "compact") window.hide();
     });
@@ -494,30 +583,31 @@ app
     });
     createWindow();
     resetSearchWatchers();
-    const launcherShortcut = "CommandOrControl+Shift+Space";
-    if (
-      !globalShortcut.register(launcherShortcut, async () => {
-        if (
-          window?.isVisible() &&
-          window.isFocused() &&
-          currentMode === "compact"
-        ) {
-          window.hide();
-          return;
-        }
-        if (!window || window.isDestroyed()) createWindow();
-        if (currentMode !== "compact") {
-          await store.setMode("compact");
-          resizeMode("compact");
-          window.webContents.send("codedog:mode", "compact");
-        }
-        window.show();
-        window.focus();
-        if (process.platform === "darwin") app.focus({ steal: true });
-      })
-    )
+    let dataRefreshTimer;
+    let dataWatcher;
+    try {
+      dataWatcher = watchFiles(
+        app.getPath("userData"),
+        { persistent: false },
+        (_event, filename) => {
+          if (filename?.toString() !== "projects.json") return;
+          clearTimeout(dataRefreshTimer);
+          dataRefreshTimer = setTimeout(async () => {
+            try {
+              await store.refresh();
+              resetSearchWatchers();
+              window?.webContents.send("codedog:searchIndexUpdated");
+            } catch {}
+          }, 100);
+        },
+      );
+      dataWatcher.on("error", () => dataWatcher?.close());
+    } catch {}
+    if (!registerLauncher(launcherShortcut))
       console.warn(`[codedog] 无法注册全局快捷键 ${launcherShortcut}`);
     app.on("will-quit", () => {
+      clearTimeout(dataRefreshTimer);
+      dataWatcher?.close();
       for (const watcher of indexWatchers) watcher.close();
       for (const timer of indexTimers.values()) clearTimeout(timer);
       globalShortcut.unregisterAll();

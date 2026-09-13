@@ -3,6 +3,9 @@ const methods = [
   "state",
   "setMode",
   "setSavedFilters",
+  "setLauncherShortcut",
+  "cliStatus",
+  "installCli",
   "hideLauncher",
   "pickFolder",
   "setRoot",
@@ -46,6 +49,7 @@ api.onModeChange = (callback) => {
 api.onSearchIndexUpdated = (callback) => {
   const listener = () => callback();
   ipcRenderer.on("codedog:searchIndexUpdated", listener);
-  return () => ipcRenderer.removeListener("codedog:searchIndexUpdated", listener);
+  return () =>
+    ipcRenderer.removeListener("codedog:searchIndexUpdated", listener);
 };
 contextBridge.exposeInMainWorld("codedog", api);

@@ -51,6 +51,7 @@ import type {
   SavedFilter,
 } from "./types";
 import { demo } from "./demo";
+import { searchProjects } from "./projectSearch";
 const defaultGroups: Record<Group, string> = {
   company: "公司项目",
   personal: "个人项目",
@@ -58,6 +59,47 @@ const defaultGroups: Record<Group, string> = {
 };
 const api = window.codedog;
 const empty: State = { root: "", ide: "Cursor", projects: [] };
+const defaultLauncherShortcut = "CommandOrControl+Shift+Space";
+function launcherShortcutParts(shortcut: string) {
+  const isMac = navigator.platform.toLowerCase().includes("mac");
+  const labels: Record<string, string> = {
+    CommandOrControl: isMac ? "⌘" : "Ctrl",
+    Command: "⌘",
+    Control: "Ctrl",
+    Alt: isMac ? "⌥" : "Alt",
+    Shift: "⇧",
+    Super: "Super",
+    Space: "Space",
+    Enter: "Enter",
+    Up: "↑",
+    Down: "↓",
+    Left: "←",
+    Right: "→",
+  };
+  return shortcut.split("+").map((part) => labels[part] || part);
+}
+function shortcutFromEvent(event: React.KeyboardEvent) {
+  if (["Meta", "Control", "Alt", "Shift"].includes(event.key)) return "";
+  const key =
+    event.key === " "
+      ? "Space"
+      : event.key.startsWith("Arrow")
+        ? event.key.slice(5)
+        : /^(?:[a-z0-9]|F(?:[1-9]|1[0-2]))$/i.test(event.key)
+          ? event.key.toUpperCase()
+          : ["Enter", "Tab"].includes(event.key)
+            ? event.key
+            : "";
+  if (!key) throw Error("暂不支持这个按键，请使用字母、数字、方向键或功能键");
+  const modifiers = [
+    event.metaKey || event.ctrlKey ? "CommandOrControl" : "",
+    event.altKey ? "Alt" : "",
+    event.shiftKey ? "Shift" : "",
+  ].filter(Boolean);
+  if (!modifiers.some((modifier) => modifier !== "Shift"))
+    throw Error("快捷键至少需要包含 Command/Ctrl 或 Option/Alt");
+  return [...modifiers, key].join("+");
+}
 const formatSize = (n: number) =>
   n > 1073741824
     ? `${(n / 1073741824).toFixed(1)} GB`
@@ -74,11 +116,6 @@ const ago = (n: number) =>
         : Date.now() - n < 86400000
           ? `${Math.floor((Date.now() - n) / 3600000)} 小时前`
           : `${Math.floor((Date.now() - n) / 86400000)} 天前`;
-function fuzzy(value: string, query: string) {
-  let i = 0;
-  for (const c of value.toLowerCase()) if (c === query.toLowerCase()[i]) i++;
-  return i === query.length;
-}
 function IconButton({
   children,
   label,
@@ -200,9 +237,14 @@ export default function App() {
     [toast, setToast] = useState(""),
     [error, setError] = useState(""),
     [modal, setModal] = useState(""),
+    [recordingShortcut, setRecordingShortcut] = useState(false),
     [settingsSection, setSettingsSection] = useState<
       "general" | "appearance" | "open" | "data"
     >("general"),
+    [cliInfo, setCliInfo] = useState<{
+      installed: boolean;
+      path: string;
+    } | null>(null),
     [logs, setLogs] = useState(""),
     [showLogs, setShowLogs] = useState(false),
     [usage, setUsage] = useState<
@@ -265,14 +307,25 @@ export default function App() {
       setLogs((s) => (s + text).slice(-100000)),
     );
     const removeMode = api?.onModeChange((mode) => setUiMode(mode));
+    const removeIndexUpdate = api?.onSearchIndexUpdated(() => {
+      refresh().catch((e) => setError(e.message));
+    });
     return () => {
       removeLog?.();
       removeMode?.();
+      removeIndexUpdate?.();
     };
   }, []);
   useEffect(() => {
     if (demoMode) setSelected(demo.projects[0].id);
   }, [demoMode]);
+  useEffect(() => {
+    if (modal === "settings" && api)
+      api
+        .cliStatus()
+        .then(setCliInfo)
+        .catch(() => setCliInfo(null));
+  }, [modal]);
   useEffect(() => {
     if (!toast) return;
     const t = setTimeout(() => setToast(""), 3500);
@@ -298,48 +351,25 @@ export default function App() {
       (aUsage ? aUsage.source + aUsage.dependencies : -1)
     );
   });
-  const list = useMemo(
-    () =>
-      projects
-        .filter((p) => {
-          if (nav === "archived" ? !p.archived : p.archived) return false;
-          if (nav === "favorites" && !p.favorite) return false;
-          if (nav === "recent" && !p.lastOpened) return false;
-          if (Object.hasOwn(groups, nav) && p.group !== nav) return false;
-          if (groupFilter !== "all" && p.group !== groupFilter) return false;
-          if (stack !== "all" && !p.stacks.includes(stack)) return false;
-          if (status !== "all" && p.dependencyState !== status) return false;
-          const hay = [
-            p.name,
-            p.path,
-            p.notes,
-            p.remote,
-            ...(p.aliases || []),
-            ...p.tags,
-            ...p.stacks,
-          ]
-            .join(" ")
-            .toLowerCase();
-          return search
-            .trim()
-            .toLowerCase()
-            .split(/\s+/)
-            .every(
-              (q) =>
-                hay.includes(q) ||
-                fuzzy(p.name, q) ||
-                (p.aliases || []).some((alias) => fuzzy(alias, q)),
-            );
-        })
-        .sort((a, b) =>
-          sort === "name"
-            ? a.name.localeCompare(b.name)
-            : sort === "created"
-              ? b.createdAt - a.createdAt
-              : b.lastOpened - a.lastOpened,
-        ),
-    [projects, nav, groupFilter, stack, status, search, sort, groups],
-  );
+  const list = useMemo(() => {
+    const filtered = projects.filter((p) => {
+      if (nav === "archived" ? !p.archived : p.archived) return false;
+      if (nav === "favorites" && !p.favorite) return false;
+      if (nav === "recent" && !p.lastOpened) return false;
+      if (Object.hasOwn(groups, nav) && p.group !== nav) return false;
+      if (groupFilter !== "all" && p.group !== groupFilter) return false;
+      if (stack !== "all" && !p.stacks.includes(stack)) return false;
+      if (status !== "all" && p.dependencyState !== status) return false;
+      return true;
+    });
+    return searchProjects(filtered, search, (a, b) =>
+      sort === "name"
+        ? a.name.localeCompare(b.name)
+        : sort === "created"
+          ? b.createdAt - a.createdAt
+          : b.lastOpened - a.lastOpened,
+    );
+  }, [projects, nav, groupFilter, stack, status, search, sort, groups]);
   useEffect(() => {
     if (!list.some((p) => p.id === selected)) setSelected(list[0]?.id || "");
   }, [list, selected]);
@@ -471,7 +501,7 @@ export default function App() {
         ...f,
         source: folder,
         name: folder.split(/[\\/]/).pop() || "",
-        mode: folder.startsWith(state.root + "/") ? "register" : "copy",
+        mode: "register",
       }));
       setScanResults([]);
       setChecked([]);
@@ -489,9 +519,7 @@ export default function App() {
             name: folder.split(/[\\/]/).pop()!,
             mode: folder.startsWith(state.root + "/")
               ? "register"
-              : importForm.mode === "move"
-                ? "move"
-                : "copy",
+              : importForm.mode,
           });
           // Keep completed projects out of retries if a later import fails.
           setChecked((remaining) =>
@@ -595,6 +623,16 @@ export default function App() {
           }, "筛选已保存");
         }}
         onHide={() => void api?.hideLauncher()}
+        onRefreshIndex={() => {
+          if (!api || demoMode) {
+            setToast("演示模式无需刷新搜索索引");
+            return;
+          }
+          void perform(async () => {
+            await api.refreshSearchIndex();
+            await refresh();
+          }, "搜索索引已刷新");
+        }}
         onOpen={(p, kind) => {
           if (demoMode)
             setError("当前为演示模式，请在标准模式中切换到本地项目后打开。");
@@ -783,10 +821,26 @@ export default function App() {
                 <input
                   ref={searchRef}
                   aria-label="搜索项目"
-                  placeholder="搜索项目名称、路径或标签…"
+                  placeholder="搜索名称、用途、README 或依赖…"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                 />
+                <IconButton
+                  label="刷新搜索索引"
+                  disabled={busy}
+                  onClick={() => {
+                    if (!api || demoMode) {
+                      setToast("演示模式无需刷新搜索索引");
+                      return;
+                    }
+                    void perform(async () => {
+                      await api.refreshSearchIndex();
+                      await refresh();
+                    }, "搜索索引已刷新");
+                  }}
+                >
+                  <RefreshCw size={15} className={busy ? "spin" : ""} />
+                </IconButton>
                 {search ? (
                   <IconButton label="清空搜索" onClick={() => setSearch("")}>
                     <X size={15} />
@@ -934,8 +988,9 @@ export default function App() {
                           />
                         </div>
                         <h3>{p.name}</h3>
-                        <p>
-                          {p.description ||
+                        <p className={p.searchMatch ? "search-match" : ""}>
+                          {p.searchMatch?.reasons[0] ||
+                            p.description ||
                             p.path.split("/").slice(-2).join("/")}
                         </p>
                         <div>
@@ -999,6 +1054,11 @@ export default function App() {
                                 <small>
                                   {p.path.replace(data.root + "/", "")}
                                 </small>
+                                {p.searchMatch && (
+                                  <small className="search-match">
+                                    {p.searchMatch.reasons.join(" · ")}
+                                  </small>
+                                )}
                               </div>
                             </div>
                           </td>
@@ -1559,7 +1619,7 @@ export default function App() {
                 >
                   <option value="copy">复制到根目录</option>
                   <option value="move">移动到根目录</option>
-                  <option value="register">登记根目录内项目</option>
+                  <option value="register">登记项目（保留原路径）</option>
                 </select>
               </label>
             )}
@@ -1748,7 +1808,7 @@ export default function App() {
                       </button>
                     </div>
                     <small>
-                      所有项目统一存放在这里。已有项目不会自动移动到新的根目录。
+                      复制、移动和克隆的项目存放在这里；登记项目可保留原路径。
                     </small>
                   </label>
                   <div className="settings-line">
@@ -1756,14 +1816,97 @@ export default function App() {
                       <strong>全局项目启动器</strong>
                       <p>在任何应用中呼出精简模式，再按一次即可收起。</p>
                     </div>
-                    <span className="shortcut-display">
-                      <Keyboard size={14} />
-                      <kbd>⌘ / Ctrl</kbd>
-                      <span>+</span>
-                      <kbd>Shift</kbd>
-                      <span>+</span>
-                      <kbd>Space</kbd>
-                    </span>
+                    <div className="shortcut-editor">
+                      <button
+                        className={`shortcut-display ${recordingShortcut ? "recording" : ""}`}
+                        disabled={busy || demoMode}
+                        aria-label="更改全局项目启动器快捷键"
+                        onClick={() => setRecordingShortcut(true)}
+                        onBlur={() => setRecordingShortcut(false)}
+                        onKeyDown={(event) => {
+                          if (!recordingShortcut) return;
+                          event.preventDefault();
+                          event.stopPropagation();
+                          if (event.key === "Escape") {
+                            setRecordingShortcut(false);
+                            return;
+                          }
+                          try {
+                            const shortcut = shortcutFromEvent(event);
+                            if (!shortcut) return;
+                            setRecordingShortcut(false);
+                            if (!api) return;
+                            void perform(async () => {
+                              await api.setLauncherShortcut(shortcut);
+                              await refresh();
+                            }, "全局快捷键已更新");
+                          } catch (e) {
+                            setError((e as Error).message);
+                          }
+                        }}
+                      >
+                        <Keyboard size={14} />
+                        {recordingShortcut ? (
+                          <span>请按下新的组合键…</span>
+                        ) : (
+                          launcherShortcutParts(
+                            state.launcherShortcut || defaultLauncherShortcut,
+                          ).map((part, index) => (
+                            <span
+                              className="shortcut-part"
+                              key={`${part}-${index}`}
+                            >
+                              {index > 0 && <i>+</i>}
+                              <kbd>{part}</kbd>
+                            </span>
+                          ))
+                        )}
+                      </button>
+                      {(state.launcherShortcut || defaultLauncherShortcut) !==
+                        defaultLauncherShortcut && (
+                        <button
+                          className="icon-button shortcut-reset"
+                          title="恢复默认快捷键"
+                          aria-label="恢复默认快捷键"
+                          disabled={busy || demoMode}
+                          onClick={() => {
+                            if (!api) return;
+                            void perform(async () => {
+                              await api.setLauncherShortcut(
+                                defaultLauncherShortcut,
+                              );
+                              await refresh();
+                            }, "已恢复默认快捷键");
+                          }}
+                        >
+                          <RefreshCw size={13} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  <div className="settings-line">
+                    <div>
+                      <strong>命令行工具</strong>
+                      <p>
+                        在终端中使用 codedog add、list、open 和 path。
+                        {cliInfo?.path ? ` 安装位置：${cliInfo.path}` : ""}
+                        若终端提示找不到命令，请将 ~/.local/bin 加入 PATH。
+                      </p>
+                    </div>
+                    <button
+                      className="button"
+                      disabled={busy || demoMode}
+                      onClick={() => {
+                        if (!api) return;
+                        perform(async () => {
+                          const result = await api.installCli();
+                          setCliInfo({ installed: true, path: result.path });
+                        }, "命令行工具已安装");
+                      }}
+                    >
+                      <Terminal size={14} />
+                      {cliInfo?.installed ? "重新安装" : "安装"}
+                    </button>
                   </div>
                   <div className="settings-line">
                     <div>
@@ -1994,7 +2137,7 @@ export default function App() {
             <small>用逗号分隔多个标签</small>
           </label>
           <label>
-            搜索别名
+            项目别名
             <input
               value={edit.aliases}
               placeholder="网关, gateway, 鉴权"
@@ -2002,7 +2145,7 @@ export default function App() {
                 setEdit((s) => ({ ...s, aliases: e.target.value }))
               }
             />
-            <small>用逗号分隔；别名只用于搜索，不改变项目名称</small>
+            <small>用逗号分隔；每个别名全局唯一，可直接用于 CLI 打开项目</small>
           </label>
           <label>
             备注

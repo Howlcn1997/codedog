@@ -12,15 +12,12 @@ import {
   Trash2,
   Code2,
   FolderOpen,
+  RefreshCw,
 } from "lucide-react";
 import type { KeyboardEvent as ReactKeyboardEvent } from "react";
 import type { Project, SavedFilter } from "./types";
 import TechStackIcon from "./TechStackIcon";
-function fuzzy(name: string, query: string) {
-  let i = 0;
-  for (const c of name.toLocaleLowerCase()) if (c === query[i]) i++;
-  return i === query.length;
-}
+import { searchProjects } from "./projectSearch";
 export default function CompactMode({
   projects,
   groups,
@@ -33,6 +30,7 @@ export default function CompactMode({
   savedFilters,
   onSaveFilters,
   onHide,
+  onRefreshIndex,
   error,
   onDismissError,
 }: {
@@ -50,6 +48,7 @@ export default function CompactMode({
   savedFilters: SavedFilter[];
   onSaveFilters: (filters: SavedFilter[]) => void;
   onHide: () => void;
+  onRefreshIndex: () => void;
   error: string;
   onDismissError: () => void;
 }) {
@@ -72,57 +71,30 @@ export default function CompactMode({
       ].sort((a, b) => a.localeCompare(b, "zh-CN")),
     [projects],
   );
-  const results = useMemo(
-    () =>
-      projects
-        .filter((p) => {
-          if (
-            p.archived ||
-            (group !== "all" && p.group !== group) ||
-            (stack !== "all" && !p.stacks.includes(stack)) ||
-            (tag !== "all" && !p.tags.includes(tag))
-          )
-            return false;
-          const hay = [
-            p.name,
-            p.path,
-            p.notes,
-            p.remote,
-            ...(p.aliases || []),
-            ...p.tags,
-            ...p.stacks,
-          ]
-            .join(" ")
-            .toLocaleLowerCase();
-          const matchesSearch = search
-            .trim()
-            .toLocaleLowerCase()
-            .split(/\s+/)
-            .every(
-              (q) =>
-                hay.includes(q) ||
-                fuzzy(p.name, q) ||
-                (p.aliases || []).some((alias) => fuzzy(alias, q)),
-            );
-          if (!matchesSearch) return false;
-          if (preset === "week")
-            return (
-              Math.max(p.lastOpened, p.createdAt) >= Date.now() - 7 * 86400000
-            );
-          if (preset === "dirty") return (p.changes || 0) > 0;
-          if (preset === "backend")
-            return p.group === "company" && p.tags.includes("后端");
-          return true;
-        })
-        .sort((a, b) =>
-          sort === "name"
-            ? a.name.localeCompare(b.name)
-            : sort === "created"
-              ? b.createdAt - a.createdAt
-              : b.lastOpened - a.lastOpened,
-        ),
-    [projects, search, group, stack, tag, sort, preset],
-  );
+  const results = useMemo(() => {
+    const filtered = projects.filter((p) => {
+      if (
+        p.archived ||
+        (group !== "all" && p.group !== group) ||
+        (stack !== "all" && !p.stacks.includes(stack)) ||
+        (tag !== "all" && !p.tags.includes(tag))
+      )
+        return false;
+      if (preset === "week")
+        return Math.max(p.lastOpened, p.createdAt) >= Date.now() - 7 * 86400000;
+      if (preset === "dirty") return (p.changes || 0) > 0;
+      if (preset === "backend")
+        return p.group === "company" && p.tags.includes("后端");
+      return true;
+    });
+    return searchProjects(filtered, search, (a, b) =>
+      sort === "name"
+        ? a.name.localeCompare(b.name)
+        : sort === "created"
+          ? b.createdAt - a.createdAt
+          : b.lastOpened - a.lastOpened,
+    );
+  }, [projects, search, group, stack, tag, sort, preset]);
   const current = results.find((p) => p.id === selected) || results[0];
   const actions = [
     { kind: "ide" as const, label: "打开 IDE", icon: Code2, disabled: false },
@@ -269,7 +241,7 @@ export default function CompactMode({
             ref={input}
             autoFocus
             aria-label="搜索项目"
-            placeholder="搜索项目名称、路径或标签…"
+            placeholder="搜索名称、用途、README 或依赖…"
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
@@ -279,6 +251,14 @@ export default function CompactMode({
             title="↑ / ↓ 选择项目 · ← / → 选择打开方式 · Enter 执行"
             onKeyDown={handleProjectKeyDown}
           />
+          <button
+            aria-label="刷新搜索索引"
+            className="icon-button"
+            disabled={busy}
+            onClick={onRefreshIndex}
+          >
+            <RefreshCw size={15} className={busy ? "spin" : ""} />
+          </button>
           {search ? (
             <button
               aria-label="清空搜索"
@@ -498,11 +478,16 @@ export default function CompactMode({
                     <Star size={13} fill="currentColor" className="starred" />
                   )}
                 </span>
-                <span className="compact-path">
-                  {p.missing ? "路径缺失 · " : ""}
-                  {p.path.startsWith(root + "/")
-                    ? p.path.slice(root.length + 1)
-                    : p.path}
+                <span
+                  className={`compact-path ${p.searchMatch ? "search-match" : ""}`}
+                >
+                  {p.searchMatch
+                    ? p.searchMatch.reasons.join(" · ")
+                    : `${p.missing ? "路径缺失 · " : ""}${
+                        p.path.startsWith(root + "/")
+                          ? p.path.slice(root.length + 1)
+                          : p.path
+                      }`}
                 </span>
               </span>
               <span className="compact-group">

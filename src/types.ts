@@ -68,6 +68,7 @@ export type State = {
   ide: string;
   projects: Project[];
   savedFilters?: SavedFilter[];
+  launcherShortcut?: string;
   uiMode?: "standard" | "compact";
 };
 export type ImportInput = {
@@ -86,6 +87,9 @@ export type Api = {
   projectMenu: (id: string) => Promise<{ opened: boolean }>;
   setMode: (mode: "standard" | "compact") => Promise<void>;
   setSavedFilters: (filters: SavedFilter[]) => Promise<void>;
+  setLauncherShortcut: (shortcut: string) => Promise<string>;
+  cliStatus: () => Promise<{ installed: boolean; path: string }>;
+  installCli: () => Promise<{ path: string }>;
   hideLauncher: () => Promise<void>;
   state: () => Promise<State>;
   pickFolder: () => Promise<string | null>;

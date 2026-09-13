@@ -44,6 +44,10 @@ test("main module finishes evaluation before Electron emits ready", async (t) =>
       .replace(
         'from "./window-mode.mjs"',
         `from ${JSON.stringify(new URL("../electron/window-mode.mjs", import.meta.url).href)}`,
+      )
+      .replace(
+        'from "./cli.mjs"',
+        `from ${JSON.stringify(new URL("../electron/cli.mjs", import.meta.url).href)}`,
       ),
   );
   let timer;

@@ -3,57 +3,17 @@ import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { spawn } from "node:child_process";
 import { copyClaudeCodeChats } from "./claude-sessions.mjs";
+import {
+  normalizeSearchText,
+  resolveProject,
+  searchProjects,
+} from "../shared/project-search.mjs";
 export const defaultGroups = {
   company: "公司项目",
   personal: "个人项目",
   temporary: "临时项目",
 };
 export const exists = async (p) => !!(await fs.stat(p).catch(() => null));
-const normalizedText = (value) =>
-  String(value || "")
-    .normalize("NFKC")
-    .toLocaleLowerCase();
-
-export function fuzzyMatch(value, query) {
-  const text = normalizedText(value);
-  const needle = normalizedText(query).trim();
-  if (!needle) return true;
-  if (text.includes(needle)) return true;
-  let index = 0;
-  for (const character of text) if (character === needle[index]) index++;
-  return index === needle.length;
-}
-
-export function searchProjects(projects, query = "") {
-  const needle = normalizedText(query).trim();
-  if (!needle) return [...projects];
-  return projects.filter((project) =>
-    [project.name, project.path, ...(project.aliases || [])].some((value) =>
-      fuzzyMatch(value, needle),
-    ),
-  );
-}
-
-export function resolveProject(projects, query) {
-  const needle = normalizedText(query).trim();
-  if (!needle) throw Error("请提供项目名称或别名");
-  const exactAliases = projects.filter((project) =>
-    (project.aliases || []).some(
-      (alias) => normalizedText(alias) === needle,
-    ),
-  );
-  if (exactAliases.length) return { project: exactAliases[0], candidates: [] };
-  const exactNames = projects.filter(
-    (project) => normalizedText(project.name) === needle,
-  );
-  if (exactNames.length === 1)
-    return { project: exactNames[0], candidates: [] };
-  if (exactNames.length > 1) return { project: null, candidates: exactNames };
-  const candidates = searchProjects(projects, query);
-  return candidates.length === 1
-    ? { project: candidates[0], candidates: [] }
-    : { project: null, candidates };
-}
 export const within = (root, target) => {
   const r = path.relative(root, target);
   return (
@@ -85,6 +45,66 @@ export function safeName(name) {
   )
     throw Error("项目名称不能包含路径分隔符，且必须以字母或数字开头");
   return name.trim();
+}
+export const defaultLauncherShortcut = "CommandOrControl+Shift+Space";
+export function normalizeLauncherShortcut(value) {
+  if (typeof value !== "string" || value.length > 80)
+    throw Error("快捷键格式无效");
+  const modifierNames = {
+    commandorcontrol: "CommandOrControl",
+    command: "Command",
+    control: "Control",
+    alt: "Alt",
+    shift: "Shift",
+    super: "Super",
+  };
+  const keyNames = {
+    space: "Space",
+    enter: "Enter",
+    tab: "Tab",
+    up: "Up",
+    down: "Down",
+    left: "Left",
+    right: "Right",
+  };
+  const parts = value
+    .split("+")
+    .map((part) => part.trim())
+    .filter(Boolean);
+  if (parts.length < 2 || parts.length > 4)
+    throw Error("快捷键需要包含修饰键和一个按键");
+  const modifiers = [];
+  let key = "";
+  for (const part of parts) {
+    const modifier = modifierNames[part.toLowerCase()];
+    if (modifier) {
+      if (modifiers.includes(modifier)) throw Error("快捷键包含重复按键");
+      modifiers.push(modifier);
+      continue;
+    }
+    if (key) throw Error("快捷键只能包含一个普通按键");
+    const named = keyNames[part.toLowerCase()];
+    const candidate = named || part.toUpperCase();
+    if (
+      !/^(?:[A-Z0-9]|F(?:[1-9]|1[0-2])|Space|Enter|Tab|Up|Down|Left|Right)$/.test(
+        candidate,
+      )
+    )
+      throw Error("暂不支持这个快捷键按键");
+    key = candidate;
+  }
+  if (!key || !modifiers.some((item) => item !== "Shift"))
+    throw Error("快捷键至少需要包含 Command/Ctrl 或 Option/Alt");
+  const order = [
+    "CommandOrControl",
+    "Command",
+    "Control",
+    "Alt",
+    "Shift",
+    "Super",
+  ];
+  modifiers.sort((a, b) => order.indexOf(a) - order.indexOf(b));
+  return [...modifiers, key].join("+");
 }
 export function run(
   command,
@@ -180,15 +200,44 @@ export async function createSearchIndex(folder) {
     if (!(await fs.stat(folder)).isDirectory()) return empty;
     const entries = await fs.readdir(folder, { withFileTypes: true });
     const readmeEntry = entries.find(
-      (entry) => entry.isFile() && /^readme(?:\.(?:md|markdown|txt|rst))?$/i.test(entry.name),
+      (entry) =>
+        entry.isFile() &&
+        /^readme(?:\.(?:md|markdown|txt|rst))?$/i.test(entry.name),
     );
-    const info = await inspect(folder).catch(() => null);
+    const dependencies = [];
+    const pkg = await json(path.join(folder, "package.json")).catch(() => null);
+    for (const values of [pkg?.dependencies, pkg?.devDependencies])
+      dependencies.push(...Object.keys(values || {}));
+    const gomod = await read(path.join(folder, "go.mod"));
+    for (const match of gomod.matchAll(
+      /^\s*(?:require\s+)?([\w.\-/]+)\s+v[^\s]+(?:\s*\/\/.*)?$/gm,
+    ))
+      dependencies.push(match[1]);
+    const pyproject = await read(path.join(folder, "pyproject.toml"));
+    const requirements = await read(path.join(folder, "requirements.txt"));
+    const pythonDeclarations = [
+      ...requirements
+        .split("\n")
+        .filter((line) => line.trim() && !line.trim().startsWith("#")),
+      ...[
+        ...(
+          pyproject.match(/(?:^|\n)dependencies\s*=\s*\[([\s\S]*?)\]/)?.[1] ||
+          ""
+        ).matchAll(/["']([^"']+)["']/g),
+      ].map((match) => match[1]),
+    ];
+    for (const declaration of pythonDeclarations) {
+      const name = declaration.trim().match(/^[A-Za-z0-9_.-]+/)?.[0];
+      if (name) dependencies.push(name);
+    }
     const index = {
       ...empty,
-      description: String(info?.description || "").slice(0, 10000),
-      dependencies: [
-        ...new Set((info?.dependencies || []).map((item) => String(item.name))),
-      ],
+      description: String(
+        pkg?.description ||
+          pyproject.match(/(?:^|\n)description\s*=\s*["']([^"']*)/)?.[1] ||
+          "",
+      ).slice(0, 10000),
+      dependencies: [...new Set(dependencies)],
     };
     if (readmeEntry) {
       const text = await readLimited(path.join(folder, readmeEntry.name)).catch(
@@ -457,12 +506,15 @@ export class ProjectStore {
     }
     const missingIndexes = this.state.projects.filter((p) => !p.searchIndex);
     if (missingIndexes.length) {
-      await Promise.all(
-        missingIndexes.map(async (project) => {
-          project.searchIndex = await createSearchIndex(project.path);
-        }),
-      );
-      await this.save();
+      await this.transaction(async () => {
+        const pending = this.state.projects.filter((p) => !p.searchIndex);
+        await Promise.all(
+          pending.map(async (project) => {
+            project.searchIndex = await createSearchIndex(project.path);
+          }),
+        );
+        await this.save();
+      });
     }
     return this.state;
   }
@@ -615,6 +667,20 @@ export class ProjectStore {
       }
     });
   }
+  async setLauncherShortcut(shortcut) {
+    const normalized = normalizeLauncherShortcut(shortcut);
+    return this.transaction(async () => {
+      const previous = this.state.launcherShortcut;
+      this.state.launcherShortcut = normalized;
+      try {
+        await this.save();
+      } catch (error) {
+        this.state.launcherShortcut = previous;
+        throw error;
+      }
+      return normalized;
+    });
+  }
   async setSavedFilters(filters) {
     if (!Array.isArray(filters) || filters.length > 20)
       throw Error("保存筛选格式无效");
@@ -666,11 +732,15 @@ export class ProjectStore {
     const real = await fs.realpath(item.path).catch(() => {
       throw Error(`项目路径已失效：${item.path}`);
     });
+    const root = await fs.realpath(this.state.root).catch(() => "");
+    if (root && within(root, path.resolve(item.path)) && !within(root, real))
+      throw Error("项目路径已移出根目录，请重新导入");
     return { ...item, path: real };
   }
   async list() {
     await this.refresh();
     const records = [...this.state.projects];
+    const root = await fs.realpath(this.state.root).catch(() => "");
     const result = new Array(records.length);
     let index = 0;
     await Promise.all(
@@ -679,6 +749,13 @@ export class ProjectStore {
           const position = index++;
           const p = records[position];
           try {
+            const real = await fs.realpath(p.path).catch(() => p.path);
+            if (
+              root &&
+              within(root, path.resolve(p.path)) &&
+              !within(root, real)
+            )
+              throw Error("项目路径已移出根目录，请重新导入");
             result[position] = { ...p, ...(await inspect(p.path)) };
           } catch (e) {
             result[position] = {
@@ -872,22 +949,21 @@ export class ProjectStore {
       }
       if (patch.aliases !== undefined) {
         if (!Array.isArray(patch.aliases)) throw Error("搜索别名格式无效");
-        allowed.aliases = [
-          ...new Set(
-            patch.aliases
-              .map(String)
-              .map((s) => s.trim())
-              .filter(Boolean),
-          ),
-        ].slice(0, 20);
+        const uniqueAliases = new Map();
+        for (const alias of patch.aliases.map(String).map((s) => s.trim()))
+          if (alias && !uniqueAliases.has(normalizeSearchText(alias)))
+            uniqueAliases.set(normalizeSearchText(alias), alias);
+        allowed.aliases = [...uniqueAliases.values()].slice(0, 20);
         if (allowed.aliases.some((alias) => alias.length > 40))
           throw Error("每个搜索别名最多 40 个字符");
-        const normalizedAliases = new Set(allowed.aliases.map(normalizedText));
+        const normalizedAliases = new Set(
+          allowed.aliases.map(normalizeSearchText),
+        );
         const conflict = this.state.projects.find(
           (project) =>
             project.id !== id &&
             (project.aliases || []).some((alias) =>
-              normalizedAliases.has(normalizedText(alias)),
+              normalizedAliases.has(normalizeSearchText(alias)),
             ),
         );
         if (conflict) throw Error(`别名已被项目“${conflict.name}”使用`);
@@ -916,11 +992,16 @@ export class ProjectStore {
       const real = await fs.realpath(folder).catch(() => {
         throw Error(`项目路径不存在：${path.resolve(folder)}`);
       });
-      if (!(await fs.stat(real)).isDirectory()) throw Error("项目路径必须是文件夹");
-      const duplicate = this.state.projects.find(async (project) => project.path === real);
+      if (!(await fs.stat(real)).isDirectory())
+        throw Error("项目路径必须是文件夹");
+      const duplicate = this.state.projects.find(
+        (project) => project.path === real,
+      );
       if (duplicate) return { project: duplicate, existed: true };
       for (const project of this.state.projects) {
-        const existingReal = await fs.realpath(project.path).catch(() => project.path);
+        const existingReal = await fs
+          .realpath(project.path)
+          .catch(() => project.path);
         if (existingReal === real) return { project, existed: true };
       }
       const name = safeName(options.name || path.basename(real));
@@ -939,6 +1020,7 @@ export class ProjectStore {
         createdAt: Date.now(),
         lastOpened: 0,
         cloneUrl: "",
+        searchIndex: await createSearchIndex(real),
       };
       this.state.projects.push(project);
       await this.save();
