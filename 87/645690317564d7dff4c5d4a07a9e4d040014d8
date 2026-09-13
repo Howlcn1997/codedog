@@ -1,0 +1,39 @@
+README.md
+  s_a46101d44f0bbd::t_1d91cad1ba1ab3 7-18
+package.json
+  s_a46101d44f0bbd::t_1e300d08b9f9c0 3
+src/App.tsx
+  s_a46101d44f0bbd::t_2f697c2e3bdb43 210
+  s_a46101d44f0bbd::t_9b875bb8a16cfd 215,217,224-227
+  s_a46101d44f0bbd::t_faccac00045583 218-219
+electron/main.mjs
+  s_a46101d44f0bbd::t_9b875bb8a16cfd 190,316-318,320-325
+  s_a46101d44f0bbd::t_2f697c2e3bdb43 275
+  s_a46101d44f0bbd::t_6a392270a0fda0 301-314
+electron/preload.cjs
+  s_a46101d44f0bbd::t_2f697c2e3bdb43 33-38
+src/types.ts
+  s_a46101d44f0bbd::t_2f697c2e3bdb43 84
+tests/startup.test.mjs
+  s_a46101d44f0bbd::t_2f697c2e3bdb43 72-79,84-85,111
+  s_a46101d44f0bbd::t_6a392270a0fda0 102-110
+  s_a46101d44f0bbd::t_faccac00045583 86-87,89
+  s_a46101d44f0bbd::t_9b875bb8a16cfd 88,90-101
+  s_a46101d44f0bbd::t_ade6d67cefaafb 80-83
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.44-trip",
+  "base_commit_sha": "87645690317564d7dff4c5d4a07a9e4d040014d8",
+  "prompts": {},
+  "sessions": {
+    "s_a46101d44f0bbd": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a098bb-56e8-7ef0-a12a-88283487ac1f",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "w.ning <w.ning@trip.com>"
+    }
+  }
+}
