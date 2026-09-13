@@ -1,0 +1,128 @@
+tests/cli.test.mjs
+  s_cc06f1d586acc9::t_37e5b26c8b574c 66-69,83-86
+  s_cc06f1d586acc9::t_e3c566cb9a1d36 1-65,70-82,87-100
+src/projectSearch.ts
+  s_cc06f1d586acc9::t_8ac4f0cc727fca 2-4,9-10,18
+electron/main.mjs
+  s_79f3736afdc399::t_6d062d7d472f1c 34-35,190-222,306,315-334,606
+  s_cc06f1d586acc9::t_08e8764cb1fc4b 586-605,609-610
+  s_cc06f1d586acc9::t_ea4ebc0b6165a3 345-347,349-351,353
+  s_cc06f1d586acc9::t_442cca72999a1e 5,44,151-157,335-344,348,352,354-358
+tests/core.test.mjs
+  s_07e8f9aa90679e::t_13193a21bc3ac4 17,111-134,139-146
+  s_79f3736afdc399::t_7a0fcc21cd80cc 462-465
+  s_79f3736afdc399::t_f6eb50b5778647 18-19,454-461,466-469
+  s_cc06f1d586acc9::t_910b0c3af094eb 148,150-156,164,166
+  s_07e8f9aa90679e::t_3668c5f8946fbc 135-138
+electron/cli.mjs
+  s_07e8f9aa90679e::t_282c81e0a02622 96,103-105
+  s_cc06f1d586acc9::t_ddc4d577e608ab 1-44,46-90,102,106-116
+  s_cc06f1d586acc9::t_e3c566cb9a1d36 45,91-95,97-101
+docs/user-guide.md
+  s_ffeff9c2ee74c0::t_9281e1dfa2e0ee 27-31,84-91
+  s_ffeff9c2ee74c0::t_904ecc3ec72df9 1-26,32-83,92-251
+src/types.ts
+  s_79f3736afdc399::t_b87ecc4fa838ed 71,90
+  s_cc06f1d586acc9::t_08e8764cb1fc4b 91-92
+README.md
+  s_ffeff9c2ee74c0::t_8e5da1be5a35bf 9-21,66,70-74,76,80,91
+  s_cc06f1d586acc9::t_ea4ebc0b6165a3 38-56
+  s_ffeff9c2ee74c0::t_63d56a34f4d86e 7-8
+electron/preload.cjs
+  s_79f3736afdc399::t_b87ecc4fa838ed 6
+  s_07e8f9aa90679e::t_3668c5f8946fbc 52-53
+  s_cc06f1d586acc9::t_08e8764cb1fc4b 7-8
+src/CompactMode.tsx
+  s_07e8f9aa90679e::t_dd1f217afbdc99 15
+  s_cc06f1d586acc9::t_24124a1b7060e6 20
+  s_07e8f9aa90679e::t_b188d9c32a7904 33,51,244,254-261,484-490
+  s_07e8f9aa90679e::t_78b0b8a9c5c282 481-483
+  s_07e8f9aa90679e::t_3668c5f8946fbc 74-97
+shared/project-search.mjs
+  s_07e8f9aa90679e::t_282c81e0a02622 2-4,38-43,48-55,57-60,65-71,79-90,122-124,131-133,137-139
+  s_cc06f1d586acc9::t_d214162e86e78c 1,5-37,44-47,56,61-64,72-78,92-97,104-109,111-121,125-130,134,140-146
+  s_cc06f1d586acc9::t_ea4ebc0b6165a3 135-136
+  s_07e8f9aa90679e::t_842ee5611f1680 91,98-103,110
+src/style.css
+  s_79f3736afdc399::t_684dab9f7f35ea 1428-1432,1437-1441,1445-1455,1460-1472
+  s_07e8f9aa90679e::t_dd1f217afbdc99 503-511
+package.json
+  s_a46101d44f0bbd::t_65a931016f30ea 3
+  s_cc06f1d586acc9::t_d214162e86e78c 48
+tests/startup.test.mjs
+  s_07e8f9aa90679e::t_e5a433575bc5c5 47-50
+src/App.tsx
+  s_cc06f1d586acc9::t_ebeab9dac97c11 504,522,1622,1811
+  s_cc06f1d586acc9::t_0f0b8f120d1cd4 244-247,323,328,1886-1892,1894-1909,2140,2148
+  s_79f3736afdc399::t_7a0fcc21cd80cc 1855-1858
+  s_07e8f9aa90679e::t_3668c5f8946fbc 354-372
+  s_cc06f1d586acc9::t_70a253c3cd414a 324-327
+  s_cc06f1d586acc9::t_ea4ebc0b6165a3 1893
+  s_79f3736afdc399::t_a580e43ea9bc57 62-102,240,1819-1854,1859-1885
+  s_cc06f1d586acc9::t_24124a1b7060e6 54
+  s_07e8f9aa90679e::t_b188d9c32a7904 310-312,316,626-635,824,828-843,991-993,1057-1061
+tests/search.test.mjs
+  s_07e8f9aa90679e::t_421bece76691f0 38-41,45-48
+  s_07e8f9aa90679e::t_e82b223084aa8e 1-37,42-44,49-61
+electron/core.mjs
+  s_cc06f1d586acc9::t_fb4b4a97102013 509-517
+  s_cc06f1d586acc9::t_87f3a0afeab1de 6-10,959-961,966
+  s_07e8f9aa90679e::t_3668c5f8946fbc 203-205,219-221,223-226
+  s_cc06f1d586acc9::t_70a253c3cd414a 753-757,995-996,1002-1004
+  s_07e8f9aa90679e::t_56128327cecdc8 1023
+  s_07e8f9aa90679e::t_e5a433575bc5c5 735-737
+  s_cc06f1d586acc9::t_ddc4d577e608ab 997-999
+  s_79f3736afdc399::t_b87ecc4fa838ed 49-87,93-97,106-108,670-681
+  s_79f3736afdc399::t_7a0fcc21cd80cc 88-92,98-105
+  s_07e8f9aa90679e::t_260de388db4ea0 207-218,222,227-232,235-240
+  s_07e8f9aa90679e::t_eccdf64f08f90b 743,752,758
+  s_cc06f1d586acc9::t_910b0c3af094eb 952-956
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.44-trip",
+  "base_commit_sha": "b53ef598ba70c000c0ace5ad49be858990a1d9bb",
+  "prompts": {},
+  "sessions": {
+    "s_07e8f9aa90679e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0989f-41e7-75d3-bdb3-7862a4bce74d",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "w.ning <w.ning@trip.com>"
+    },
+    "s_79f3736afdc399": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a09887-2847-7ea3-9dd8-d78cc2770bb0",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "w.ning <w.ning@trip.com>"
+    },
+    "s_a46101d44f0bbd": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a098bb-56e8-7ef0-a12a-88283487ac1f",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "w.ning <w.ning@trip.com>"
+    },
+    "s_cc06f1d586acc9": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0989f-8247-7311-a87b-323ac747dd94",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "w.ning <w.ning@trip.com>"
+    },
+    "s_ffeff9c2ee74c0": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a098af-f14d-72e1-a3f7-77f0f90b4ffc",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "w.ning <w.ning@trip.com>"
+    }
+  }
+}
