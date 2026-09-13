@@ -12,6 +12,8 @@ import {
   safeName,
   run,
   installPlan,
+  dependencyCleanupPlan,
+  cleanProjectDependencies,
 } from "../electron/core.mjs";
 async function fixture(t) {
   const dir = await fs.realpath(
@@ -63,6 +65,45 @@ test("copy import, dependency inspection, metadata persistence and non-destructi
   await fresh.forget(p.id);
   assert.ok(await exists(p.path));
   assert.equal(fresh.state.projects.length, 0);
+});
+test("search aliases and saved launcher filters are normalized and persisted", async (t) => {
+  const { store, source, dir } = await fixture(t);
+  const project = await store.importProject({
+    name: "gateway",
+    source,
+    group: "company",
+    mode: "copy",
+  });
+  await store.update(project.id, {
+    aliases: [" 网关 ", "gateway-api", "网关"],
+  });
+  await store.setSavedFilters([
+    {
+      id: "backend",
+      name: " 公司后端 ",
+      query: "api",
+      group: "company",
+      stack: "Go",
+      tag: "后端",
+      sort: "unexpected",
+    },
+  ]);
+  const fresh = new ProjectStore(path.join(dir, "data.json"));
+  await fresh.init();
+  assert.deepEqual(fresh.state.projects[0].aliases, ["网关", "gateway-api"]);
+  assert.deepEqual(fresh.state.savedFilters[0], {
+    id: "backend",
+    name: "公司后端",
+    query: "api",
+    group: "company",
+    stack: "Go",
+    tag: "后端",
+    sort: "recent",
+  });
+  await assert.rejects(
+    store.setSavedFilters([{ name: "", id: "bad" }]),
+    /筛选名称/,
+  );
 });
 test("move and register enforce root containment; duplicates cannot overwrite", async (t) => {
   const { store, source, root } = await fixture(t);
@@ -479,4 +520,65 @@ test("custom group folders use names while legacy project paths remain usable", 
     "trailing.",
   ])
     await assert.rejects(store.createGroup(name), /文件夹名称/);
+});
+
+test("dependency cleanup removes only project-local dependency directories", async (t) => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "codedog-cleanup-"));
+  t.after(() => fs.rm(dir, { recursive: true, force: true }));
+  const project = path.join(dir, "project");
+  const outside = path.join(dir, "outside");
+  await fs.mkdir(path.join(project, "node_modules", "package"), {
+    recursive: true,
+  });
+  await fs.mkdir(path.join(project, "packages", "app", "node_modules"), {
+    recursive: true,
+  });
+  await fs.mkdir(path.join(project, ".venv", "lib"), { recursive: true });
+  await fs.mkdir(path.join(project, "src"), { recursive: true });
+  await fs.mkdir(outside);
+  await fs.writeFile(
+    path.join(project, "node_modules", "package", "a.js"),
+    "a".repeat(10),
+  );
+  await fs.writeFile(
+    path.join(project, "packages", "app", "node_modules", "b.js"),
+    "b".repeat(20),
+  );
+  await fs.writeFile(
+    path.join(project, ".venv", "lib", "c.py"),
+    "c".repeat(30),
+  );
+  await fs.writeFile(path.join(project, "src", "index.js"), "source");
+  await fs.writeFile(path.join(project, "package-lock.json"), "lock");
+  await fs.writeFile(path.join(outside, "keep.txt"), "keep");
+  await fs.symlink(outside, path.join(project, "linked-dependencies"));
+
+  const plan = await dependencyCleanupPlan(project);
+  assert.deepEqual(plan.directories.map((item) => item.relativePath).sort(), [
+    ".venv",
+    "node_modules",
+    path.join("packages", "app", "node_modules"),
+  ]);
+  assert.equal(plan.size, 60);
+
+  const result = await cleanProjectDependencies(project);
+  assert.deepEqual(result, { removed: 3, reclaimed: 60 });
+  assert.equal(await exists(path.join(project, "node_modules")), false);
+  assert.equal(await exists(path.join(project, ".venv")), false);
+  assert.equal(
+    await exists(path.join(project, "packages", "app", "node_modules")),
+    false,
+  );
+  assert.equal(
+    await fs.readFile(path.join(project, "src", "index.js"), "utf8"),
+    "source",
+  );
+  assert.equal(
+    await fs.readFile(path.join(project, "package-lock.json"), "utf8"),
+    "lock",
+  );
+  assert.equal(
+    await fs.readFile(path.join(outside, "keep.txt"), "utf8"),
+    "keep",
+  );
 });

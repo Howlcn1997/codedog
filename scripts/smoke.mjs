@@ -17,8 +17,43 @@ try {
   await page.waitForSelector(".brand");
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
+  await page.evaluate(() => {
+    const scroller = document.createElement("div");
+    scroller.id = "scrollbar-smoke";
+    scroller.style.cssText =
+      "position:fixed;left:20px;top:60px;width:120px;height:80px;overflow:auto;z-index:9999";
+    scroller.innerHTML = '<div style="height:500px"></div>';
+    document.body.append(scroller);
+    scroller.scrollTop = 20;
+  });
+  await page.waitForFunction(() =>
+    document
+      .querySelector("#scrollbar-smoke")
+      ?.classList.contains("scrollbar-visible"),
+  );
+  await page.waitForTimeout(1050);
+  assert.equal(
+    await page
+      .locator("#scrollbar-smoke")
+      .evaluate((element) => element.classList.contains("scrollbar-visible")),
+    false,
+  );
+  await page
+    .locator("#scrollbar-smoke")
+    .evaluate((element) => element.remove());
   await page.getByText("先看看演示项目").click();
   await page.getByText("atlas-console", { exact: true }).first().waitFor();
+  await page.locator(".sidebar").getByRole("button", { name: /设置/ }).click();
+  const settings = page.getByRole("dialog", { name: "设置", exact: true });
+  await settings.getByRole("button", { name: "外观", exact: true }).click();
+  await settings.getByRole("heading", { name: "外观", exact: true }).waitFor();
+  await settings.getByRole("button", { name: "打开方式", exact: true }).click();
+  await settings
+    .getByRole("heading", { name: "打开方式", exact: true })
+    .waitFor();
+  await settings.getByRole("button", { name: "数据", exact: true }).click();
+  await settings.getByRole("heading", { name: "数据", exact: true }).waitFor();
+  await settings.getByRole("button", { name: "关闭", exact: true }).click();
   await page.screenshot({ path: "work/codedog-desktop.png" });
   await page
     .getByRole("textbox", { name: "搜索项目", exact: true })
@@ -35,9 +70,17 @@ try {
   const source = path.join(profile, "source");
   await fs.mkdir(root);
   await fs.mkdir(source);
+  await fs.mkdir(path.join(source, "node_modules", "react"), {
+    recursive: true,
+  });
   await fs.writeFile(
     path.join(source, "package.json"),
     JSON.stringify({ name: "smoke-project", dependencies: { react: "^19" } }),
+  );
+  await fs.writeFile(path.join(source, "src.js"), "console.log('source')");
+  await fs.writeFile(
+    path.join(source, "node_modules", "react", "index.js"),
+    "x".repeat(4096),
   );
   await app.evaluate(({ dialog }, folder) => {
     dialog.showOpenDialog = async () => ({
@@ -89,6 +132,26 @@ try {
     .click();
   await page.getByText("smoke-project", { exact: true }).first().waitFor();
   await page.getByRole("button", { name: "恢复项目", exact: true }).click();
+  await page
+    .locator(".sidebar")
+    .getByRole("button", { name: "存储空间", exact: true })
+    .click();
+  await page.getByLabel("选择 smoke-project", { exact: true }).click();
+  await app.evaluate(({ dialog }) => {
+    dialog.showMessageBox = async () => ({ response: 1 });
+  });
+  await page
+    .getByRole("button", { name: "清理所选项目依赖", exact: true })
+    .click();
+  await page.getByText("已释放约 4 KB", { exact: true }).waitFor();
+  const imported = path.join(root, "personal", "smoke-project");
+  await assert.rejects(fs.stat(path.join(imported, "node_modules")), {
+    code: "ENOENT",
+  });
+  assert.equal(
+    await fs.readFile(path.join(imported, "src.js"), "utf8"),
+    "console.log('source')",
+  );
   assert.deepEqual(errors, []);
   const persisted = JSON.parse(
     await fs.readFile(path.join(profile, "projects.json"), "utf8"),
@@ -96,7 +159,7 @@ try {
   assert.equal(persisted.projects[0].notes, "Persisted by smoke test");
   assert.equal(persisted.projects[0].archived, false);
   console.log(
-    "PASS: Electron launch, demo, fuzzy search, empty state, native folder selection, copy import, favorite, edit, archive, restore, persistence.",
+    "PASS: Electron launch, auto-hidden scrollbars, settings navigation, demo, fuzzy search, import, metadata, archive, storage scan, dependency cleanup, and persistence.",
   );
 } finally {
   await app.close();

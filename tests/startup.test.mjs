@@ -14,7 +14,7 @@ test("main module finishes evaluation before Electron emits ready", async (t) =>
     path.join(dir, "electron.mjs"),
     `
     export const app={setName(){},setPath(){},whenReady(){return new Promise(()=>{});}};
-    export const BrowserWindow=class {},autoUpdater={};
+    export const BrowserWindow=class {},autoUpdater={},globalShortcut={};
     export const ipcMain={},dialog={},shell={},clipboard={},session={},nativeImage={},nativeTheme={},Menu={};
   `,
   );
@@ -40,6 +40,10 @@ test("main module finishes evaluation before Electron emits ready", async (t) =>
       .replace(
         'from "./updates.mjs"',
         `from ${JSON.stringify(new URL("../electron/updates.mjs", import.meta.url).href)}`,
+      )
+      .replace(
+        'from "./window-mode.mjs"',
+        `from ${JSON.stringify(new URL("../electron/window-mode.mjs", import.meta.url).href)}`,
       ),
   );
   let timer;

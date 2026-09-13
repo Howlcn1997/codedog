@@ -16,12 +16,20 @@ export type Dependency = {
   kind: string;
   stack: string;
 };
+export type SearchIndex = {
+  version: number;
+  updatedAt: number;
+  description: string;
+  dependencies: string[];
+  readme?: { file: string; text: string };
+};
 export type Project = {
   id: string;
   name: string;
   path: string;
   group: Group;
   tags: string[];
+  aliases?: string[];
   notes: string;
   favorite: boolean;
   archived: boolean;
@@ -38,6 +46,19 @@ export type Project = {
   remote?: string;
   missing?: boolean;
   error?: string;
+  searchIndex?: SearchIndex;
+};
+export type ProjectSearchResult = Project & {
+  searchMatch?: { rank: number; reasons: string[] };
+};
+export type SavedFilter = {
+  id: string;
+  name: string;
+  query: string;
+  group: string;
+  stack: string;
+  tag: string;
+  sort: string;
 };
 export type State = {
   groups?: Record<string, string>;
@@ -46,9 +67,11 @@ export type State = {
   root: string;
   ide: string;
   projects: Project[];
+  savedFilters?: SavedFilter[];
   uiMode?: "standard" | "compact";
 };
 export type ImportInput = {
+  copyClaudeChats: boolean;
   tags: string[];
   mode: string;
   source: string;
@@ -62,12 +85,15 @@ export type Api = {
   setTerminal: (terminal: "system" | "warp") => Promise<void>;
   projectMenu: (id: string) => Promise<{ opened: boolean }>;
   setMode: (mode: "standard" | "compact") => Promise<void>;
+  setSavedFilters: (filters: SavedFilter[]) => Promise<void>;
+  hideLauncher: () => Promise<void>;
   state: () => Promise<State>;
   pickFolder: () => Promise<string | null>;
   setRoot: (folder: string) => Promise<void>;
   setIde: (ide: string) => Promise<void>;
   import: (input: ImportInput) => Promise<void>;
   scan: (folder: string) => Promise<string[]>;
+  refreshSearchIndex: (id?: string) => Promise<number>;
   update: (id: string, patch: Partial<Project>) => Promise<void>;
   forget: (id: string) => Promise<void>;
   open: (id: string, kind: string) => Promise<void>;
@@ -75,11 +101,25 @@ export type Api = {
   storage: (
     id: string,
   ) => Promise<{ source: number; dependencies: number; skipped: number }>;
+  storageBatch: (
+    ids: string[],
+  ) => Promise<
+    Record<string, { source: number; dependencies: number; skipped: number }>
+  >;
+  cleanupDependencies: (ids: string[]) => Promise<{
+    canceled: boolean;
+    reclaimed?: number;
+    projects?: { id: string; removed: number; reclaimed: number }[];
+  }>;
   environment: (id: string) => Promise<Environment[]>;
   install: (id: string, stack: string) => Promise<{ canceled: boolean }>;
   backup: () => Promise<boolean>;
   openRoot: () => Promise<void>;
   onLog: (callback: (text: string) => void) => () => void;
+  onModeChange: (
+    callback: (mode: "standard" | "compact") => void,
+  ) => () => void;
+  onSearchIndexUpdated: (callback: () => void) => () => void;
 };
 declare global {
   interface Window {

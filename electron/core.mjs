@@ -2,12 +2,58 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { spawn } from "node:child_process";
+import { copyClaudeCodeChats } from "./claude-sessions.mjs";
 export const defaultGroups = {
   company: "公司项目",
   personal: "个人项目",
   temporary: "临时项目",
 };
 export const exists = async (p) => !!(await fs.stat(p).catch(() => null));
+const normalizedText = (value) =>
+  String(value || "")
+    .normalize("NFKC")
+    .toLocaleLowerCase();
+
+export function fuzzyMatch(value, query) {
+  const text = normalizedText(value);
+  const needle = normalizedText(query).trim();
+  if (!needle) return true;
+  if (text.includes(needle)) return true;
+  let index = 0;
+  for (const character of text) if (character === needle[index]) index++;
+  return index === needle.length;
+}
+
+export function searchProjects(projects, query = "") {
+  const needle = normalizedText(query).trim();
+  if (!needle) return [...projects];
+  return projects.filter((project) =>
+    [project.name, project.path, ...(project.aliases || [])].some((value) =>
+      fuzzyMatch(value, needle),
+    ),
+  );
+}
+
+export function resolveProject(projects, query) {
+  const needle = normalizedText(query).trim();
+  if (!needle) throw Error("请提供项目名称或别名");
+  const exactAliases = projects.filter((project) =>
+    (project.aliases || []).some(
+      (alias) => normalizedText(alias) === needle,
+    ),
+  );
+  if (exactAliases.length) return { project: exactAliases[0], candidates: [] };
+  const exactNames = projects.filter(
+    (project) => normalizedText(project.name) === needle,
+  );
+  if (exactNames.length === 1)
+    return { project: exactNames[0], candidates: [] };
+  if (exactNames.length > 1) return { project: null, candidates: exactNames };
+  const candidates = searchProjects(projects, query);
+  return candidates.length === 1
+    ? { project: candidates[0], candidates: [] }
+    : { project: null, candidates };
+}
 export const within = (root, target) => {
   const r = path.relative(root, target);
   return (
@@ -106,6 +152,53 @@ async function json(p) {
     return JSON.parse(content);
   } catch {
     throw Error(`无法解析 ${path.basename(p)}，请检查文件格式`);
+  }
+}
+export const isSearchSource = (name) =>
+  /^(?:readme(?:\.(?:md|markdown|txt|rst))?|package\.json|go\.mod|go\.work|pyproject\.toml|requirements\.txt|setup\.py)$/i.test(
+    String(name || ""),
+  );
+const README_LIMIT = 256 * 1024;
+async function readLimited(file, limit = README_LIMIT) {
+  const handle = await fs.open(file, "r");
+  try {
+    const buffer = Buffer.alloc(limit);
+    const { bytesRead } = await handle.read(buffer, 0, limit, 0);
+    return buffer.subarray(0, bytesRead).toString("utf8");
+  } finally {
+    await handle.close();
+  }
+}
+export async function createSearchIndex(folder) {
+  const empty = {
+    version: 1,
+    updatedAt: Date.now(),
+    description: "",
+    dependencies: [],
+  };
+  try {
+    if (!(await fs.stat(folder)).isDirectory()) return empty;
+    const entries = await fs.readdir(folder, { withFileTypes: true });
+    const readmeEntry = entries.find(
+      (entry) => entry.isFile() && /^readme(?:\.(?:md|markdown|txt|rst))?$/i.test(entry.name),
+    );
+    const info = await inspect(folder).catch(() => null);
+    const index = {
+      ...empty,
+      description: String(info?.description || "").slice(0, 10000),
+      dependencies: [
+        ...new Set((info?.dependencies || []).map((item) => String(item.name))),
+      ],
+    };
+    if (readmeEntry) {
+      const text = await readLimited(path.join(folder, readmeEntry.name)).catch(
+        () => "",
+      );
+      if (text) index.readme = { file: readmeEntry.name, text };
+    }
+    return index;
+  } catch {
+    return empty;
   }
 }
 export async function inspect(folder) {
@@ -251,7 +344,10 @@ export async function inspect(folder) {
     branch,
     changes,
     remote,
-    description: pkg?.description || "",
+    description:
+      pkg?.description ||
+      pyproject.match(/(?:^|\n)description\s*=\s*["']([^"']*)/)?.[1] ||
+      "",
     missing: false,
     dependencyState: environments.some((e) => e.installed === false)
       ? "pending"
@@ -288,6 +384,63 @@ export async function diskUsage(folder) {
   await walk(folder);
   return { source, dependencies, skipped };
 }
+
+const dependencyDirectoryNames = new Set(["node_modules", ".venv", "venv"]);
+
+async function directorySize(folder) {
+  let size = 0;
+  async function walk(dir) {
+    for (const entry of await fs.readdir(dir, { withFileTypes: true })) {
+      if (entry.isSymbolicLink()) continue;
+      const target = path.join(dir, entry.name);
+      if (entry.isDirectory()) await walk(target);
+      else size += (await fs.stat(target).catch(() => null))?.size || 0;
+    }
+  }
+  await walk(folder);
+  return size;
+}
+
+export async function dependencyCleanupPlan(folder) {
+  const project = await fs.realpath(folder);
+  const directories = [];
+  async function walk(dir) {
+    for (const entry of await fs.readdir(dir, { withFileTypes: true })) {
+      if (entry.isSymbolicLink() || !entry.isDirectory()) continue;
+      const target = path.join(dir, entry.name);
+      if (dependencyDirectoryNames.has(entry.name)) {
+        if (!within(project, target)) throw Error("依赖目录已移出项目范围");
+        directories.push({
+          path: target,
+          relativePath: path.relative(project, target),
+          size: await directorySize(target),
+        });
+      } else {
+        await walk(target);
+      }
+    }
+  }
+  await walk(project);
+  return {
+    directories,
+    size: directories.reduce((total, item) => total + item.size, 0),
+  };
+}
+
+export async function cleanProjectDependencies(folder) {
+  const project = await fs.realpath(folder);
+  const plan = await dependencyCleanupPlan(project);
+  for (const directory of plan.directories) {
+    if (!within(project, directory.path)) throw Error("依赖目录已移出项目范围");
+    const stat = await fs.lstat(directory.path).catch(() => null);
+    if (!stat || stat.isSymbolicLink() || !stat.isDirectory()) continue;
+    await fs.rm(directory.path, { recursive: true, force: false });
+  }
+  return {
+    removed: plan.directories.length,
+    reclaimed: plan.size,
+  };
+}
 export class ProjectStore {
   constructor(file) {
     this.file = file;
@@ -302,18 +455,86 @@ export class ProjectStore {
     } catch (e) {
       if (e.code !== "ENOENT") throw Error(`无法读取管理数据：${e.message}`);
     }
+    const missingIndexes = this.state.projects.filter((p) => !p.searchIndex);
+    if (missingIndexes.length) {
+      await Promise.all(
+        missingIndexes.map(async (project) => {
+          project.searchIndex = await createSearchIndex(project.path);
+        }),
+      );
+      await this.save();
+    }
     return this.state;
   }
+  async refresh() {
+    try {
+      const next = JSON.parse(await fs.readFile(this.file, "utf8"));
+      if (next.version !== 1 || !Array.isArray(next.projects))
+        throw Error("不支持的数据格式");
+      this.state = next;
+    } catch (error) {
+      if (error.code !== "ENOENT")
+        throw Error(`无法读取管理数据：${error.message}`);
+    }
+    return this.state;
+  }
+  async acquireLock(timeout = 15000) {
+    const lock = this.file + ".lock";
+    await fs.mkdir(path.dirname(this.file), { recursive: true });
+    const started = Date.now();
+    while (true) {
+      try {
+        const handle = await fs.open(lock, "wx");
+        await handle.writeFile(String(process.pid));
+        await handle.close();
+        return async () => fs.unlink(lock).catch(() => {});
+      } catch (error) {
+        if (error.code !== "EEXIST") throw error;
+        const owner = Number(await fs.readFile(lock, "utf8").catch(() => 0));
+        let active = false;
+        if (owner > 0) {
+          try {
+            process.kill(owner, 0);
+            active = true;
+          } catch (signalError) {
+            active = signalError.code === "EPERM";
+          }
+        }
+        const age =
+          Date.now() - ((await fs.stat(lock).catch(() => null))?.mtimeMs || 0);
+        if (!active && age > 2000) {
+          await fs.unlink(lock).catch(() => {});
+          continue;
+        }
+        if (Date.now() - started >= timeout)
+          throw Error("项目数据正在被另一个 codedog 操作占用，请稍后重试");
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      }
+    }
+  }
   transaction(fn) {
-    const operation = this.queue.then(fn);
+    const operation = this.queue.then(async () => {
+      const release = await this.acquireLock();
+      try {
+        await this.refresh();
+        return await fn();
+      } finally {
+        await release();
+      }
+    });
     this.queue = operation.catch(() => {});
     return operation;
   }
   async save() {
     await fs.mkdir(path.dirname(this.file), { recursive: true });
-    const temp = this.file + ".tmp";
+    const temp = `${this.file}.${process.pid}.${randomUUID()}.tmp`;
     await fs.writeFile(temp, JSON.stringify(this.state, null, 2));
-    await fs.rename(temp, this.file);
+    try {
+      await fs.rename(temp, this.file);
+    } catch (error) {
+      await fs.unlink(temp).catch(() => {});
+      throw error;
+    }
   }
   groups() {
     return {
@@ -394,6 +615,38 @@ export class ProjectStore {
       }
     });
   }
+  async setSavedFilters(filters) {
+    if (!Array.isArray(filters) || filters.length > 20)
+      throw Error("保存筛选格式无效");
+    const normalized = filters.map((filter) => {
+      if (!filter || typeof filter !== "object")
+        throw Error("保存筛选格式无效");
+      const name = String(filter.name || "").trim();
+      if (!name || name.length > 30) throw Error("筛选名称须为 1–30 个字符");
+      return {
+        id: String(filter.id || randomUUID()).slice(0, 100),
+        name,
+        query: String(filter.query || "").slice(0, 200),
+        group: String(filter.group || "all").slice(0, 100),
+        stack: String(filter.stack || "all").slice(0, 40),
+        tag: String(filter.tag || "all").slice(0, 40),
+        sort: ["recent", "name", "created"].includes(filter.sort)
+          ? filter.sort
+          : "recent",
+      };
+    });
+    return this.transaction(async () => {
+      const previous = this.state.savedFilters;
+      this.state.savedFilters = normalized;
+      try {
+        await this.save();
+      } catch (error) {
+        this.state.savedFilters = previous;
+        throw error;
+      }
+      return normalized;
+    });
+  }
   async setRoot(folder) {
     return this.transaction(async () => {
       const root = await fs.realpath(folder);
@@ -407,14 +660,16 @@ export class ProjectStore {
     });
   }
   async get(id) {
+    await this.refresh();
     const item = this.state.projects.find((p) => p.id === id);
     if (!item) throw Error("项目不存在");
-    const real = await fs.realpath(item.path);
-    if (!within(await fs.realpath(this.state.root), real))
-      throw Error("项目路径已移出根目录，请重新导入");
+    const real = await fs.realpath(item.path).catch(() => {
+      throw Error(`项目路径已失效：${item.path}`);
+    });
     return { ...item, path: real };
   }
   async list() {
+    await this.refresh();
     const records = [...this.state.projects];
     const result = new Array(records.length);
     let index = 0;
@@ -424,7 +679,6 @@ export class ProjectStore {
           const position = index++;
           const p = records[position];
           try {
-            if (await exists(p.path)) await this.get(p.id);
             result[position] = { ...p, ...(await inspect(p.path)) };
           } catch (e) {
             result[position] = {
@@ -440,6 +694,21 @@ export class ProjectStore {
       }),
     );
     return result;
+  }
+  async refreshSearchIndex(id) {
+    return this.transaction(async () => {
+      const projects = id
+        ? this.state.projects.filter((project) => project.id === id)
+        : this.state.projects;
+      if (id && !projects.length) throw Error("项目不存在");
+      await Promise.all(
+        projects.map(async (project) => {
+          project.searchIndex = await createSearchIndex(project.path);
+        }),
+      );
+      await this.save();
+      return projects.length;
+    });
   }
   async importProject(input, onLog = () => {}) {
     return this.transaction(async () => {
@@ -461,6 +730,11 @@ export class ProjectStore {
       if (!Object.hasOwn(this.groups(), group)) throw Error("无效的项目分组");
       if (!["copy", "move", "register", "clone"].includes(input.mode))
         throw Error("无效的导入方式");
+      if (
+        input.copyClaudeChats !== undefined &&
+        typeof input.copyClaudeChats !== "boolean"
+      )
+        throw Error("Claude Code 聊天记录选项无效");
       let source = "";
       let target = "";
       let created = false;
@@ -469,8 +743,6 @@ export class ProjectStore {
         if (!(await fs.stat(source)).isDirectory()) throw Error("请选择文件夹");
       }
       if (input.mode === "register") {
-        if (!within(root, source) || root === source)
-          throw Error("只能直接登记根目录内的项目子文件夹");
         target = source;
       } else {
         const parent = path.join(root, this.groupDirectory(group));
@@ -500,6 +772,8 @@ export class ProjectStore {
           throw Error("这个仓库已经导入");
       }
       onLog("开始导入…\n");
+      let moved = false;
+      let chatCopy;
       try {
         if (input.mode === "copy") {
           await fs.mkdir(target);
@@ -518,7 +792,18 @@ export class ProjectStore {
         }
         if (input.mode === "move") {
           await fs.rename(source, target);
+          moved = true;
           onLog("文件夹已移动到 " + target + "\n");
+          if (input.copyClaudeChats) {
+            chatCopy = await copyClaudeCodeChats(source, target);
+            onLog(
+              `Claude Code 聊天记录已复制 ${chatCopy.copied} 个` +
+                (chatCopy.skipped
+                  ? `，跳过 ${chatCopy.skipped} 个已存在会话`
+                  : "") +
+                "\n",
+            );
+          }
         }
         if (input.mode === "clone") {
           await fs.mkdir(target);
@@ -543,18 +828,21 @@ export class ProjectStore {
           createdAt: Date.now(),
           lastOpened: 0,
           cloneUrl: input.url || "",
+          searchIndex: await createSearchIndex(target),
         };
         this.state.projects.push(record);
         try {
           await this.save();
         } catch (e) {
           this.state.projects.pop();
-          if (input.mode === "move") await fs.rename(target, source);
           throw e;
         }
         onLog("导入完成\n");
         return record;
       } catch (e) {
+        if (chatCopy?.rollback) await chatCopy.rollback().catch(() => {});
+        if (moved && (await exists(target)) && !(await exists(source)))
+          await fs.rename(target, source);
         if (created) await fs.rm(target, { recursive: true, force: true });
         throw e;
       }
@@ -582,6 +870,28 @@ export class ProjectStore {
           .filter(Boolean)
           .slice(0, 20);
       }
+      if (patch.aliases !== undefined) {
+        if (!Array.isArray(patch.aliases)) throw Error("搜索别名格式无效");
+        allowed.aliases = [
+          ...new Set(
+            patch.aliases
+              .map(String)
+              .map((s) => s.trim())
+              .filter(Boolean),
+          ),
+        ].slice(0, 20);
+        if (allowed.aliases.some((alias) => alias.length > 40))
+          throw Error("每个搜索别名最多 40 个字符");
+        const normalizedAliases = new Set(allowed.aliases.map(normalizedText));
+        const conflict = this.state.projects.find(
+          (project) =>
+            project.id !== id &&
+            (project.aliases || []).some((alias) =>
+              normalizedAliases.has(normalizedText(alias)),
+            ),
+        );
+        if (conflict) throw Error(`别名已被项目“${conflict.name}”使用`);
+      }
       if (patch.ide !== undefined) {
         if (
           ![
@@ -600,6 +910,48 @@ export class ProjectStore {
       await this.save();
       return item;
     });
+  }
+  async add(folder, options = {}) {
+    return this.transaction(async () => {
+      const real = await fs.realpath(folder).catch(() => {
+        throw Error(`项目路径不存在：${path.resolve(folder)}`);
+      });
+      if (!(await fs.stat(real)).isDirectory()) throw Error("项目路径必须是文件夹");
+      const duplicate = this.state.projects.find(async (project) => project.path === real);
+      if (duplicate) return { project: duplicate, existed: true };
+      for (const project of this.state.projects) {
+        const existingReal = await fs.realpath(project.path).catch(() => project.path);
+        if (existingReal === real) return { project, existed: true };
+      }
+      const name = safeName(options.name || path.basename(real));
+      const group = options.group || "personal";
+      if (!Object.hasOwn(this.groups(), group)) throw Error("无效的项目分组");
+      const project = {
+        id: randomUUID(),
+        name,
+        path: real,
+        group,
+        tags: [],
+        aliases: [],
+        notes: "",
+        favorite: false,
+        archived: false,
+        createdAt: Date.now(),
+        lastOpened: 0,
+        cloneUrl: "",
+      };
+      this.state.projects.push(project);
+      await this.save();
+      return { project, existed: false };
+    });
+  }
+  async search(query = "") {
+    await this.refresh();
+    return searchProjects(this.state.projects, query);
+  }
+  async resolve(query) {
+    await this.refresh();
+    return resolveProject(this.state.projects, query);
   }
   async forget(id) {
     return this.transaction(async () => {

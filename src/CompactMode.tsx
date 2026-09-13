@@ -4,14 +4,18 @@ import {
   PanelsTopLeft,
   CornerDownLeft,
   Star,
-  Code2,
-  Box,
-  FileCode2,
   X,
   Loader2,
+  Terminal,
+  GitBranch,
+  Save,
+  Trash2,
+  Code2,
+  FolderOpen,
 } from "lucide-react";
 import type { KeyboardEvent as ReactKeyboardEvent } from "react";
-import type { Project } from "./types";
+import type { Project, SavedFilter } from "./types";
+import TechStackIcon from "./TechStackIcon";
 function fuzzy(name: string, query: string) {
   let i = 0;
   for (const c of name.toLocaleLowerCase()) if (c === query[i]) i++;
@@ -26,6 +30,9 @@ export default function CompactMode({
   onStandard,
   onOpen,
   onProjectMenu,
+  savedFilters,
+  onSaveFilters,
+  onHide,
   error,
   onDismissError,
 }: {
@@ -35,8 +42,14 @@ export default function CompactMode({
   busy: boolean;
   demo: boolean;
   onStandard: () => void;
-  onOpen: (p: Project, kind: "ide" | "terminal") => void;
+  onOpen: (
+    p: Project,
+    kind: "ide" | "terminal" | "repository" | "folder",
+  ) => void;
   onProjectMenu: (p: Project) => void;
+  savedFilters: SavedFilter[];
+  onSaveFilters: (filters: SavedFilter[]) => void;
+  onHide: () => void;
   error: string;
   onDismissError: () => void;
 }) {
@@ -45,7 +58,11 @@ export default function CompactMode({
     [stack, setStack] = useState("all"),
     [tag, setTag] = useState("all"),
     [sort, setSort] = useState("recent"),
-    [selected, setSelected] = useState("");
+    [selected, setSelected] = useState(""),
+    [preset, setPreset] = useState(""),
+    [namingFilter, setNamingFilter] = useState(false),
+    [filterName, setFilterName] = useState(""),
+    [actionIndex, setActionIndex] = useState(0);
   const input = useRef<HTMLInputElement>(null);
   const selectedRow = useRef<HTMLButtonElement>(null);
   const tags = useMemo(
@@ -71,16 +88,31 @@ export default function CompactMode({
             p.path,
             p.notes,
             p.remote,
+            ...(p.aliases || []),
             ...p.tags,
             ...p.stacks,
           ]
             .join(" ")
             .toLocaleLowerCase();
-          return search
+          const matchesSearch = search
             .trim()
             .toLocaleLowerCase()
             .split(/\s+/)
-            .every((q) => hay.includes(q) || fuzzy(p.name, q));
+            .every(
+              (q) =>
+                hay.includes(q) ||
+                fuzzy(p.name, q) ||
+                (p.aliases || []).some((alias) => fuzzy(alias, q)),
+            );
+          if (!matchesSearch) return false;
+          if (preset === "week")
+            return (
+              Math.max(p.lastOpened, p.createdAt) >= Date.now() - 7 * 86400000
+            );
+          if (preset === "dirty") return (p.changes || 0) > 0;
+          if (preset === "backend")
+            return p.group === "company" && p.tags.includes("后端");
+          return true;
         })
         .sort((a, b) =>
           sort === "name"
@@ -89,9 +121,30 @@ export default function CompactMode({
               ? b.createdAt - a.createdAt
               : b.lastOpened - a.lastOpened,
         ),
-    [projects, search, group, stack, tag, sort],
+    [projects, search, group, stack, tag, sort, preset],
   );
   const current = results.find((p) => p.id === selected) || results[0];
+  const actions = [
+    { kind: "ide" as const, label: "打开 IDE", icon: Code2, disabled: false },
+    {
+      kind: "terminal" as const,
+      label: "打开终端",
+      icon: Terminal,
+      disabled: false,
+    },
+    {
+      kind: "repository" as const,
+      label: "访问仓库",
+      icon: GitBranch,
+      disabled: !current?.remote,
+    },
+    {
+      kind: "folder" as const,
+      label: "在访达中打开",
+      icon: FolderOpen,
+      disabled: false,
+    },
+  ];
   useEffect(() => {
     input.current?.focus();
     const focus = () => input.current?.focus();
@@ -102,6 +155,9 @@ export default function CompactMode({
     selectedRow.current?.scrollIntoView({ block: "nearest" });
   }, [current?.id]);
   useEffect(() => {
+    if (actions[actionIndex]?.disabled) setActionIndex(0);
+  }, [current?.id, current?.remote, actionIndex]);
+  useEffect(() => {
     const shortcut = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
@@ -111,7 +167,10 @@ export default function CompactMode({
     window.addEventListener("keydown", shortcut);
     return () => window.removeEventListener("keydown", shortcut);
   }, []);
-  function open(p: Project, kind: "ide" | "terminal" = "ide") {
+  function open(
+    p: Project,
+    kind: "ide" | "terminal" | "repository" | "folder" = "ide",
+  ) {
     if (!busy && !p.missing) onOpen(p, kind);
   }
   function handleProjectKeyDown(e: ReactKeyboardEvent<HTMLElement>) {
@@ -128,15 +187,78 @@ export default function CompactMode({
         ].id,
       );
       input.current?.focus();
+    } else if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+      e.preventDefault();
+      e.stopPropagation();
+      const direction = e.key === "ArrowRight" ? 1 : -1;
+      let next = actionIndex;
+      do {
+        next = (next + direction + actions.length) % actions.length;
+      } while (actions[next].disabled && next !== actionIndex);
+      setActionIndex(next);
+      input.current?.focus();
     } else if (e.key === "Enter") {
       e.preventDefault();
       e.stopPropagation();
-      if (current && !e.repeat) open(current, e.metaKey ? "terminal" : "ide");
+      const action = actions[actionIndex];
+      if (current && action && !action.disabled && !e.repeat)
+        open(current, action.kind);
     } else if (e.key === "Escape") {
-      setSearch("");
-      setSelected("");
-      input.current?.focus();
+      if (
+        search ||
+        preset ||
+        group !== "all" ||
+        stack !== "all" ||
+        tag !== "all" ||
+        sort !== "recent"
+      ) {
+        setSearch("");
+        clearStructuredFilters();
+        input.current?.focus();
+      } else onHide();
     }
+  }
+  function clearStructuredFilters() {
+    setGroup("all");
+    setStack("all");
+    setTag("all");
+    setSort("recent");
+    setPreset("");
+    setSelected("");
+  }
+  function applyBuiltIn(id: string) {
+    clearStructuredFilters();
+    setSearch("");
+    setPreset(id);
+    input.current?.focus();
+  }
+  function applySaved(filter: SavedFilter) {
+    setSearch(filter.query);
+    setGroup(filter.group);
+    setStack(filter.stack);
+    setTag(filter.tag);
+    setSort(filter.sort);
+    setPreset(filter.id);
+    setSelected("");
+    input.current?.focus();
+  }
+  function saveFilter() {
+    const name = filterName.trim();
+    if (!name) return;
+    onSaveFilters([
+      ...savedFilters,
+      {
+        id: `filter-${Date.now()}`,
+        name,
+        query: search,
+        group,
+        stack,
+        tag,
+        sort,
+      },
+    ]);
+    setNamingFilter(false);
+    setFilterName("");
   }
   return (
     <main className="compact-shell" aria-label="精简模式">
@@ -151,9 +273,10 @@ export default function CompactMode({
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
+              setPreset("");
               setSelected("");
             }}
-            title="↑ / ↓ 选择项目 · Enter 使用 IDE 打开 · ⌘ Enter 使用终端打开"
+            title="↑ / ↓ 选择项目 · ← / → 选择打开方式 · Enter 执行"
             onKeyDown={handleProjectKeyDown}
           />
           {search ? (
@@ -180,6 +303,90 @@ export default function CompactMode({
           标准模式
         </button>
       </div>
+      <div className="compact-presets" aria-label="快捷筛选">
+        <span className="compact-presets-label">快捷筛选</span>
+        {[
+          ["week", "本周项目"],
+          ["dirty", "有未提交修改"],
+          ["backend", "公司后端"],
+        ].map(([id, label]) => (
+          <button
+            key={id}
+            className={preset === id ? "active" : ""}
+            aria-pressed={preset === id}
+            onClick={() => applyBuiltIn(id)}
+          >
+            {label}
+          </button>
+        ))}
+        {savedFilters.map((filter) => (
+          <span className="saved-filter" key={filter.id}>
+            <button
+              className={preset === filter.id ? "active" : ""}
+              aria-pressed={preset === filter.id}
+              onClick={() => applySaved(filter)}
+            >
+              {filter.name}
+            </button>
+            <button
+              className="saved-filter-remove"
+              aria-label={`删除筛选 ${filter.name}`}
+              title={`删除筛选 ${filter.name}`}
+              onClick={() =>
+                onSaveFilters(
+                  savedFilters.filter((item) => item.id !== filter.id),
+                )
+              }
+            >
+              <Trash2 size={11} />
+            </button>
+          </span>
+        ))}
+        {namingFilter ? (
+          <form
+            className="save-filter-form"
+            onSubmit={(event) => {
+              event.preventDefault();
+              saveFilter();
+            }}
+          >
+            <input
+              autoFocus
+              aria-label="筛选名称"
+              placeholder="筛选名称"
+              maxLength={30}
+              value={filterName}
+              onChange={(event) => setFilterName(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Escape") {
+                  event.stopPropagation();
+                  setNamingFilter(false);
+                }
+              }}
+            />
+            <button type="submit" disabled={!filterName.trim()}>
+              保存
+            </button>
+          </form>
+        ) : (
+          <button
+            className="save-filter"
+            disabled={
+              savedFilters.length >= 20 ||
+              ["week", "dirty", "backend"].includes(preset)
+            }
+            title={
+              ["week", "dirty", "backend"].includes(preset)
+                ? "内置快捷筛选无需重复保存"
+                : "保存当前搜索与筛选条件"
+            }
+            onClick={() => setNamingFilter(true)}
+          >
+            <Save size={12} />
+            保存当前
+          </button>
+        )}
+      </div>
       <div className="compact-filters">
         <div>
           <select
@@ -187,6 +394,7 @@ export default function CompactMode({
             value={group}
             onChange={(e) => {
               setGroup(e.target.value);
+              setPreset("");
               setSelected("");
             }}
           >
@@ -202,6 +410,7 @@ export default function CompactMode({
             value={stack}
             onChange={(e) => {
               setStack(e.target.value);
+              setPreset("");
               setSelected("");
             }}
           >
@@ -215,6 +424,7 @@ export default function CompactMode({
             value={tag}
             onChange={(e) => {
               setTag(e.target.value);
+              setPreset("");
               setSelected("");
             }}
           >
@@ -234,7 +444,10 @@ export default function CompactMode({
           <select
             aria-label="排序"
             value={sort}
-            onChange={(e) => setSort(e.target.value)}
+            onChange={(e) => {
+              setSort(e.target.value);
+              setPreset("");
+            }}
           >
             <option value="recent">最近打开 ↓</option>
             <option value="name">名称 A–Z</option>
@@ -249,7 +462,7 @@ export default function CompactMode({
               ref={p.id === current?.id ? selectedRow : undefined}
               className={`compact-project ${p.id === current?.id ? "selected" : ""}`}
               aria-label={`打开项目 ${p.name}`}
-              title={`${p.name}\n${p.path}\nEnter：IDE 打开 · ⌘ Enter：终端打开`}
+              title={`${p.name}\n${p.path}\n↑ / ↓：选择项目 · ← / →：选择打开方式 · Enter：执行`}
               aria-current={p.id === current?.id ? "true" : undefined}
               disabled={busy || p.missing}
               onFocus={() => setSelected(p.id)}
@@ -276,13 +489,7 @@ export default function CompactMode({
               <span
                 className={`project-mark ${p.stacks[0] === "Go" ? "go" : p.stacks[0] === "Python" ? "python" : ""}`}
               >
-                {p.stacks[0] === "Go" ? (
-                  <Box />
-                ) : p.stacks[0] === "Python" ? (
-                  <FileCode2 />
-                ) : (
-                  <Code2 />
-                )}
+                <TechStackIcon stack={p.stacks[0]} size={17} />
               </span>
               <span className="compact-project-info">
                 <span className="compact-project-name">
@@ -332,6 +539,28 @@ export default function CompactMode({
           </li>
         )}
       </ul>
+      <footer className="compact-command-bar" aria-label="打开方式">
+        <span className="compact-command-project">
+          {current ? current.name : "选择一个项目"}
+        </span>
+        {actions.map((action, index) => {
+          const ActionIcon = action.icon;
+          return (
+            <button
+              key={action.kind}
+              className={actionIndex === index ? "active" : ""}
+              aria-pressed={actionIndex === index}
+              disabled={!current || busy || current.missing || action.disabled}
+              onFocus={() => setActionIndex(index)}
+              onClick={() => current && open(current, action.kind)}
+            >
+              <ActionIcon size={13} />
+              {action.label}
+              {actionIndex === index && <kbd>↵</kbd>}
+            </button>
+          );
+        })}
+      </footer>
       {error && (
         <div className="error-toast" role="alert">
           <span>{error}</span>

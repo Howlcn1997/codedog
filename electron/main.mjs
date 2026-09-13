@@ -1,6 +1,7 @@
 import { terminalLaunch } from "./terminal.mjs";
 import { chooseEditor, projectMenuTemplate } from "./project-menu.mjs";
 import { setupAutoUpdates } from "./updates.mjs";
+import { applyWindowMode, sizeForMode } from "./window-mode.mjs";
 import {
   app,
   autoUpdater,
@@ -13,8 +14,10 @@ import {
   nativeImage,
   nativeTheme,
   Menu,
+  globalShortcut,
 } from "electron";
 import fs from "node:fs/promises";
+import { watch as watchFiles } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -22,8 +25,11 @@ import {
   inspect,
   run,
   diskUsage,
+  dependencyCleanupPlan,
+  cleanProjectDependencies,
   installPlan,
   exists,
+  isSearchSource,
 } from "./core.mjs";
 const here = path.dirname(fileURLToPath(import.meta.url));
 if (process.env.CODEDOG_DATA_DIR)
@@ -119,6 +125,19 @@ async function openProject(id, kind, editorOverride) {
       item.lastOpened = Date.now();
       await store.save();
     });
+  } else if (kind === "repository") {
+    let remote = p.remote || (await inspect(p.path)).remote;
+    if (/^git@[\w.-]+:[^\s]+$/i.test(remote)) {
+      const match = remote.match(/^git@([\w.-]+):(.+)$/i);
+      remote = `https://${match[1]}/${match[2]}`;
+    } else if (/^ssh:\/\/(?:git@)?[\w.-]+\/[^\s]+$/i.test(remote)) {
+      const match = remote.match(/^ssh:\/\/(?:git@)?([\w.-]+)\/(.+)$/i);
+      remote = `https://${match[1]}/${match[2]}`;
+    }
+    remote = remote.replace(/\.git$/i, "");
+    if (!/^https:\/\/[^\s]+$/i.test(remote))
+      throw Error("这个项目没有可访问的 HTTPS 仓库地址");
+    await shell.openExternal(remote);
   } else throw Error("无效的打开方式");
 }
 // Do not await ready at module scope: Electron waits for ESM evaluation before emitting ready.
@@ -156,26 +175,49 @@ app
           nativeTheme.shouldUseDarkColors ? "#191b23" : "#fafbfc",
         );
     });
-    let standardSize = [1500, 980];
-    let compactSize = [920, 650];
     let currentMode = store.state.uiMode === "compact" ? "compact" : "standard";
+    let indexWatchers = [];
+    const indexTimers = new Map();
+    function resetSearchWatchers() {
+      for (const watcher of indexWatchers) watcher.close();
+      indexWatchers = [];
+      for (const project of store.state.projects) {
+        try {
+          const watcher = watchFiles(
+            project.path,
+            { persistent: false },
+            (_event, filename) => {
+              if (!filename || !isSearchSource(filename.toString())) return;
+              clearTimeout(indexTimers.get(project.id));
+              indexTimers.set(
+                project.id,
+                setTimeout(async () => {
+                  indexTimers.delete(project.id);
+                  try {
+                    await store.refreshSearchIndex(project.id);
+                    window?.webContents.send("codedog:searchIndexUpdated");
+                  } catch {}
+                }, 350),
+              );
+            },
+          );
+          watcher.on("error", () => watcher.close());
+          indexWatchers.push(watcher);
+        } catch {}
+      }
+    }
     function resizeMode(mode) {
       if (mode === currentMode || !window || window.isDestroyed()) return;
-      if (!window.isMaximized() && !window.isFullScreen()) {
-        if (currentMode === "compact") compactSize = window.getSize();
-        else standardSize = window.getSize();
-      }
       currentMode = mode;
-      window.setMinimumSize(...(mode === "compact" ? [640, 420] : [1050, 700]));
-      if (!window.isMaximized() && !window.isFullScreen())
-        window.setSize(...(mode === "compact" ? compactSize : standardSize));
+      applyWindowMode(window, mode);
     }
     function createWindow() {
+      const [width, height] = sizeForMode(currentMode);
       window = new BrowserWindow({
-        width: currentMode === "compact" ? compactSize[0] : standardSize[0],
-        height: currentMode === "compact" ? compactSize[1] : standardSize[1],
-        minWidth: currentMode === "compact" ? 640 : 1050,
-        minHeight: currentMode === "compact" ? 420 : 700,
+        width,
+        height,
+        minWidth: width,
+        minHeight: height,
         title: "codedog",
         backgroundColor: nativeTheme.shouldUseDarkColors
           ? "#191b23"
@@ -190,6 +232,7 @@ app
           sandbox: true,
         },
       });
+      window.center();
       window.webContents.on("did-finish-load", () => {
         console.info("[codedog] Window loaded:", window.webContents.getURL());
       });
@@ -216,11 +259,16 @@ app
       groups: store.groups(),
       theme: store.state.theme || "system",
       terminal: store.state.terminal || "system",
+      savedFilters: store.state.savedFilters || [],
       projects: await store.list(),
     }));
     handle("setMode", async (mode) => {
       await store.setMode(mode);
       resizeMode(mode);
+    });
+    handle("setSavedFilters", (filters) => store.setSavedFilters(filters));
+    handle("hideLauncher", async () => {
+      if (currentMode === "compact") window.hide();
     });
     handle("pickFolder", pick);
     handle("setRoot", (folder) => job(() => store.setRoot(folder)));
@@ -237,10 +285,25 @@ app
         await store.save();
       });
     });
-    handle("import", (input) => job(() => store.importProject(input, log)));
+    handle("import", (input) =>
+      job(async () => {
+        const result = await store.importProject(input, log);
+        resetSearchWatchers();
+        return result;
+      }),
+    );
     handle("scan", (folder) => store.scan(folder));
+    handle("refreshSearchIndex", (id) =>
+      job(() => store.refreshSearchIndex(id)),
+    );
     handle("update", (id, patch) => store.update(id, patch));
-    handle("forget", (id) => job(() => store.forget(id)));
+    handle("forget", (id) =>
+      job(async () => {
+        const result = await store.forget(id);
+        resetSearchWatchers();
+        return result;
+      }),
+    );
     handle("open", openProject);
     handle("projectMenu", async (id) => {
       const project = await store.get(id);
@@ -266,6 +329,86 @@ app
       clipboard.writeText((await store.get(id)).path),
     );
     handle("storage", async (id) => diskUsage((await store.get(id)).path));
+    handle("storageBatch", async (ids) => {
+      if (!Array.isArray(ids) || ids.length > 500)
+        throw Error("项目列表格式无效");
+      const unique = [...new Set(ids)];
+      const results = {};
+      let index = 0;
+      await Promise.all(
+        Array.from({ length: Math.min(4, unique.length) }, async () => {
+          while (index < unique.length) {
+            const id = unique[index++];
+            results[id] = await diskUsage((await store.get(id)).path);
+          }
+        }),
+      );
+      return results;
+    });
+    handle("cleanupDependencies", (ids) =>
+      job(async () => {
+        if (!Array.isArray(ids) || !ids.length || ids.length > 500)
+          throw Error("请选择要清理的项目");
+        const projects = await Promise.all(
+          [...new Set(ids)].map((id) => store.get(id)),
+        );
+        const plans = await Promise.all(
+          projects.map(async (project) => ({
+            project,
+            plan: await dependencyCleanupPlan(project.path),
+          })),
+        );
+        const reclaimable = plans.reduce(
+          (total, item) => total + item.plan.size,
+          0,
+        );
+        const directories = plans.reduce(
+          (total, item) => total + item.plan.directories.length,
+          0,
+        );
+        if (!directories)
+          return { canceled: false, reclaimed: 0, projects: [] };
+        const format = (bytes) =>
+          bytes >= 1073741824
+            ? `${(bytes / 1073741824).toFixed(1)} GB`
+            : `${(bytes / 1048576).toFixed(1)} MB`;
+        const cleanablePlans = plans.filter(
+          (item) => item.plan.directories.length,
+        );
+        const preview = cleanablePlans
+          .slice(0, 12)
+          .map(
+            ({ project, plan }) =>
+              `${project.name} · ${format(plan.size)} · ${plan.directories.map((item) => item.relativePath).join(", ")}`,
+          );
+        if (cleanablePlans.length > 12)
+          preview.push(`以及其他 ${cleanablePlans.length - 12} 个项目`);
+        const answer = await dialog.showMessageBox(window, {
+          type: "warning",
+          title: "清理项目依赖",
+          message: `清理 ${directories} 个依赖目录？`,
+          detail: `${preview.join("\n")}\n\n预计释放 ${format(reclaimable)}。源码与锁文件会保留，需要时可重新安装依赖。`,
+          buttons: ["取消", "清理依赖"],
+          defaultId: 0,
+          cancelId: 0,
+          noLink: true,
+        });
+        if (answer.response !== 1) return { canceled: true };
+        const cleaned = [];
+        for (const project of projects) {
+          const result = await cleanProjectDependencies(project.path);
+          if (result.removed) cleaned.push({ id: project.id, ...result });
+        }
+        const reclaimed = cleaned.reduce(
+          (total, item) => total + item.reclaimed,
+          0,
+        );
+        log(
+          `已清理 ${cleaned.length} 个项目的依赖，释放约 ${format(reclaimed)}\n`,
+        );
+        return { canceled: false, reclaimed, projects: cleaned };
+      }),
+    );
     handle("environment", async (id) => {
       const p = await store.get(id);
       const info = await inspect(p.path);
@@ -350,9 +493,42 @@ app
       if (error) throw Error(error);
     });
     createWindow();
+    resetSearchWatchers();
+    const launcherShortcut = "CommandOrControl+Shift+Space";
+    if (
+      !globalShortcut.register(launcherShortcut, async () => {
+        if (
+          window?.isVisible() &&
+          window.isFocused() &&
+          currentMode === "compact"
+        ) {
+          window.hide();
+          return;
+        }
+        if (!window || window.isDestroyed()) createWindow();
+        if (currentMode !== "compact") {
+          await store.setMode("compact");
+          resizeMode("compact");
+          window.webContents.send("codedog:mode", "compact");
+        }
+        window.show();
+        window.focus();
+        if (process.platform === "darwin") app.focus({ steal: true });
+      })
+    )
+      console.warn(`[codedog] 无法注册全局快捷键 ${launcherShortcut}`);
+    app.on("will-quit", () => {
+      for (const watcher of indexWatchers) watcher.close();
+      for (const timer of indexTimers.values()) clearTimeout(timer);
+      globalShortcut.unregisterAll();
+    });
     setupAutoUpdates({ app, autoUpdater, dialog });
     app.on("activate", () => {
       if (BrowserWindow.getAllWindows().length === 0) createWindow();
+      else if (window && !window.isVisible()) {
+        window.show();
+        window.focus();
+      }
     });
     app.on("window-all-closed", () => {
       if (process.platform !== "darwin") app.quit();

@@ -22,7 +22,8 @@
     "@radix-ui/react-dialog": "latest",
     "lucide-react": "latest",
     "react": "latest",
-    "react-dom": "latest"
+    "react-dom": "latest",
+    "simple-icons": "^16.30.0"
   },
   "devDependencies": {
     "@playwright/test": "latest",
