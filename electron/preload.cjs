@@ -23,6 +23,7 @@ const methods = [
   "copy",
   "storage",
   "storageBatch",
+  "cleanupDependenciesPreview",
   "cleanupDependencies",
   "environment",
   "install",

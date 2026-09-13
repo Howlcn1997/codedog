@@ -27,6 +27,7 @@ import {
   run,
   diskUsage,
   dependencyCleanupPlan,
+  createDependencyCleanupPreview,
   cleanProjectDependencies,
   installPlan,
   exists,
@@ -447,6 +448,20 @@ app
       );
       return results;
     });
+    handle("cleanupDependenciesPreview", async (ids) => {
+      if (!Array.isArray(ids) || !ids.length || ids.length > 500)
+        throw Error("请选择要清理的项目");
+      const projects = await Promise.all(
+        [...new Set(ids)].map((id) => store.get(id)),
+      );
+      const plans = await Promise.all(
+        projects.map(async (project) => ({
+          project,
+          plan: await dependencyCleanupPlan(project.path),
+        })),
+      );
+      return createDependencyCleanupPreview(plans);
+    });
     handle("cleanupDependencies", (ids) =>
       job(async () => {
         if (!Array.isArray(ids) || !ids.length || ids.length > 500)
@@ -454,48 +469,10 @@ app
         const projects = await Promise.all(
           [...new Set(ids)].map((id) => store.get(id)),
         );
-        const plans = await Promise.all(
-          projects.map(async (project) => ({
-            project,
-            plan: await dependencyCleanupPlan(project.path),
-          })),
-        );
-        const reclaimable = plans.reduce(
-          (total, item) => total + item.plan.size,
-          0,
-        );
-        const directories = plans.reduce(
-          (total, item) => total + item.plan.directories.length,
-          0,
-        );
-        if (!directories)
-          return { canceled: false, reclaimed: 0, projects: [] };
         const format = (bytes) =>
           bytes >= 1073741824
             ? `${(bytes / 1073741824).toFixed(1)} GB`
             : `${(bytes / 1048576).toFixed(1)} MB`;
-        const cleanablePlans = plans.filter(
-          (item) => item.plan.directories.length,
-        );
-        const preview = cleanablePlans
-          .slice(0, 12)
-          .map(
-            ({ project, plan }) =>
-              `${project.name} · ${format(plan.size)} · ${plan.directories.map((item) => item.relativePath).join(", ")}`,
-          );
-        if (cleanablePlans.length > 12)
-          preview.push(`以及其他 ${cleanablePlans.length - 12} 个项目`);
-        const answer = await dialog.showMessageBox(window, {
-          type: "warning",
-          title: "清理项目依赖",
-          message: `清理 ${directories} 个依赖目录？`,
-          detail: `${preview.join("\n")}\n\n预计释放 ${format(reclaimable)}。源码与锁文件会保留，需要时可重新安装依赖。`,
-          buttons: ["取消", "清理依赖"],
-          defaultId: 0,
-          cancelId: 0,
-          noLink: true,
-        });
-        if (answer.response !== 1) return { canceled: true };
         const cleaned = [];
         for (const project of projects) {
           const result = await cleanProjectDependencies(project.path);

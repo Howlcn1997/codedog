@@ -111,6 +111,15 @@ export type Api = {
   ) => Promise<
     Record<string, { source: number; dependencies: number; skipped: number }>
   >;
+  cleanupDependenciesPreview: (ids: string[]) => Promise<{
+    size: number;
+    directories: {
+      projectId: string;
+      projectName: string;
+      path: string;
+      size: number;
+    }[];
+  }>;
   cleanupDependencies: (ids: string[]) => Promise<{
     canceled: boolean;
     reclaimed?: number;

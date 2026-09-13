@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { spawn } from "node:child_process";
+import { createRequire } from "node:module";
 import { copyClaudeCodeChats } from "./claude-sessions.mjs";
 import {
   normalizeSearchText,
@@ -14,6 +15,16 @@ export const defaultGroups = {
   temporary: "临时项目",
 };
 export const exists = async (p) => !!(await fs.stat(p).catch(() => null));
+const require = createRequire(import.meta.url);
+const storageFs = (() => {
+  try {
+    // Electron patches node:fs so .asar files behave like directories. Storage
+    // management needs the real filesystem view so archives can be removed.
+    return require("original-fs").promises;
+  } catch {
+    return fs;
+  }
+})();
 export const within = (root, target) => {
   const r = path.relative(root, target);
   return (
@@ -412,7 +423,7 @@ export async function diskUsage(folder) {
     dependencies = 0,
     skipped = 0;
   async function walk(dir, isDependency = false) {
-    for (const entry of await fs
+    for (const entry of await storageFs
       .readdir(dir, { withFileTypes: true })
       .catch(() => {
         skipped++;
@@ -424,7 +435,7 @@ export async function diskUsage(folder) {
         isDependency || ["node_modules", ".venv", "venv"].includes(entry.name);
       if (entry.isDirectory()) await walk(p, dep);
       else {
-        const size = (await fs.stat(p).catch(() => null))?.size || 0;
+        const size = (await storageFs.stat(p).catch(() => null))?.size || 0;
         if (dep) dependencies += size;
         else source += size;
       }
@@ -439,11 +450,11 @@ const dependencyDirectoryNames = new Set(["node_modules", ".venv", "venv"]);
 async function directorySize(folder) {
   let size = 0;
   async function walk(dir) {
-    for (const entry of await fs.readdir(dir, { withFileTypes: true })) {
+    for (const entry of await storageFs.readdir(dir, { withFileTypes: true })) {
       if (entry.isSymbolicLink()) continue;
       const target = path.join(dir, entry.name);
       if (entry.isDirectory()) await walk(target);
-      else size += (await fs.stat(target).catch(() => null))?.size || 0;
+      else size += (await storageFs.stat(target).catch(() => null))?.size || 0;
     }
   }
   await walk(folder);
@@ -451,10 +462,10 @@ async function directorySize(folder) {
 }
 
 export async function dependencyCleanupPlan(folder) {
-  const project = await fs.realpath(folder);
+  const project = await storageFs.realpath(folder);
   const directories = [];
   async function walk(dir) {
-    for (const entry of await fs.readdir(dir, { withFileTypes: true })) {
+    for (const entry of await storageFs.readdir(dir, { withFileTypes: true })) {
       if (entry.isSymbolicLink() || !entry.isDirectory()) continue;
       const target = path.join(dir, entry.name);
       if (dependencyDirectoryNames.has(entry.name)) {
@@ -476,14 +487,34 @@ export async function dependencyCleanupPlan(folder) {
   };
 }
 
+export function createDependencyCleanupPreview(plans) {
+  const directories = plans.flatMap(({ project, plan }) =>
+    plan.directories.map((directory) => ({
+      projectId: project.id,
+      projectName: project.name,
+      path: directory.relativePath,
+      size: directory.size,
+    })),
+  );
+  return {
+    directories,
+    size: directories.reduce((total, item) => total + item.size, 0),
+  };
+}
+
 export async function cleanProjectDependencies(folder) {
-  const project = await fs.realpath(folder);
+  const project = await storageFs.realpath(folder);
   const plan = await dependencyCleanupPlan(project);
   for (const directory of plan.directories) {
     if (!within(project, directory.path)) throw Error("依赖目录已移出项目范围");
-    const stat = await fs.lstat(directory.path).catch(() => null);
+    const stat = await storageFs.lstat(directory.path).catch(() => null);
     if (!stat || stat.isSymbolicLink() || !stat.isDirectory()) continue;
-    await fs.rm(directory.path, { recursive: true, force: false });
+    await storageFs.rm(directory.path, {
+      recursive: true,
+      force: false,
+      maxRetries: 3,
+      retryDelay: 100,
+    });
   }
   return {
     removed: plan.directories.length,

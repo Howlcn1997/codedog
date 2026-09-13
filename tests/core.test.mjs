@@ -13,6 +13,7 @@ import {
   run,
   installPlan,
   dependencyCleanupPlan,
+  createDependencyCleanupPreview,
   cleanProjectDependencies,
   createSearchIndex,
   defaultLauncherShortcut,
@@ -647,4 +648,25 @@ test("dependency cleanup removes only project-local dependency directories", asy
     await fs.readFile(path.join(outside, "keep.txt"), "utf8"),
     "keep",
   );
+});
+
+test("dependency cleanup preview preserves every directory for in-app expansion", () => {
+  const directories = Array.from({ length: 100 }, (_, index) => ({
+    relativePath: `packages/package-${index}/node_modules`,
+    size: index + 1,
+  }));
+  const preview = createDependencyCleanupPreview([
+    {
+      project: { id: "tripyoyo-id", name: "tripyoyo" },
+      plan: { directories },
+    },
+  ]);
+  assert.equal(preview.directories.length, 100);
+  assert.deepEqual(preview.directories[0], {
+    projectId: "tripyoyo-id",
+    projectName: "tripyoyo",
+    path: "packages/package-0/node_modules",
+    size: 1,
+  });
+  assert.equal(preview.size, 5050);
 });

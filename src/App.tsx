@@ -10,6 +10,7 @@ import {
   Search,
   Plus,
   ChevronDown,
+  ChevronUp,
   ChevronRight,
   Folder,
   FolderOpen,
@@ -60,6 +61,16 @@ const defaultGroups: Record<Group, string> = {
 const api = window.codedog;
 const empty: State = { root: "", ide: "Cursor", projects: [] };
 const defaultLauncherShortcut = "CommandOrControl+Shift+Space";
+type DependencyCleanupPreview = {
+  ids: string[];
+  size: number;
+  directories: {
+    projectId: string;
+    projectName: string;
+    path: string;
+    size: number;
+  }[];
+};
 function launcherShortcutParts(shortcut: string) {
   const isMac = navigator.platform.toLowerCase().includes("mac");
   const labels: Record<string, string> = {
@@ -258,6 +269,9 @@ export default function App() {
     >({}),
     [storageSelected, setStorageSelected] = useState<string[]>([]),
     [storageLoading, setStorageLoading] = useState(false),
+    [cleanupPreview, setCleanupPreview] =
+      useState<DependencyCleanupPreview | null>(null),
+    [cleanupExpanded, setCleanupExpanded] = useState(false),
     [envs, setEnvs] = useState<Record<string, Environment[]>>({});
   const [importForm, setImportForm] = useState<ImportInput>({
       copyClaudeChats: false,
@@ -448,12 +462,34 @@ export default function App() {
   async function cleanSelectedDependencies() {
     if (!api || demoMode || !storageSelected.length) return;
     const ids = [...storageSelected];
+    setStorageLoading(true);
+    setError("");
+    try {
+      const preview = await api.cleanupDependenciesPreview(ids);
+      if (!preview.directories.length) {
+        setToast("所选项目没有可清理的依赖");
+        return;
+      }
+      setCleanupPreview({ ...preview, ids });
+      setCleanupExpanded(false);
+      setModal("cleanup");
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setStorageLoading(false);
+    }
+  }
+  async function confirmDependencyCleanup() {
+    if (!api || !cleanupPreview) return;
+    const ids = cleanupPreview.ids;
     await perform(async () => {
       const result = await api.cleanupDependencies(ids);
-      if (result.canceled) return;
       const updated = await api.storageBatch(ids);
       setUsage((current) => ({ ...current, ...updated }));
       setStorageSelected([]);
+      setCleanupPreview(null);
+      setCleanupExpanded(false);
+      setModal("");
       await refresh();
       setToast(
         result.reclaimed
@@ -461,6 +497,12 @@ export default function App() {
           : "所选项目没有可清理的依赖",
       );
     });
+  }
+  function closeDependencyCleanup() {
+    if (busy) return;
+    setCleanupPreview(null);
+    setCleanupExpanded(false);
+    setModal("");
   }
   function navigate(value: string) {
     setNav(value);
@@ -2192,6 +2234,91 @@ export default function App() {
             保存信息
           </button>
         </div>
+      </Modal>
+      <Modal
+        title={`清理 ${cleanupPreview?.directories.length || 0} 个依赖目录`}
+        description="这些目录会被永久删除；项目源码和锁文件会保留。"
+        open={modal === "cleanup" && !!cleanupPreview}
+        onClose={closeDependencyCleanup}
+        className="cleanup-modal"
+      >
+        {cleanupPreview && (
+          <>
+            <div className="cleanup-summary">
+              <div>
+                <span>预计释放</span>
+                <strong>{formatSize(cleanupPreview.size)}</strong>
+              </div>
+              <div>
+                <span>影响项目</span>
+                <strong>
+                  {
+                    new Set(
+                      cleanupPreview.directories.map((item) => item.projectId),
+                    ).size
+                  }{" "}
+                  个
+                </strong>
+              </div>
+            </div>
+            <div className="cleanup-list-heading">
+              <span>即将删除</span>
+              <span>{cleanupPreview.directories.length} 项</span>
+            </div>
+            <ul className={`cleanup-list ${cleanupExpanded ? "expanded" : ""}`}>
+              {cleanupPreview.directories
+                .slice(0, cleanupExpanded ? undefined : 5)
+                .map((item) => (
+                  <li key={`${item.projectId}:${item.path}`}>
+                    <span className="cleanup-project">{item.projectName}</span>
+                    <code>{item.path}</code>
+                    <span className="cleanup-size">
+                      {formatSize(item.size)}
+                    </span>
+                  </li>
+                ))}
+            </ul>
+            {cleanupPreview.directories.length > 5 && (
+              <button
+                className="cleanup-expand"
+                aria-expanded={cleanupExpanded}
+                onClick={() => setCleanupExpanded((value) => !value)}
+              >
+                {cleanupExpanded ? (
+                  <>
+                    <ChevronUp size={14} /> 收起列表
+                  </>
+                ) : (
+                  <>
+                    <ChevronDown size={14} /> 展开其余{" "}
+                    {cleanupPreview.directories.length - 5} 项
+                  </>
+                )}
+              </button>
+            )}
+            <div className="modal-footer">
+              <button
+                className="button"
+                disabled={busy}
+                onClick={closeDependencyCleanup}
+              >
+                取消
+              </button>
+              <button
+                className="button danger"
+                disabled={busy}
+                onClick={() => void confirmDependencyCleanup()}
+              >
+                {busy ? (
+                  <Loader2 size={14} className="spin" />
+                ) : (
+                  <Trash2 size={14} />
+                )}
+                清理依赖
+              </button>
+            </div>
+          </>
+        )}
       </Modal>
       <Modal
         title="移出管理"
