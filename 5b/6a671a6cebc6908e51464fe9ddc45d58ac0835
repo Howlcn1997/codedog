@@ -1,0 +1,157 @@
+electron/core.mjs
+  s_79f3736afdc399::t_9c02c4269e6fce 618-621,624-649,873-884
+  s_b98df4f2a78e9f::t_105055d65f3dfe 843
+  s_79f3736afdc399::t_4144ca611a261b 622-623
+  s_a0ba8bca9ba4e9::t_306c4bb0c54b91 387-443
+  s_07e8f9aa90679e::t_aefa88eb53861f 157-203,347-350,458-465,698-711,831
+  s_b98df4f2a78e9f::t_e7aaa724c277df 5,733-737,775-776,795,797-806,844-845
+  s_cc06f1d586acc9::t_e2d0cd87d0d79a 12-56,466-478,481-514,516-524,530,532-537,663,666-668,672,885-894,914-954
+scripts/smoke.mjs
+  s_a0ba8bca9ba4e9::t_15f7c07f86522c 46-56,162
+  s_a0ba8bca9ba4e9::t_9d551a86f6235a 20-43,151-154
+  s_a0ba8bca9ba4e9::t_79c3dc3e845cb8 73-75,80-84,135-150
+electron/claude-sessions.mjs
+  s_b98df4f2a78e9f::t_9c899d8be203ec 42-44,225-231
+  s_b98df4f2a78e9f::t_939f4a7c2cb98c 53-73,176-181
+  s_b98df4f2a78e9f::t_19dd4f9a809d4b 41
+  s_b98df4f2a78e9f::t_e31a75ac832b8a 167-169
+  s_b98df4f2a78e9f::t_3147f982bacb4e 1-40,45-52,74-98,101-102,111-166,170-175,182-224,232-234,236-238
+  s_b98df4f2a78e9f::t_f81c29594771bf 99-100,103-110
+  s_b98df4f2a78e9f::t_105055d65f3dfe 235
+electron/window-mode.mjs
+  s_a0ba8bca9ba4e9::t_3c36b14b793442 1-27
+tests/window-mode.test.mjs
+  s_a0ba8bca9ba4e9::t_bb982ba5d8c0f1 1-2,4-61
+tests/core.test.mjs
+  s_a0ba8bca9ba4e9::t_a3ead6e9180db2 524-540,542-544,546-548,550-560,562-569,571-573,575-577,579-581,583-584
+  s_a0ba8bca9ba4e9::t_318bc3ac033a94 15-16
+  s_79f3736afdc399::t_103c438fd75bba 69-107
+src/App.tsx
+  s_79f3736afdc399::t_191392ae0b7dd7 1756-1769
+  s_a0ba8bca9ba4e9::t_f354a92cf86043 5,211-212,293-300,397-401,405-429,437-441
+  s_79f3736afdc399::t_ace8c023acc10a 51,232,264-271,522,586-597,1996-2006,2034-2036
+  s_a0ba8bca9ba4e9::t_470cae498b22f2 4,151,2084
+  s_a0ba8bca9ba4e9::t_50a8f909cdb4e9 402-404
+  s_a0ba8bca9ba4e9::t_e97181a44e3abb 1702-1703,1705-1713,1715-1722,1724-1725,1727-1755,1770-1927
+  s_b98df4f2a78e9f::t_b580897e9659b4 215,454,1575-1593
+  s_79f3736afdc399::t_64c8c98fd3145d 317,327-332
+  s_a0ba8bca9ba4e9::t_66162668554bd2 112,120,126-128,203-205
+  h_fca69631ad06e9 642,1699
+  s_a0ba8bca9ba4e9::t_afd930f8b48040 723,727-733,756-777,779-780,1037-1038,1040
+  s_b98df4f2a78e9f::t_939f4a7c2cb98c 1465-1472
+  s_a0ba8bca9ba4e9::t_c180cf39b4e396 724,781-796,798-832,834-838,840-867,869-871,873-899,901-913,916-929,931-934,936-942,944-1036
+src/main.tsx
+  s_a0ba8bca9ba4e9::t_990cc8a9436bcb 4,6-9
+README.md
+  s_b98df4f2a78e9f::t_939f4a7c2cb98c 35
+src/projectSearch.ts
+  s_07e8f9aa90679e::t_bc6ab719904ccb 1-97
+tests/startup.test.mjs
+  s_79f3736afdc399::t_bd06eba1154a08 17
+  s_a0ba8bca9ba4e9::t_3c36b14b793442 43-46
+src/autoHideScrollbars.ts
+  s_a0ba8bca9ba4e9::t_990cc8a9436bcb 1-6,8-12,14-37
+  s_a0ba8bca9ba4e9::t_4a9c31a70dd192 7,13
+src/types.ts
+  s_a0ba8bca9ba4e9::t_306c4bb0c54b91 104-113
+  s_79f3736afdc399::t_4144ca611a261b 119-121
+  s_b98df4f2a78e9f::t_b580897e9659b4 74
+  s_79f3736afdc399::t_9c02c4269e6fce 32,54-61,70,88-89
+  s_07e8f9aa90679e::t_bc6ab719904ccb 19-25,49-52,96,122
+src/CompactMode.tsx
+  s_79f3736afdc399::t_1ac62c75a2c203 13-14,45-48,64-65,127-147,157-159,170-173,190-199,203-205,279,465,546-562
+  s_a0ba8bca9ba4e9::t_470cae498b22f2 18,492
+  s_79f3736afdc399::t_191392ae0b7dd7 374-382
+  s_79f3736afdc399::t_2d4026fec24b5f 9,11-12,17,33-35,50-52,61-63,91,97,101-108,112-115,124,215,217-218,221-261
+  s_79f3736afdc399::t_21190c8fe2fc18 10
+  s_79f3736afdc399::t_e3eda7fd2043da 207-214,216
+  s_79f3736afdc399::t_ab3095ea76bcab 276,306-335,339-373,383-389,397,413,427,447-450,542-545,563
+  s_79f3736afdc399::t_4144ca611a261b 109-111,336-338
+src/style.css
+  s_79f3736afdc399::t_1ac62c75a2c203 2429,2432
+  s_a0ba8bca9ba4e9::t_990cc8a9436bcb 1607-1608,1611-1614,1621,1623
+  s_79f3736afdc399::t_191392ae0b7dd7 1419-1429
+  s_a0ba8bca9ba4e9::t_4a9c31a70dd192 1619-1620,1622,1624-1626
+  s_b98df4f2a78e9f::t_19dd4f9a809d4b 1159-1182
+  s_79f3736afdc399::t_b06f18af1fab29 2170-2243,2397-2428,2430-2431,2433-2443,2473-2475,2502-2508
+  s_a0ba8bca9ba4e9::t_50a8f909cdb4e9 519-527,1820-2021
+  s_a0ba8bca9ba4e9::t_6dbbba37de157f 1260-1418,1430-1440
+electron/preload.cjs
+  s_79f3736afdc399::t_9c02c4269e6fce 5-6
+  s_a0ba8bca9ba4e9::t_306c4bb0c54b91 22-23
+  s_07e8f9aa90679e::t_9798b622bd7a01 15,45-49
+  s_79f3736afdc399::t_ace8c023acc10a 41-44,50
+src/TechStackIcon.tsx
+  s_a0ba8bca9ba4e9::t_470cae498b22f2 1-47
+src/StorageWorkspace.tsx
+  s_a0ba8bca9ba4e9::t_ef20efcb26c1e5 1-190,192,194,205-217,219-221,223-225
+electron/main.mjs
+  s_a0ba8bca9ba4e9::t_3c36b14b793442 4,212,215,217-220,235
+  s_79f3736afdc399::t_a228c9b12f0137 133-135
+  s_07e8f9aa90679e::t_9798b622bd7a01 20,32,179-208,288-294,296-298,300-306,496,520-524
+  s_79f3736afdc399::t_103c438fd75bba 528-531
+  s_a0ba8bca9ba4e9::t_306c4bb0c54b91 28-29,332-374,379-383,386-406,408-411
+  s_79f3736afdc399::t_4144ca611a261b 498-519
+  s_a0ba8bca9ba4e9::t_50a8f909cdb4e9 375-378,384-385
+  s_79f3736afdc399::t_9c02c4269e6fce 17,262,269-272,497
+  s_79f3736afdc399::t_ace8c023acc10a 128-132,136-140
+tests/claude-sessions.test.mjs
+  s_b98df4f2a78e9f::t_f81c29594771bf 41-42,58-61,79,84-86,111-114,125-126,139
+  s_b98df4f2a78e9f::t_19dd4f9a809d4b 1-9,11-40,43-56,64-78,80-83,87-98,108-110,115-124,127-138,140-142,191
+  s_b98df4f2a78e9f::t_b68f89d7575b6f 146-147
+  s_b98df4f2a78e9f::t_939f4a7c2cb98c 57,62-63,99-107
+  s_b98df4f2a78e9f::t_105055d65f3dfe 10,143-145,148-190
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.44-trip",
+  "base_commit_sha": "5b6a671a6cebc6908e51464fe9ddc45d58ac0835",
+  "prompts": {},
+  "humans": {
+    "h_fca69631ad06e9": {
+      "author": "w.ning <w.ning@trip.com>"
+    }
+  },
+  "sessions": {
+    "s_07e8f9aa90679e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0989f-41e7-75d3-bdb3-7862a4bce74d",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "w.ning <w.ning@trip.com>"
+    },
+    "s_79f3736afdc399": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a09887-2847-7ea3-9dd8-d78cc2770bb0",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "w.ning <w.ning@trip.com>"
+    },
+    "s_a0ba8bca9ba4e9": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0905c-635f-70e2-bb9a-ff00337aca58",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "w.ning <w.ning@trip.com>"
+    },
+    "s_b98df4f2a78e9f": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a09880-ca2f-7320-ad5a-c6a3acd6b0fe",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "w.ning <w.ning@trip.com>"
+    },
+    "s_cc06f1d586acc9": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0989f-8247-7311-a87b-323ac747dd94",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "w.ning <w.ning@trip.com>"
+    }
+  }
+}
