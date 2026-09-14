@@ -1,3 +1,5 @@
+import ProjectWorkspaces from "./ProjectWorkspaces";
+import { version as appVersion } from "../package.json";
 import GroupCreator from "./GroupCreator";
 import CompactMode from "./CompactMode";
 import ImportTags from "./ImportTags";
@@ -45,6 +47,7 @@ import {
 import type {
   State,
   Project,
+  SearchItem,
   Group,
   ImportInput,
   Environment,
@@ -52,7 +55,7 @@ import type {
   SavedFilter,
 } from "./types";
 import { demo } from "./demo";
-import { searchProjects } from "./projectSearch";
+import { searchProjects, createSearchItems } from "./projectSearch";
 const defaultGroups: Record<Group, string> = {
   company: "公司项目",
   personal: "个人项目",
@@ -310,6 +313,11 @@ export default function App() {
     document.documentElement.dataset.theme = theme;
   }, [theme]);
   const projects = data.projects;
+  const [workspaceSelection, setWorkspaceSelection] = useState("");
+  const searchItems = useMemo(
+    () => createSearchItems(projects, data.workspaces || []),
+    [projects, data.workspaces],
+  );
   const selectedProject = projects.find((p) => p.id === selected);
   async function refresh() {
     if (api) {
@@ -371,7 +379,15 @@ export default function App() {
     );
   });
   const list = useMemo(() => {
-    const filtered = projects.filter((p) => {
+    const filtered = searchItems.filter((p) => {
+      if (p.kind === "workspace")
+        return (
+          !!search.trim() &&
+          nav === "all" &&
+          groupFilter === "all" &&
+          stack === "all" &&
+          status === "all"
+        );
       if (nav === "archived" ? !p.archived : p.archived) return false;
       if (nav === "favorites" && !p.favorite) return false;
       if (nav === "recent" && !p.lastOpened) return false;
@@ -388,7 +404,7 @@ export default function App() {
           ? b.createdAt - a.createdAt
           : b.lastOpened - a.lastOpened,
     );
-  }, [projects, nav, groupFilter, stack, status, search, sort, groups]);
+  }, [searchItems, nav, groupFilter, stack, status, search, sort, groups]);
   useEffect(() => {
     if (!list.some((p) => p.id === selected)) setSelected(list[0]?.id || "");
   }, [list, selected]);
@@ -516,7 +532,12 @@ export default function App() {
     setStorageSelected([]);
     void scanStorage();
   }, [nav, demoMode]);
-  function select(p: Project) {
+  function select(p: SearchItem) {
+    if (p.kind === "workspace") {
+      setWorkspaceSelection(p.workspaceId!);
+      setNav("workspaces");
+      return;
+    }
     setSelected(p.id);
     setTab("overview");
     setInspector(true);
@@ -613,14 +634,18 @@ export default function App() {
       {count !== undefined && <small>{count}</small>}
     </button>
   );
-  const actionOpen = (p: Project, kind: string) => {
+  const actionOpen = (p: SearchItem, kind: string) => {
     if (requireNative())
       perform(async () => {
-        await api!.open(p.id, kind);
+        if (p.kind === "workspace") {
+          if (kind !== "ide" && kind !== "terminal" && kind !== "folder")
+            return;
+          await api!.openWorkspace(p.workspaceId!, kind);
+        } else await api!.open(p.id, kind);
         if (kind === "ide") await refresh();
       }, "已打开");
   };
-  const showProjectMenu = (p: Project) => {
+  const showProjectMenu = (p: SearchItem) => {
     if (demoMode) {
       setError("演示项目不能在本地打开，请先切换到本地项目。");
       return;
@@ -628,30 +653,36 @@ export default function App() {
     if (!api || busy) return;
     setSelected(p.id);
     perform(async () => {
-      const result = await api.projectMenu(p.id);
+      const result = await api.projectMenu(
+        p.workspaceId || p.id,
+        p.kind === "workspace",
+      );
       if (result.opened) {
         await refresh();
         setToast("已打开");
       }
     });
   };
-  const contextMenu = (p: Project, e: React.MouseEvent) => {
+  const contextMenu = (p: SearchItem, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     showProjectMenu(p);
   };
-  const menuKey = (p: Project, e: React.KeyboardEvent) => {
+  const menuKey = (p: SearchItem, e: React.KeyboardEvent) => {
     if (e.key === "ContextMenu" || (e.shiftKey && e.key === "F10")) {
       e.preventDefault();
       e.stopPropagation();
       showProjectMenu(p);
     }
   };
-  const noProjects = !demoMode && !state.projects.length;
+  const noProjects =
+    !demoMode &&
+    !state.projects.length &&
+    !(search.trim() && data.workspaces?.length);
   if (uiMode === "compact")
     return (
       <CompactMode
-        projects={projects}
+        projects={searchItems}
         groups={groups}
         root={data.root}
         busy={busy}
@@ -738,7 +769,7 @@ export default function App() {
             )}
           </nav>
           <div className="nav-label group-heading">
-            <span>项目分组</span>
+            <span>项目分类</span>
             <IconButton
               label="新增项目分组"
               disabled={busy || demoMode}
@@ -763,32 +794,16 @@ export default function App() {
           </nav>
           <div className="nav-label">工作台</div>
           <nav>
+            {navButton(
+              "workspaces",
+              "项目组",
+              <FolderOpen size={18} />,
+              data.workspaces?.length || 0,
+            )}
             {navButton("storage", "存储空间", <HardDrive size={18} />)}
             {navButton("archived", "已归档", <Archive size={18} />)}
           </nav>
           <div className="sidebar-bottom">
-            <div className="root-card">
-              <div className="root-eyebrow">
-                <span className="dot" />
-                本地工作空间
-              </div>
-              <button
-                onClick={() =>
-                  data.root
-                    ? requireNative() && perform(() => api!.openRoot())
-                    : chooseRoot()
-                }
-                title={data.root}
-              >
-                <FolderOpen size={16} />
-                <span>
-                  {data.root
-                    ? data.root.replace(/^\/Users\/[^/]+/, "~")
-                    : "选择项目根目录"}
-                </span>
-                <ChevronRight size={14} />
-              </button>
-            </div>
             <button className="nav-item" onClick={() => setModal("settings")}>
               <Settings size={18} />
               <span>设置</span>
@@ -797,354 +812,421 @@ export default function App() {
           </div>
         </aside>
         <main className="workspace">
-          <div className="page-header">
-            <div>
-              <div className="page-title">
-                <h1>{title}</h1>
-                <span className="count">{list.length}</span>
-              </div>
-              <p>
-                {nav === "storage"
-                  ? "查看项目占用，按需回收依赖空间。"
-                  : "所有项目，井然有序。"}
-              </p>
-            </div>
-            {nav !== "storage" && (
-              <button className="button primary" onClick={beginImport}>
-                <Plus size={17} />
-                导入项目
-                <ChevronDown size={14} />
-              </button>
-            )}
-          </div>
-          {demoMode && (
-            <div className="demo-banner">
-              <span>
-                <span className="dot" />
-                示例项目 · 操作不会影响本地文件
-              </span>
-              {api ? (
-                <button
-                  onClick={() => {
-                    setDemoMode(false);
-                    setSelected(state.projects[0]?.id || "");
-                  }}
-                >
-                  返回本地项目
-                  <ArrowUpRight size={14} />
-                </button>
-              ) : (
-                <span>在桌面应用中管理真实项目</span>
-              )}
-            </div>
-          )}
-          {nav === "storage" ? (
-            <StorageWorkspace
-              projects={storageProjects}
-              groups={groups}
-              root={data.root}
-              usage={usage}
-              selected={storageSelected}
-              loading={storageLoading}
-              busy={busy}
-              demo={demoMode}
-              onScan={() => void scanStorage()}
-              onToggle={(id) =>
-                setStorageSelected((current) =>
-                  current.includes(id)
-                    ? current.filter((item) => item !== id)
-                    : [...current, id],
-                )
-              }
-              onToggleAll={(ids, checked) =>
-                setStorageSelected(checked ? ids : [])
-              }
-              onClean={() => void cleanSelectedDependencies()}
+          {nav === "workspaces" ? (
+            <ProjectWorkspaces
+              initialSelectedId={workspaceSelection}
+              api={demoMode ? undefined : api}
+              projects={projects}
+              workspaces={data.workspaces || []}
+              refresh={refresh}
             />
           ) : (
             <>
-              <div className="search-box">
-                <Search size={18} />
-                <input
-                  ref={searchRef}
-                  aria-label="搜索项目"
-                  placeholder="搜索名称、用途、README 或依赖…"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
-                <IconButton
-                  label="刷新搜索索引"
-                  disabled={busy}
-                  onClick={() => {
-                    if (!api || demoMode) {
-                      setToast("演示模式无需刷新搜索索引");
-                      return;
-                    }
-                    void perform(async () => {
-                      await api.refreshSearchIndex();
-                      await refresh();
-                    }, "搜索索引已刷新");
-                  }}
-                >
-                  <RefreshCw size={15} className={busy ? "spin" : ""} />
-                </IconButton>
-                {search ? (
-                  <IconButton label="清空搜索" onClick={() => setSearch("")}>
-                    <X size={15} />
-                  </IconButton>
-                ) : (
-                  <kbd>⌘ K</kbd>
+              <div className="page-header">
+                <div>
+                  <div className="page-title">
+                    <h1>{title}</h1>
+                    <span className="count">{list.length}</span>
+                  </div>
+                  <p>
+                    {nav === "storage"
+                      ? "查看项目占用，按需回收依赖空间。"
+                      : "所有项目，井然有序。"}
+                  </p>
+                </div>
+                {nav !== "storage" && (
+                  <button className="button primary" onClick={beginImport}>
+                    <Plus size={17} />
+                    导入项目
+                    <ChevronDown size={14} />
+                  </button>
                 )}
               </div>
-              <div className="filters">
-                <div className="filter-left">
-                  <select
-                    aria-label="项目分组"
-                    value={groupFilter}
-                    onChange={(e) => setGroupFilter(e.target.value)}
-                  >
-                    <option value="all">所有分组</option>
-                    {Object.entries(groups).map(([k, v]) => (
-                      <option key={k} value={k}>
-                        {v}
-                      </option>
-                    ))}
-                  </select>
-                  <select
-                    aria-label="技术栈"
-                    value={stack}
-                    onChange={(e) => setStack(e.target.value)}
-                  >
-                    <option value="all">技术栈</option>
-                    {["Node.js", "Go", "Python"].map((s) => (
-                      <option key={s}>{s}</option>
-                    ))}
-                  </select>
-                  <select
-                    aria-label="依赖状态"
-                    value={status}
-                    onChange={(e) => setStatus(e.target.value)}
-                  >
-                    <option value="all">依赖状态</option>
-                    <option value="ready">依赖就绪</option>
-                    <option value="pending">待安装</option>
-                    <option value="unknown">待检查</option>
-                    <option value="missing">路径缺失</option>
-                  </select>
-                </div>
-                <div className="filter-right">
-                  <select
-                    aria-label="排序"
-                    value={sort}
-                    onChange={(e) => setSort(e.target.value)}
-                  >
-                    <option value="recent">最近打开 ↓</option>
-                    <option value="name">名称 A–Z</option>
-                    <option value="created">最近导入 ↓</option>
-                  </select>
-                  <div className="view-toggle">
+              {demoMode && (
+                <div className="demo-banner">
+                  <span>
+                    <span className="dot" />
+                    示例项目 · 操作不会影响本地文件
+                  </span>
+                  {api ? (
                     <button
-                      aria-label="列表视图"
-                      className={!grid ? "selected" : ""}
-                      onClick={() => setGrid(false)}
-                    >
-                      <List size={16} />
-                    </button>
-                    <button
-                      aria-label="卡片视图"
-                      className={grid ? "selected" : ""}
-                      onClick={() => setGrid(true)}
-                    >
-                      <LayoutGrid size={15} />
-                    </button>
-                  </div>
-                </div>
-              </div>
-              <div className="project-scroll">
-                {noProjects ? (
-                  <div className="empty-state welcome">
-                    <img src="./icon.png" alt="" />
-                    <span className="eyebrow">HELLO, DEVELOPER</span>
-                    <h2>让项目各就各位。</h2>
-                    <p>
-                      公司项目、个人作品，或是一个临时灵感。
-                      <br />
-                      从一个统一的目录开始，把它们交给 codedog。
-                    </p>
-                    <button
-                      className="button primary"
-                      onClick={state.root ? beginImport : chooseRoot}
-                    >
-                      <FolderOpen size={17} />
-                      {state.root ? "导入第一个项目" : "选择项目根目录"}
-                    </button>
-                    <button
-                      className="text-button"
-                      onClick={() => setDemoMode(true)}
-                    >
-                      先看看演示项目
-                      <ArrowUpRight size={14} />
-                    </button>
-                    <div className="welcome-stacks">
-                      <span>
-                        <StackIcon stack="Node.js" />
-                        Node.js
-                      </span>
-                      <span>
-                        <StackIcon stack="Go" />
-                        Go
-                      </span>
-                      <span>
-                        <StackIcon stack="Python" />
-                        Python
-                      </span>
-                    </div>
-                  </div>
-                ) : !list.length ? (
-                  <div className="empty-state">
-                    <Search size={32} />
-                    <h2>没有找到匹配的项目</h2>
-                    <p>试试其他关键词，或清除筛选条件。</p>
-                    <button
-                      className="button"
                       onClick={() => {
-                        setSearch("");
-                        setStack("all");
-                        setStatus("all");
-                        setGroupFilter("all");
+                        setDemoMode(false);
+                        setSelected(state.projects[0]?.id || "");
                       }}
                     >
-                      清除筛选
+                      返回本地项目
+                      <ArrowUpRight size={14} />
                     </button>
-                  </div>
-                ) : grid ? (
-                  <div className="project-grid">
-                    {list.map((p) => (
-                      <button
-                        key={p.id}
-                        className={`project-card ${selected === p.id ? "selected" : ""}`}
-                        onContextMenu={(e) => contextMenu(p, e)}
-                        onKeyDown={(e) => menuKey(p, e)}
-                        onClick={() => select(p)}
+                  ) : (
+                    <span>在桌面应用中管理真实项目</span>
+                  )}
+                </div>
+              )}
+              {nav === "storage" ? (
+                <StorageWorkspace
+                  projects={storageProjects}
+                  groups={groups}
+                  root={data.root}
+                  usage={usage}
+                  selected={storageSelected}
+                  loading={storageLoading}
+                  busy={busy}
+                  demo={demoMode}
+                  onScan={() => void scanStorage()}
+                  onToggle={(id) =>
+                    setStorageSelected((current) =>
+                      current.includes(id)
+                        ? current.filter((item) => item !== id)
+                        : [...current, id],
+                    )
+                  }
+                  onToggleAll={(ids, checked) =>
+                    setStorageSelected(checked ? ids : [])
+                  }
+                  onClean={() => void cleanSelectedDependencies()}
+                />
+              ) : (
+                <>
+                  <div className="search-box">
+                    <Search size={18} />
+                    <input
+                      ref={searchRef}
+                      aria-label="搜索项目"
+                      placeholder="搜索项目、项目组、README 或依赖…"
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                    />
+                    <IconButton
+                      label="刷新搜索索引"
+                      disabled={busy}
+                      onClick={() => {
+                        if (!api || demoMode) {
+                          setToast("演示模式无需刷新搜索索引");
+                          return;
+                        }
+                        void perform(async () => {
+                          await api.refreshSearchIndex();
+                          await refresh();
+                        }, "搜索索引已刷新");
+                      }}
+                    >
+                      <RefreshCw size={15} className={busy ? "spin" : ""} />
+                    </IconButton>
+                    {search ? (
+                      <IconButton
+                        label="清空搜索"
+                        onClick={() => setSearch("")}
                       >
-                        <div>
-                          <ProjectMark p={p} />
-                          <Star
-                            size={15}
-                            className={p.favorite ? "starred" : ""}
-                          />
-                        </div>
-                        <h3>{p.name}</h3>
-                        <p className={p.searchMatch ? "search-match" : ""}>
-                          {p.searchMatch?.reasons[0] ||
-                            p.description ||
-                            p.path.split("/").slice(-2).join("/")}
-                        </p>
-                        <div>
-                          <span className="tag">{groups[p.group]}</span>
-                          <Status value={p.dependencyState} />
-                        </div>
-                      </button>
-                    ))}
+                        <X size={15} />
+                      </IconButton>
+                    ) : (
+                      <kbd>⌘ K</kbd>
+                    )}
                   </div>
-                ) : (
-                  <table className="project-table">
-                    <thead>
-                      <tr>
-                        <th>项目</th>
-                        <th>分组</th>
-                        <th>技术栈</th>
-                        <th>状态</th>
-                        <th className="last-column">最近打开 ↓</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {list.map((p) => (
-                        <tr
-                          key={p.id}
-                          className={selected === p.id ? "selected" : ""}
-                          onContextMenu={(e) => contextMenu(p, e)}
-                          onClick={() => select(p)}
-                          tabIndex={0}
-                          onKeyDown={(e) => {
-                            menuKey(p, e);
-                            if (e.key === "Enter") select(p);
-                          }}
-                          aria-selected={selected === p.id}
+                  <div className="filters">
+                    <div className="filter-left">
+                      <select
+                        aria-label="项目分组"
+                        value={groupFilter}
+                        onChange={(e) => setGroupFilter(e.target.value)}
+                      >
+                        <option value="all">所有分组</option>
+                        {Object.entries(groups).map(([k, v]) => (
+                          <option key={k} value={k}>
+                            {v}
+                          </option>
+                        ))}
+                      </select>
+                      <select
+                        aria-label="技术栈"
+                        value={stack}
+                        onChange={(e) => setStack(e.target.value)}
+                      >
+                        <option value="all">技术栈</option>
+                        {["Node.js", "Go", "Python"].map((s) => (
+                          <option key={s}>{s}</option>
+                        ))}
+                      </select>
+                      <select
+                        aria-label="依赖状态"
+                        value={status}
+                        onChange={(e) => setStatus(e.target.value)}
+                      >
+                        <option value="all">依赖状态</option>
+                        <option value="ready">依赖就绪</option>
+                        <option value="pending">待安装</option>
+                        <option value="unknown">待检查</option>
+                        <option value="missing">路径缺失</option>
+                      </select>
+                    </div>
+                    <div className="filter-right">
+                      <select
+                        aria-label="排序"
+                        value={sort}
+                        onChange={(e) => setSort(e.target.value)}
+                      >
+                        <option value="recent">最近打开 ↓</option>
+                        <option value="name">名称 A–Z</option>
+                        <option value="created">最近导入 ↓</option>
+                      </select>
+                      <div className="view-toggle">
+                        <button
+                          aria-label="列表视图"
+                          className={!grid ? "selected" : ""}
+                          onClick={() => setGrid(false)}
                         >
-                          <td>
-                            <div className="project-name-cell">
+                          <List size={16} />
+                        </button>
+                        <button
+                          aria-label="卡片视图"
+                          className={grid ? "selected" : ""}
+                          onClick={() => setGrid(true)}
+                        >
+                          <LayoutGrid size={15} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="project-scroll">
+                    {noProjects ? (
+                      <div className="empty-state welcome">
+                        <img src="./icon.png" alt="" />
+                        <span className="eyebrow">HELLO, DEVELOPER</span>
+                        <h2>让项目各就各位。</h2>
+                        <p>
+                          公司项目、个人作品，或是一个临时灵感。
+                          <br />
+                          从一个统一的目录开始，把它们交给 codedog。
+                        </p>
+                        <button
+                          className="button primary"
+                          onClick={state.root ? beginImport : chooseRoot}
+                        >
+                          <FolderOpen size={17} />
+                          {state.root ? "导入第一个项目" : "选择项目根目录"}
+                        </button>
+                        <button
+                          className="text-button"
+                          onClick={() => setDemoMode(true)}
+                        >
+                          先看看演示项目
+                          <ArrowUpRight size={14} />
+                        </button>
+                        <div className="welcome-stacks">
+                          <span>
+                            <StackIcon stack="Node.js" />
+                            Node.js
+                          </span>
+                          <span>
+                            <StackIcon stack="Go" />
+                            Go
+                          </span>
+                          <span>
+                            <StackIcon stack="Python" />
+                            Python
+                          </span>
+                        </div>
+                      </div>
+                    ) : !list.length ? (
+                      <div className="empty-state">
+                        <Search size={32} />
+                        <h2>没有找到匹配的项目</h2>
+                        <p>试试其他关键词，或清除筛选条件。</p>
+                        <button
+                          className="button"
+                          onClick={() => {
+                            setSearch("");
+                            setStack("all");
+                            setStatus("all");
+                            setGroupFilter("all");
+                          }}
+                        >
+                          清除筛选
+                        </button>
+                      </div>
+                    ) : grid ? (
+                      <div className="project-grid">
+                        {list.map((p) => (
+                          <button
+                            key={p.id}
+                            className={`project-card ${selected === p.id ? "selected" : ""}`}
+                            onContextMenu={(e) => contextMenu(p, e)}
+                            onKeyDown={(e) => menuKey(p, e)}
+                            onClick={() => select(p)}
+                          >
+                            <div>
                               <ProjectMark p={p} />
-                              <div>
-                                <div className="name-line">
-                                  <strong>{p.name}</strong>
-                                  <button
-                                    className={`favorite-button ${p.favorite ? "starred" : ""}`}
-                                    aria-label={
-                                      p.favorite
-                                        ? "取消收藏 " + p.name
-                                        : "收藏 " + p.name
-                                    }
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      patch(p, { favorite: !p.favorite });
-                                    }}
-                                  >
-                                    <Star
-                                      size={13}
-                                      fill={
-                                        p.favorite ? "currentColor" : "none"
-                                      }
-                                    />
-                                  </button>
-                                </div>
-                                <small>
-                                  {p.path.replace(data.root + "/", "")}
-                                </small>
-                                {p.searchMatch && (
-                                  <small className="search-match">
-                                    {p.searchMatch.reasons.join(" · ")}
-                                  </small>
-                                )}
-                              </div>
-                            </div>
-                          </td>
-                          <td>
-                            <span className="tag">
-                              {(groups[p.group] || p.group).replace(
-                                /项目$/,
-                                "",
+                              {p.kind !== "workspace" && (
+                                <Star
+                                  size={15}
+                                  className={p.favorite ? "starred" : ""}
+                                />
                               )}
-                            </span>
-                          </td>
-                          <td>
-                            <span className="stack-label">
-                              <StackIcon stack={p.stacks[0]} />
-                              {p.stacks.join(" / ") || "其他"}
-                            </span>
-                          </td>
-                          <td>
-                            <Status value={p.dependencyState} />
-                          </td>
-                          <td className="last-column">{ago(p.lastOpened)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
-              </div>
-              <div className="list-footer">
-                <span>
-                  显示 {noProjects ? 0 : list.length} / {projects.length} 个项目
-                </span>
-                <span>
-                  <Keyboard size={13} />⌘ K 快速查找
-                </span>
-              </div>
+                            </div>
+                            <h3>
+                              {p.name}{" "}
+                              {search.trim() && (
+                                <span
+                                  className={`result-kind ${p.kind === "workspace" ? "is-workspace" : ""}`}
+                                >
+                                  {p.kind === "workspace" ? "项目组" : "项目"}
+                                </span>
+                              )}
+                            </h3>
+                            <p className={p.searchMatch ? "search-match" : ""}>
+                              {p.searchMatch?.reasons[0] ||
+                                p.description ||
+                                p.path.split("/").slice(-2).join("/")}
+                            </p>
+                            <div>
+                              {p.kind === "workspace" ? (
+                                <span className="tag">
+                                  {p.memberCount} 个成员项目
+                                </span>
+                              ) : (
+                                <>
+                                  <span className="tag">{groups[p.group]}</span>
+                                  <Status value={p.dependencyState} />
+                                </>
+                              )}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <table className="project-table">
+                        <thead>
+                          <tr>
+                            <th>项目</th>
+                            <th>分组</th>
+                            <th>技术栈</th>
+                            <th>状态</th>
+                            <th className="last-column">最近打开 ↓</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {list.map((p) => (
+                            <tr
+                              key={p.id}
+                              className={selected === p.id ? "selected" : ""}
+                              onContextMenu={(e) => contextMenu(p, e)}
+                              onClick={() => select(p)}
+                              tabIndex={0}
+                              onKeyDown={(e) => {
+                                menuKey(p, e);
+                                if (e.key === "Enter") select(p);
+                              }}
+                              aria-selected={selected === p.id}
+                            >
+                              <td>
+                                <div className="project-name-cell">
+                                  <ProjectMark p={p} />
+                                  <div>
+                                    <div className="name-line">
+                                      <strong>{p.name}</strong>
+                                      {search.trim() && (
+                                        <span
+                                          className={`result-kind ${p.kind === "workspace" ? "is-workspace" : ""}`}
+                                        >
+                                          {p.kind === "workspace"
+                                            ? "项目组"
+                                            : "项目"}
+                                        </span>
+                                      )}
+                                      {p.kind !== "workspace" && (
+                                        <button
+                                          className={`favorite-button ${p.favorite ? "starred" : ""}`}
+                                          aria-label={
+                                            p.favorite
+                                              ? "取消收藏 " + p.name
+                                              : "收藏 " + p.name
+                                          }
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            patch(p, { favorite: !p.favorite });
+                                          }}
+                                        >
+                                          <Star
+                                            size={13}
+                                            fill={
+                                              p.favorite
+                                                ? "currentColor"
+                                                : "none"
+                                            }
+                                          />
+                                        </button>
+                                      )}
+                                    </div>
+                                    <small>
+                                      {p.path.replace(data.root + "/", "")}
+                                    </small>
+                                    {p.searchMatch && (
+                                      <small className="search-match">
+                                        {p.searchMatch.reasons.join(" · ")}
+                                      </small>
+                                    )}
+                                  </div>
+                                </div>
+                              </td>
+                              <td>
+                                <span className="tag">
+                                  {p.kind === "workspace"
+                                    ? `${p.memberCount} 个成员`
+                                    : (groups[p.group] || p.group).replace(
+                                        /项目$/,
+                                        "",
+                                      )}
+                                </span>
+                              </td>
+                              <td>
+                                <span className="stack-label">
+                                  {p.kind === "workspace" ? (
+                                    "—"
+                                  ) : (
+                                    <>
+                                      <StackIcon stack={p.stacks[0]} />
+                                      {p.stacks.join(" / ") || "其他"}
+                                    </>
+                                  )}
+                                </span>
+                              </td>
+                              <td>
+                                {p.kind === "workspace" ? (
+                                  p.missing ? (
+                                    "目录失效"
+                                  ) : (
+                                    "—"
+                                  )
+                                ) : (
+                                  <Status value={p.dependencyState} />
+                                )}
+                              </td>
+                              <td className="last-column">
+                                {ago(p.lastOpened)}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                  </div>
+                  <div className="list-footer">
+                    <span>
+                      {search.trim()
+                        ? `找到 ${list.length} 项结果（含项目组）`
+                        : `显示 ${noProjects ? 0 : list.length} / ${projects.length} 个项目`}
+                    </span>
+                    <span>
+                      <Keyboard size={13} />⌘ K 快速查找
+                    </span>
+                  </div>
+                </>
+              )}
             </>
           )}
         </main>
-        {inspector && nav !== "storage" && (
+        {inspector && nav !== "storage" && nav !== "workspaces" && (
           <aside className="inspector">
             {selectedProject ? (
               <>
@@ -1832,7 +1914,7 @@ export default function App() {
                 {label}
               </button>
             ))}
-            <small>codedog 0.1.0</small>
+            <small>codedog {appVersion}</small>
           </nav>
           <div className="settings-content">
             {settingsSection === "general" && (
@@ -2351,12 +2433,16 @@ export default function App() {
     </div>
   );
 }
-function ProjectMark({ p, large = false }: { p: Project; large?: boolean }) {
+function ProjectMark({ p, large = false }: { p: SearchItem; large?: boolean }) {
   return (
     <span
       className={`project-mark ${large ? "large" : ""} ${p.stacks[0] === "Python" ? "python" : p.stacks[0] === "Go" ? "go" : ""}`}
     >
-      <TechStackIcon stack={p.stacks[0]} size={large ? 27 : 20} />
+      {p.kind === "workspace" ? (
+        <FolderOpen size={large ? 27 : 20} />
+      ) : (
+        <TechStackIcon stack={p.stacks[0]} size={large ? 27 : 20} />
+      )}
     </span>
   );
 }

@@ -1,3 +1,12 @@
+import {
+  listWorkspaces,
+  getWorkspace,
+  workspaceLocation,
+  createWorkspace,
+  updateWorkspace,
+  repairWorkspace,
+  forgetWorkspace,
+} from "./workspaces.mjs";
 import { terminalLaunch } from "./terminal.mjs";
 import { chooseEditor, projectMenuTemplate } from "./project-menu.mjs";
 import { setupAutoUpdates } from "./updates.mjs";
@@ -105,8 +114,12 @@ async function pick() {
   });
   return r.canceled ? null : r.filePaths[0];
 }
-async function openProject(id, kind, editorOverride) {
-  const p = await store.get(id);
+async function openProject(id, kind, editorOverride, workspace = false) {
+  if (workspace && !["folder", "terminal", "ide"].includes(kind))
+    throw Error("无效的打开方式");
+  const p = workspace
+    ? await workspaceLocation(store, id)
+    : await store.get(id);
   if (kind === "folder") {
     const error = await shell.openPath(p.path);
     if (error) throw Error(error);
@@ -126,7 +139,10 @@ async function openProject(id, kind, editorOverride) {
     if (process.platform === "darwin") await run("open", ["-a", ide, p.path]);
     else await run(cli[ide], [p.path]);
     await store.transaction(async () => {
-      const item = store.state.projects.find((x) => x.id === id);
+      const item = (
+        workspace ? store.state.workspaces : store.state.projects
+      ).find((x) => x.id === id);
+      if (!item) throw Error("项目或项目组已移出管理");
       item.lastOpened = Date.now();
       await store.save();
     });
@@ -311,6 +327,7 @@ app
         launcherShortcut,
         savedFilters: store.state.savedFilters || [],
         projects,
+        workspaces: await listWorkspaces(store),
       };
     });
     handle("setMode", async (mode) => {
@@ -376,6 +393,16 @@ app
     handle("pickFolder", pick);
     handle("setRoot", (folder) => job(() => store.setRoot(folder)));
     handle("createGroup", (name) => store.createGroup(name));
+    handle("createWorkspace", (input) =>
+      createWorkspace(store, input, app.getPath("home")),
+    );
+    handle("getWorkspace", (id) => getWorkspace(store, id));
+    handle("updateWorkspace", (id, input) => updateWorkspace(store, id, input));
+    handle("repairWorkspace", (id) => repairWorkspace(store, id));
+    handle("forgetWorkspace", (id) => forgetWorkspace(store, id));
+    handle("openWorkspace", (id, kind) =>
+      openProject(id, kind, undefined, true),
+    );
     handle("setTheme", async (theme) => {
       await store.setTheme(theme);
       nativeTheme.themeSource = theme;
@@ -408,8 +435,11 @@ app
       }),
     );
     handle("open", openProject);
-    handle("projectMenu", async (id) => {
-      const project = await store.get(id);
+    handle("projectMenu", async (id, workspace = false) => {
+      if (typeof workspace !== "boolean") throw Error("无效的项目类型");
+      const project = workspace
+        ? await workspaceLocation(store, id)
+        : await store.get(id);
       const icons = await editorIcons();
       const selection = await new Promise((resolve) => {
         let selected = null;
@@ -425,7 +455,11 @@ app
         menu.popup({ window, callback: () => resolve(selected) });
       });
       if (!selection) return { opened: false };
-      await openProject(id, selection.kind, selection.editor);
+      if (selection.kind === "copy") {
+        clipboard.writeText(project.path);
+        return { opened: false, copied: true };
+      }
+      await openProject(id, selection.kind, selection.editor, workspace);
       return { opened: true };
     });
     handle("copy", async (id) =>

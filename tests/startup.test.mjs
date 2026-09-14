@@ -30,6 +30,10 @@ test("main module finishes evaluation before Electron emits ready", async (t) =>
     path.join(dir, "main.mjs"),
     source
       .replace(
+        'from "./workspaces.mjs"',
+        `from ${JSON.stringify(new URL("../electron/workspaces.mjs", import.meta.url).href)}`,
+      )
+      .replace(
         'from "./terminal.mjs"',
         `from ${JSON.stringify(new URL("../electron/terminal.mjs", import.meta.url).href)}`,
       )

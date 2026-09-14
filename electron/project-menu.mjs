@@ -13,7 +13,7 @@ export function chooseEditor(override, projectEditor, defaultEditor) {
 export function projectMenuTemplate(defaultEditor, onSelect, icons = {}) {
   return [
     {
-      label: "使用 IDE 打开",
+      label: "IDE打开",
       submenu: [
         {
           label: `默认 IDE · ${defaultEditor}`,
@@ -29,6 +29,8 @@ export function projectMenuTemplate(defaultEditor, onSelect, icons = {}) {
       ],
     },
     { type: "separator" },
-    { label: "在终端中打开", click: () => onSelect({ kind: "terminal" }) },
+    { label: "终端打开", click: () => onSelect({ kind: "terminal" }) },
+    { label: "访达打开", click: () => onSelect({ kind: "folder" }) },
+    { label: "复制路径", click: () => onSelect({ kind: "copy" }) },
   ];
 }

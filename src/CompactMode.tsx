@@ -15,7 +15,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import type { KeyboardEvent as ReactKeyboardEvent } from "react";
-import type { Project, SavedFilter } from "./types";
+import type { SearchItem, SavedFilter } from "./types";
 import TechStackIcon from "./TechStackIcon";
 import { searchProjects } from "./projectSearch";
 export default function CompactMode({
@@ -34,17 +34,17 @@ export default function CompactMode({
   error,
   onDismissError,
 }: {
-  projects: Project[];
+  projects: SearchItem[];
   groups: Record<string, string>;
   root: string;
   busy: boolean;
   demo: boolean;
   onStandard: () => void;
   onOpen: (
-    p: Project,
+    p: SearchItem,
     kind: "ide" | "terminal" | "repository" | "folder",
   ) => void;
-  onProjectMenu: (p: Project) => void;
+  onProjectMenu: (p: SearchItem) => void;
   savedFilters: SavedFilter[];
   onSaveFilters: (filters: SavedFilter[]) => void;
   onHide: () => void;
@@ -73,6 +73,7 @@ export default function CompactMode({
   );
   const results = useMemo(() => {
     const filtered = projects.filter((p) => {
+      if (p.kind === "workspace" && !search.trim()) return false;
       if (
         p.archived ||
         (group !== "all" && p.group !== group) ||
@@ -140,7 +141,7 @@ export default function CompactMode({
     return () => window.removeEventListener("keydown", shortcut);
   }, []);
   function open(
-    p: Project,
+    p: SearchItem,
     kind: "ide" | "terminal" | "repository" | "folder" = "ide",
   ) {
     if (!busy && !p.missing) onOpen(p, kind);
@@ -241,7 +242,7 @@ export default function CompactMode({
             ref={input}
             autoFocus
             aria-label="搜索项目"
-            placeholder="搜索名称、用途、README 或依赖…"
+            placeholder="搜索项目、项目组、README 或依赖…"
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
@@ -441,7 +442,7 @@ export default function CompactMode({
             <button
               ref={p.id === current?.id ? selectedRow : undefined}
               className={`compact-project ${p.id === current?.id ? "selected" : ""}`}
-              aria-label={`打开项目 ${p.name}`}
+              aria-label={`打开${p.kind === "workspace" ? "项目组" : "项目"} ${p.name}`}
               title={`${p.name}\n${p.path}\n↑ / ↓：选择项目 · ← / →：选择打开方式 · Enter：执行`}
               aria-current={p.id === current?.id ? "true" : undefined}
               disabled={busy || p.missing}
@@ -469,11 +470,22 @@ export default function CompactMode({
               <span
                 className={`project-mark ${p.stacks[0] === "Go" ? "go" : p.stacks[0] === "Python" ? "python" : ""}`}
               >
-                <TechStackIcon stack={p.stacks[0]} size={17} />
+                {p.kind === "workspace" ? (
+                  <FolderOpen size={17} />
+                ) : (
+                  <TechStackIcon stack={p.stacks[0]} size={17} />
+                )}
               </span>
               <span className="compact-project-info">
                 <span className="compact-project-name">
                   <span className="compact-name-text">{p.name}</span>
+                  {search.trim() && (
+                    <span
+                      className={`result-kind ${p.kind === "workspace" ? "is-workspace" : ""}`}
+                    >
+                      {p.kind === "workspace" ? "项目组" : "项目"}
+                    </span>
+                  )}
                   {p.favorite && (
                     <Star size={13} fill="currentColor" className="starred" />
                   )}
@@ -491,10 +503,12 @@ export default function CompactMode({
                 </span>
               </span>
               <span className="compact-group">
-                {groups[p.group] || p.group}
+                {p.kind === "workspace"
+                  ? `${p.memberCount} 个成员`
+                  : groups[p.group] || p.group}
               </span>
               <span className="compact-stack">
-                {p.stacks.join(" / ") || "其他"}
+                {p.kind === "workspace" ? "" : p.stacks.join(" / ") || "其他"}
               </span>
               <span
                 className={`compact-open ${p.id === current?.id ? "active" : ""}`}

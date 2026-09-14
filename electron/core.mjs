@@ -747,9 +747,12 @@ export class ProjectStore {
   async setRoot(folder) {
     return this.transaction(async () => {
       const root = await fs.realpath(folder);
-      if (this.state.root !== root && this.state.projects.length)
+      if (
+        this.state.root !== root &&
+        (this.state.projects.length || this.state.workspaces?.length)
+      )
         throw Error(
-          "已有项目时不能直接切换根目录。请先备份并移出管理，文件会保留。",
+          "已有项目或项目组时不能直接切换根目录。请先备份并移出管理，文件会保留。",
         );
       this.state.root = root;
       await this.save();
@@ -1068,6 +1071,13 @@ export class ProjectStore {
   }
   async forget(id) {
     return this.transaction(async () => {
+      const workspace = (this.state.workspaces || []).find((item) =>
+        item.members.some((member) => member.projectId === id),
+      );
+      if (workspace)
+        throw Error(
+          `项目仍被项目组「${workspace.name}」引用，请先从项目组移除成员`,
+        );
       this.state.projects = this.state.projects.filter((p) => p.id !== id);
       await this.save();
     });

@@ -48,7 +48,13 @@ export type Project = {
   error?: string;
   searchIndex?: SearchIndex;
 };
-export type ProjectSearchResult = Project & {
+export type SearchItem = Project & {
+  kind?: "workspace";
+  workspaceId?: string;
+  memberCount?: number;
+  memberNames?: string[];
+};
+export type ProjectSearchResult = SearchItem & {
   searchMatch?: { rank: number; reasons: string[] };
 };
 export type SavedFilter = {
@@ -60,6 +66,27 @@ export type SavedFilter = {
   tag: string;
   sort: string;
 };
+export type WorkspaceMember = {
+  projectId: string;
+  alias: string;
+  target?: string;
+  status?: string;
+};
+export type Workspace = {
+  id: string;
+  name: string;
+  path: string;
+  members: WorkspaceMember[];
+  createdAt: number;
+  lastOpened: number;
+  error?: string;
+};
+export type WorkspaceInput = {
+  name: string;
+  members: WorkspaceMember[];
+  description?: string;
+  expectedDescription?: string;
+};
 export type State = {
   groups?: Record<string, string>;
   theme?: Theme;
@@ -67,6 +94,7 @@ export type State = {
   root: string;
   ide: string;
   projects: Project[];
+  workspaces?: Workspace[];
   savedFilters?: SavedFilter[];
   launcherShortcut?: string;
   uiMode?: "standard" | "compact";
@@ -81,11 +109,23 @@ export type ImportInput = {
   group: Group;
 };
 export type Api = {
+  createWorkspace: (input: WorkspaceInput) => Promise<Workspace>;
+  getWorkspace: (id: string) => Promise<Workspace & { description: string }>;
+  updateWorkspace: (id: string, input: WorkspaceInput) => Promise<Workspace>;
+  repairWorkspace: (id: string) => Promise<Workspace>;
+  forgetWorkspace: (id: string) => Promise<void>;
+  openWorkspace: (
+    id: string,
+    kind: "ide" | "terminal" | "folder",
+  ) => Promise<void>;
   initialMode: "standard" | "compact";
   createGroup: (name: string) => Promise<{ id: string; name: string }>;
   setTheme: (theme: Theme) => Promise<void>;
   setTerminal: (terminal: "system" | "warp") => Promise<void>;
-  projectMenu: (id: string) => Promise<{ opened: boolean }>;
+  projectMenu: (
+    id: string,
+    workspace?: boolean,
+  ) => Promise<{ opened: boolean; copied?: boolean }>;
   setMode: (mode: "standard" | "compact") => Promise<void>;
   setSavedFilters: (filters: SavedFilter[]) => Promise<void>;
   setLauncherShortcut: (shortcut: string) => Promise<string>;

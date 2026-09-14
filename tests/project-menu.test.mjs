@@ -18,14 +18,18 @@ test("explicit IDE selection overrides project/global defaults without mutating 
     /不支持/,
   );
 });
-test("context menu routes VS Code and terminal to separate actions", () => {
+test("context menu routes IDE, terminal, Finder and copy to separate actions", () => {
   const actions = [];
   const menu = projectMenuTemplate("Cursor", (action) => actions.push(action));
   menu[0].submenu.find((item) => item.label === "VS Code").click();
-  menu.find((item) => item.label === "在终端中打开").click();
+  menu.find((item) => item.label === "终端打开").click();
+  menu.find((item) => item.label === "访达打开").click();
+  menu.find((item) => item.label === "复制路径").click();
   assert.deepEqual(actions, [
     { kind: "ide", editor: "Visual Studio Code" },
     { kind: "terminal" },
+    { kind: "folder" },
+    { kind: "copy" },
   ]);
 });
 test("IDE menu uses available application icons and tolerates missing icons", () => {

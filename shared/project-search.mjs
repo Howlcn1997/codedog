@@ -27,6 +27,40 @@ function readmeSnippet(text, query) {
   return `${start ? "…" : ""}${clean.slice(start, end)}${end < clean.length ? "…" : ""}`;
 }
 
+// Read-only presentation records for mixed desktop search. These never enter
+// the project store; mutations and opening must route by workspaceId.
+export function createSearchItems(projects, workspaces = []) {
+  const byId = new Map(projects.map((project) => [project.id, project]));
+  return [
+    ...projects,
+    ...workspaces.map((workspace) => ({
+      kind: "workspace",
+      workspaceId: workspace.id,
+      id: `workspace:${workspace.id}`,
+      name: workspace.name,
+      path: workspace.path,
+      createdAt: workspace.createdAt,
+      lastOpened: workspace.lastOpened,
+      memberCount: workspace.members.length,
+      memberNames: workspace.members
+        .flatMap((member) => [member.alias, byId.get(member.projectId)?.name])
+        .filter(Boolean),
+      group: "",
+      tags: [],
+      notes: "",
+      favorite: false,
+      archived: false,
+      stacks: [],
+      environments: [],
+      dependencies: [],
+      dependencyState: "",
+      missing: !!workspace.error,
+      error: workspace.error,
+      description: `${workspace.members.length} 个成员项目`,
+    })),
+  ];
+}
+
 export function matchProject(project, query) {
   const terms = normalizeSearchText(query).trim().split(/\s+/).filter(Boolean);
   if (!terms.length) return undefined;
@@ -35,6 +69,12 @@ export function matchProject(project, query) {
     { key: "name", rank: 0, values: [project.name], label: "名称" },
     { key: "tag", rank: 0, values: project.tags || [], label: "标签" },
     { key: "alias", rank: 0, values: project.aliases || [], label: "别名" },
+    {
+      key: "member",
+      rank: 1,
+      values: project.memberNames || [],
+      label: "成员",
+    },
     {
       key: "description",
       rank: 1,

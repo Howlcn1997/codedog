@@ -106,6 +106,7 @@ try {
   }, source);
   await page.getByRole("button", { name: "选择", exact: true }).click();
   await page.getByLabel("项目名称", { exact: true }).fill("smoke-project");
+  await page.getByRole("combobox", { name: "导入方式" }).selectOption("copy");
   await page
     .getByRole("dialog")
     .getByRole("button", { name: "导入项目", exact: true })
@@ -137,11 +138,12 @@ try {
     .getByRole("button", { name: "存储空间", exact: true })
     .click();
   await page.getByLabel("选择 smoke-project", { exact: true }).click();
-  await app.evaluate(({ dialog }) => {
-    dialog.showMessageBox = async () => ({ response: 1 });
-  });
   await page
     .getByRole("button", { name: "清理所选项目依赖", exact: true })
+    .click();
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "清理依赖", exact: true })
     .click();
   await page.getByText("已释放约 4 KB", { exact: true }).waitFor();
   const imported = path.join(root, "personal", "smoke-project");

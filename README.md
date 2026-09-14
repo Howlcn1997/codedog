@@ -85,6 +85,7 @@ npm run dist  # macOS DMG / Windows NSIS / Linux AppImage
 - 最近打开、收藏、归档、名称或导入时间排序、列表/卡片切换；主题可跟随系统或固定为亮色/暗色。
 - `⌘/Ctrl + Shift + Space` 从任意应用呼出全局项目启动器；精简模式支持纯键盘搜索、筛选和选择打开动作。
 - 使用默认或项目独立 IDE 打开；打开终端、文件夹、复制路径。
+- 项目组：多选关联项目生成软链工作目录，编辑组内目录名和 README 关系说明；支持 IDE、终端、文件夹打开，以及链接检查和修复。同一项目可加入多个项目组。主界面和精简模式搜索支持项目组名称、路径与成员名称，并通过类型标签区分项目和项目组。
 - 可选系统终端或 Warp；macOS 可安装与桌面端共用数据的 `codedog` 命令行工具。
 - 识别 package.json、Go 模块、Python 项目声明；检查当前运行时和包管理器。
 - 查看依赖声明，执行 npm/pnpm/Yarn 安装、go mod download、uv sync、Poetry install，或在项目 .venv 中使用 pip。原生确认框展示执行命令。
@@ -96,7 +97,7 @@ npm run dist  # macOS DMG / Windows NSIS / Linux AppImage
 
 管理元数据保存在 Electron userData 下的 projects.json（macOS 通常为 ~/Library/Application Support/codedog）。项目源码位于用户在应用内选择的根目录，和 codedog 自身源码目录相互独立。
 
-已有项目时禁止直接切换根目录，以免索引失效。跨磁盘移动请使用复制模式；不会自动删除原目录。批量导入逐项完成，失败前已完成项目会保留并展示在列表中。
+已有项目或项目组时禁止直接切换根目录，以免索引失效。跨磁盘移动请使用复制模式；不会自动删除原目录。批量导入逐项完成，失败前已完成项目会保留并展示在列表中。
 
 Node.js 的“依赖就绪”表示 node_modules 存在，Python 表示 .venv 存在，不代表锁文件一致或运行时版本兼容。Go 共享缓存不据此推断为已安装。依赖页面展示已解析的声明版本；复杂 TOML/requirements 引用、Poetry 外部虚拟环境和 monorepo 子包还未完整展开。安装动作可能更新锁文件并执行安装脚本，用户必须在原生对话框中确认。
 
@@ -108,6 +109,7 @@ Node.js 的“依赖就绪”表示 node_modules 存在，Python 表示 .venv �
 npm test
 npm run build
 node scripts/smoke.mjs
+node scripts/smoke-workspaces.mjs
 ```
 
 核心测试在临时目录验证真实文件操作。桌面测试使用 work/smoke 下的隔离资料与示例项目，不触碰现有项目。桌面测试需图形环境。
@@ -123,6 +125,16 @@ node scripts/smoke.mjs
 - scripts/：开发启动与 Electron 交互测试
 
 不启用 Node renderer 集成；preload 使用上下文隔离与 sandbox；IPC 校验主窗口来源；命令用参数数组调用，不拼接项目文本到 shell；外部导航与新窗口默认拒绝。
+
+## 项目组
+
+标准模式左侧「工作台 → 项目组」可新建项目组。选择成员、设置组内目录名并填写 Markdown 关系说明后，codedog 固定在 `~/codespace/workspaces/` 下创建带唯一标识的目录，保存位置不可编辑。成员通过软链（Windows 使用目录 junction）指向原目录，README.md 保存关系说明。
+
+项目组独立于现有分类，同一个项目可以加入多个项目组；修改软链中的源码就是修改原项目。组目录可通过默认 IDE、终端或文件夹打开，codedog 只负责项目组织。
+
+重命名项目组保持目录路径稳定。移除成员仅解除登记的软链；移出项目组管理保留整个组目录和所有源码。项目仍被项目组引用时，须先从项目组移除成员才能将项目移出管理。链接缺失可以修复；原目录丢失或链接被其他文件替换时会提示问题，不覆盖冲突文件。README 被外部编辑后，重新打开编辑窗口再保存，避免覆盖外部改动。
+
+管理备份中的项目组配置保存于 projects.json；README 和组目录内其他文件仍需自行备份。项目组功能目前在 macOS 完成桌面验证。
 
 ## 精简模式
 
