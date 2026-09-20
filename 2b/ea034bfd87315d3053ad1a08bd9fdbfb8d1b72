@@ -1,0 +1,41 @@
+electron/updates.mjs
+  s_90f845043a27a6::t_17c58c3e4757de 17
+  s_90f845043a27a6::t_c868f1b1ca5937 25-39
+tests/startup.test.mjs
+  s_90f845043a27a6::t_17c58c3e4757de 32-35
+  s_90f845043a27a6::t_2374915157de95 17
+electron/background.mjs
+  s_90f845043a27a6::t_c868f1b1ca5937 2-4,6-12,41,43-48,53-59,63-73,76-80,84-92
+  s_90f845043a27a6::t_7a72b8ba42e08f 14-28,39,42,103
+  s_90f845043a27a6::t_17c58c3e4757de 1,13,29-38,40,49-52,60-62,74-75,81-83,93-98,100-102,104-113
+  s_90f845043a27a6::t_2374915157de95 5,99
+tests/background.test.mjs
+  s_90f845043a27a6::t_c868f1b1ca5937 1-8,10-46,48-134
+  s_90f845043a27a6::t_2374915157de95 9,47
+  s_90f845043a27a6::t_845e852def2ce7 135-151
+electron/main.mjs
+  s_90f845043a27a6::t_17c58c3e4757de 15,29,212-217,219-225,233,235,240,249,315,411,628-629,636,643-644,683
+  s_90f845043a27a6::t_2374915157de95 30,632
+  s_90f845043a27a6::t_c868f1b1ca5937 316-318,630-631,633-635,637-642,676-680
+  s_90f845043a27a6::t_7a72b8ba42e08f 218
+README.md
+  s_90f845043a27a6::t_17c58c3e4757de 87
+package.json
+  s_90f845043a27a6::t_b8774241ea61d8 3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.44-trip",
+  "base_commit_sha": "2bea034bfd87315d3053ad1a08bd9fdbfb8d1b72",
+  "prompts": {},
+  "sessions": {
+    "s_90f845043a27a6": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a09ff5-6658-71c0-a134-8fc37af22b3e",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "w.ning <w.ning@trip.com>"
+    }
+  }
+}
