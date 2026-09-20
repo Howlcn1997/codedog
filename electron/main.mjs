@@ -12,6 +12,7 @@ import { chooseEditor, projectMenuTemplate } from "./project-menu.mjs";
 import { setupAutoUpdates } from "./updates.mjs";
 import { applyWindowMode, sizeForMode } from "./window-mode.mjs";
 import { executeCli } from "./cli.mjs";
+import { setupBackground } from "./background.mjs";
 import {
   app,
   autoUpdater,
@@ -25,6 +26,8 @@ import {
   nativeTheme,
   Menu,
   globalShortcut,
+  Tray,
+  powerMonitor,
 } from "electron";
 import fs from "node:fs/promises";
 import { watch as watchFiles } from "node:fs";
@@ -206,6 +209,20 @@ app
     let currentMode = store.state.uiMode === "compact" ? "compact" : "standard";
     let modeChangeSequence = 0;
     let launcherShortcut;
+    let background;
+    function hideWindow() {
+      if (background) background.hide();
+      else window?.hide();
+    }
+    async function showWindow() {
+      background?.cancelHide();
+      if (!window || window.isDestroyed()) createWindow();
+      await app.dock?.show();
+      if (window.isMinimized()) window.restore();
+      window.show();
+      window.focus();
+      if (process.platform === "darwin") app.focus({ steal: true });
+    }
     try {
       launcherShortcut = normalizeLauncherShortcut(
         store.state.launcherShortcut || defaultLauncherShortcut,
@@ -213,13 +230,14 @@ app
     } catch {
       launcherShortcut = defaultLauncherShortcut;
     }
-    async function toggleLauncher() {
+    async function toggleLauncher(toggle = true) {
       if (
+        toggle &&
         window?.isVisible() &&
         window.isFocused() &&
         currentMode === "compact"
       ) {
-        window.hide();
+        hideWindow();
         return;
       }
       if (!window || window.isDestroyed()) createWindow();
@@ -228,9 +246,7 @@ app
         resizeMode("compact");
         window.webContents.send("codedog:mode", "compact");
       }
-      window.show();
-      window.focus();
-      if (process.platform === "darwin") app.focus({ steal: true });
+      await showWindow();
     }
     const registerLauncher = (shortcut) =>
       globalShortcut.register(shortcut, () => {
@@ -296,6 +312,10 @@ app
         },
       });
       window.center();
+      background?.attach(window);
+      window.on("closed", () => {
+        window = undefined;
+      });
       window.webContents.on("did-finish-load", () => {
         console.info("[codedog] Window loaded:", window.webContents.getURL());
       });
@@ -388,7 +408,7 @@ app
       return { path: target };
     });
     handle("hideLauncher", async () => {
-      if (currentMode === "compact") window.hide();
+      if (currentMode === "compact") hideWindow();
     });
     handle("pickFolder", pick);
     handle("setRoot", (folder) => job(() => store.setRoot(folder)));
@@ -605,6 +625,23 @@ app
       const error = await shell.openPath(store.state.root);
       if (error) throw Error(error);
     });
+    if (process.platform === "darwin") {
+      background = setupBackground({
+        app,
+        autoUpdater,
+        powerMonitor,
+        Tray,
+        Menu,
+        nativeImage,
+        getWindow: () => window,
+        showWindow: () => {
+          void showWindow().catch(console.error);
+        },
+        openLauncher: () => {
+          void toggleLauncher(false).catch(console.error);
+        },
+      });
+    }
     createWindow();
     resetSearchWatchers();
     let dataRefreshTimer;
@@ -636,13 +673,14 @@ app
       for (const timer of indexTimers.values()) clearTimeout(timer);
       globalShortcut.unregisterAll();
     });
-    setupAutoUpdates({ app, autoUpdater, dialog });
+    setupAutoUpdates({
+      app,
+      autoUpdater,
+      dialog,
+      beforeInstall: () => background?.prepareToQuit(),
+    });
     app.on("activate", () => {
-      if (BrowserWindow.getAllWindows().length === 0) createWindow();
-      else if (window && !window.isVisible()) {
-        window.show();
-        window.focus();
-      }
+      void showWindow().catch(console.error);
     });
     app.on("window-all-closed", () => {
       if (process.platform !== "darwin") app.quit();

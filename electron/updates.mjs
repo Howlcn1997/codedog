@@ -14,6 +14,7 @@ export function setupAutoUpdates({
   arch = process.arch,
   interval = TEN_MINUTES,
   logger = console,
+  beforeInstall = () => {},
 }) {
   if (!app.isPackaged || !["darwin", "win32"].includes(platform)) return null;
 
@@ -21,21 +22,21 @@ export function setupAutoUpdates({
   autoUpdater.on("error", (error) =>
     logger.error("[codedog] Update check failed:", error),
   );
-  autoUpdater.on(
-    "update-downloaded",
-    async (_event, _notes, releaseName) => {
-      const answer = await dialog.showMessageBox({
-        type: "info",
-        title: "codedog 更新已就绪",
-        message: `新版本 ${releaseName || ""} 已下载完成。`,
-        detail: "重启 codedog 即可完成安装。",
-        buttons: ["稍后", "立即重启"],
-        defaultId: 1,
-        cancelId: 0,
-      });
-      if (answer.response === 1) autoUpdater.quitAndInstall();
-    },
-  );
+  autoUpdater.on("update-downloaded", async (_event, _notes, releaseName) => {
+    const answer = await dialog.showMessageBox({
+      type: "info",
+      title: "codedog 更新已就绪",
+      message: `新版本 ${releaseName || ""} 已下载完成。`,
+      detail: "重启 codedog 即可完成安装。",
+      buttons: ["稍后", "立即重启"],
+      defaultId: 1,
+      cancelId: 0,
+    });
+    if (answer.response === 1) {
+      beforeInstall();
+      autoUpdater.quitAndInstall();
+    }
+  });
 
   const check = () => {
     try {

@@ -14,7 +14,7 @@ test("main module finishes evaluation before Electron emits ready", async (t) =>
     path.join(dir, "electron.mjs"),
     `
     export const app={setName(){},setPath(){},whenReady(){return new Promise(()=>{});}};
-    export const BrowserWindow=class {},autoUpdater={},globalShortcut={};
+    export const BrowserWindow=class {},autoUpdater={},globalShortcut={},Tray=class {},powerMonitor={};
     export const ipcMain={},dialog={},shell={},clipboard={},session={},nativeImage={},nativeTheme={},Menu={};
   `,
   );
@@ -29,6 +29,10 @@ test("main module finishes evaluation before Electron emits ready", async (t) =>
   await fs.writeFile(
     path.join(dir, "main.mjs"),
     source
+      .replace(
+        'from "./background.mjs"',
+        `from ${JSON.stringify(new URL("../electron/background.mjs", import.meta.url).href)}`,
+      )
       .replace(
         'from "./workspaces.mjs"',
         `from ${JSON.stringify(new URL("../electron/workspaces.mjs", import.meta.url).href)}`,
