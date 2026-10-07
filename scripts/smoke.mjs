@@ -11,7 +11,12 @@ const env = {
   CODEDOG_SKIP_PATH: "1",
 };
 delete env.ELECTRON_RUN_AS_NODE;
-const app = await electron.launch({ args: ["."], env });
+const executablePath = process.env.CODEDOG_EXECUTABLE;
+const app = await electron.launch({
+  executablePath,
+  args: executablePath ? [] : ["."],
+  env,
+});
 try {
   const page = await app.firstWindow();
   await page.waitForSelector(".brand");
@@ -164,5 +169,11 @@ try {
     "PASS: Electron launch, auto-hidden scrollbars, settings navigation, demo, fuzzy search, import, metadata, archive, storage scan, dependency cleanup, and persistence.",
   );
 } finally {
+  // The production launcher intercepts quit to stay in the background.
+  await app.evaluate(({ app, BrowserWindow }) => {
+    app.removeAllListeners("before-quit");
+    for (const window of BrowserWindow.getAllWindows())
+      window.removeAllListeners("close");
+  });
   await app.close();
 }

@@ -670,3 +670,97 @@ test("dependency cleanup preview preserves every directory for in-app expansion"
   });
   assert.equal(preview.size, 5050);
 });
+
+test("create empty and Git projects with persisted metadata", async (t) => {
+  const { store, root, dir } = await fixture(t);
+  const group = await store.createGroup("新作品");
+  const empty = await store.createProject({
+    name: "空白项目",
+    group: group.id,
+    tags: [" idea ", "idea"],
+  });
+  assert.equal(empty.path, path.join(root, "新作品", "空白项目"));
+  assert.deepEqual(await fs.readdir(empty.path), []);
+  assert.deepEqual(empty.tags, ["idea"]);
+  assert.ok(empty.searchIndex);
+  const git = await store.createProject({
+    name: "git-project",
+    group: "personal",
+    initGit: true,
+  });
+  assert.ok(await exists(path.join(git.path, ".git")));
+  const fresh = new ProjectStore(path.join(dir, "data.json"));
+  await fresh.init();
+  assert.equal(fresh.state.projects.length, 2);
+  assert.equal(
+    (await fresh.list()).find((p) => p.id === empty.id).missing,
+    false,
+  );
+});
+
+test("create validates inputs and preserves existing directories", async (t) => {
+  const { store, root } = await fixture(t);
+  for (const input of [
+    { name: "../escape", group: "personal" },
+    { name: "demo", group: "unknown" },
+    { name: "demo", group: "personal", tags: [1] },
+    { name: "demo", group: "personal", initGit: "yes" },
+  ])
+    await assert.rejects(store.createProject(input));
+  const target = path.join(root, "personal", "existing");
+  await fs.mkdir(target, { recursive: true });
+  await fs.writeFile(path.join(target, "keep.txt"), "keep");
+  await assert.rejects(
+    store.createProject({ name: "existing", group: "personal" }),
+    /已存在/,
+  );
+  assert.equal(
+    await fs.readFile(path.join(target, "keep.txt"), "utf8"),
+    "keep",
+  );
+  assert.equal(store.state.projects.length, 0);
+});
+
+test("create rolls back on save failure and serializes duplicate requests", async (t) => {
+  const { store, root } = await fixture(t);
+  const save = store.save;
+  store.save = async () => {
+    throw Error("save failed");
+  };
+  await assert.rejects(
+    store.createProject({ name: "retry", group: "personal", initGit: true }),
+    /save failed/,
+  );
+  assert.equal(await exists(path.join(root, "personal", "retry")), false);
+  assert.equal(store.state.projects.length, 0);
+  store.save = save;
+  const results = await Promise.allSettled(
+    [1, 2].map(() => store.createProject({ name: "retry", group: "personal" })),
+  );
+  assert.equal(results.filter((r) => r.status === "fulfilled").length, 1);
+  assert.equal(store.state.projects.length, 1);
+});
+
+test("create automatically sets up a root and rejects group symlinks outside it", async (t) => {
+  const { store, root, source, dir } = await fixture(t);
+  const defaultRoot = path.join(dir, "auto-root");
+  const unconfigured = new ProjectStore(path.join(dir, "empty.json"), {
+    defaultRoot,
+  });
+  const created = await unconfigured.createProject({
+    name: "demo",
+    group: "personal",
+  });
+  assert.equal(created.path, path.join(defaultRoot, "personal", "demo"));
+  assert.deepEqual(await fs.readdir(created.path), []);
+  assert.equal(
+    JSON.parse(await fs.readFile(unconfigured.file, "utf8")).root,
+    defaultRoot,
+  );
+  await fs.symlink(source, path.join(root, "personal"), "dir");
+  await assert.rejects(
+    store.createProject({ name: "demo", group: "personal" }),
+    /根目录之外/,
+  );
+  assert.equal(await exists(path.join(source, "demo")), false);
+});

@@ -1,5 +1,7 @@
 # codedog
 
+我开发 codedog，是为了更快地找到工作中积累的众多项目、清理闲置项目的依赖以释放磁盘空间，并将关联项目组织在同一目录下，方便 AI Agent 跨项目协作，共享记忆与文档。
+
 一个本地优先的桌面项目管理中心。Node.js、Go、Python，公司项目、个人作品与临时实验，都有自己的位置。
 
 [Download for macOS](https://github.com/Howlcn1997/codedog/releases/latest)
@@ -23,7 +25,7 @@
 当前能力按使用场景可归纳为 **8 类**：
 
 1. **本地优先的项目中心**：源码留在本机，管理数据以 JSON 原子写入；统一浏览公司、个人、临时及自定义分组中的项目。
-2. **灵活导入现有代码**：支持复制、移动、原地登记、Git HTTPS/SSH 克隆和批量扫描；移动项目时还能迁移 Claude Code 聊天记录副本。
+2. **新建与导入项目**：只需选择分组、填写名称，即可自动创建空白项目文件夹；未设置根目录时默认使用用户主目录下的 `CodeDog`；已有代码支持复制、移动、原地登记、Git HTTPS/SSH 克隆和批量扫描，移动项目时还能迁移 Claude Code 聊天记录副本。
 3. **面向代码库的智能搜索**：名称支持子序列模糊匹配，也可检索别名、路径、标签、描述、备注、远程仓库、根目录 README 与依赖名称，并展示命中原因。索引支持手动刷新，也会跟随相关源文件变化自动更新。
 4. **随时呼出的项目启动器**：按 `⌘/Ctrl + Shift + Space` 可在任何应用中打开或收起精简模式；全键盘完成搜索、选择项目、切换动作和打开。
 5. **IDE、终端与 CLI 联动**：可使用全局或项目独立 IDE 打开，在系统终端或 Warp 中启动，也可通过 `codedog add/list/open/path` 从命令行访问同一份项目数据。
@@ -71,6 +73,15 @@ codedog path <名称或别名>     # 只输出绝对路径
 ```sh
 npm run pack  # 当前系统可运行的应用目录，输出至 release/
 npm run dist  # macOS DMG / Windows NSIS / Linux AppImage
+```
+
+React、Mermaid、图标库等前端依赖由 Vite 编译进 `dist/`，统一放在 `devDependencies`，避免 electron-builder 再将完整依赖打入应用。构建时需安装开发依赖（使用 `npm ci`，不要加 `--omit=dev`）。只有主进程运行时需要、且未被构建工具打包的第三方模块才放入 `dependencies`。
+
+冒烟测试默认运行源码应用；设置 `CODEDOG_EXECUTABLE` 为打包后的可执行文件路径，可验证实际发布产物。例如在 Apple Silicon Mac 上：
+
+```bash
+CODEDOG_EXECUTABLE="$PWD/release/mac-arm64/codedog.app/Contents/MacOS/codedog" node scripts/smoke.mjs
+CODEDOG_EXECUTABLE="$PWD/release/mac-arm64/codedog.app/Contents/MacOS/codedog" node scripts/smoke-workspaces.mjs
 ```
 
 此版本未配置应用签名与公证，适合本机开发使用。macOS 是本轮主要验证平台；Windows/Linux 的打包配置已保留，尚未实机验证。

@@ -56,6 +56,13 @@ let store;
 let busy = false;
 const cliMarker = process.argv.indexOf("--codedog-cli");
 const IDE = ["Cursor", "Visual Studio Code", "WebStorm", "GoLand", "PyCharm"];
+const IDE_ICON_FILES = {
+  Cursor: "cursor.png",
+  "Visual Studio Code": "visual-studio-code.png",
+  WebStorm: "webstorm.png",
+  GoLand: "goland.png",
+  PyCharm: "pycharm.png",
+};
 const cli = {
   Cursor: "cursor",
   "Visual Studio Code": "code",
@@ -90,10 +97,19 @@ function handle(name, fn) {
   });
 }
 async function editorIcons() {
-  if (process.platform !== "darwin") return {};
   const icons = {};
+  for (const editor of IDE) {
+    const icon = nativeImage.createFromPath(
+      path.join(here, "../public/ide-icons", IDE_ICON_FILES[editor]),
+    );
+    if (icon.isEmpty()) continue;
+    icon.setTemplateImage(process.platform === "darwin");
+    icons[editor] = icon;
+  }
+  if (process.platform !== "darwin") return icons;
   await Promise.all(
     IDE.map(async (editor) => {
+      if (icons[editor]) return;
       for (const base of [
         "/Applications",
         path.join(app.getPath("home"), "Applications"),
@@ -102,8 +118,11 @@ async function editorIcons() {
         if (!(await exists(folder))) continue;
         try {
           const icon = await app.getFileIcon(folder, { size: "small" });
-          if (!icon.isEmpty())
-            icons[editor] = icon.resize({ width: 16, height: 16 });
+          if (!icon.isEmpty()) {
+            const resized = icon.resize({ width: 16, height: 16 });
+            resized.setTemplateImage(false);
+            icons[editor] = resized;
+          }
         } catch {}
         break;
       }
@@ -435,6 +454,13 @@ app
         await store.save();
       });
     });
+    handle("createProject", (input) =>
+      job(async () => {
+        const result = await store.createProject(input, log);
+        resetSearchWatchers();
+        return result;
+      }),
+    );
     handle("import", (input) =>
       job(async () => {
         const result = await store.importProject(input, log);

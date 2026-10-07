@@ -50,6 +50,7 @@ import type {
   SearchItem,
   Group,
   ImportInput,
+  CreateProjectInput,
   Environment,
   Theme,
   SavedFilter,
@@ -276,6 +277,13 @@ export default function App() {
       useState<DependencyCleanupPreview | null>(null),
     [cleanupExpanded, setCleanupExpanded] = useState(false),
     [envs, setEnvs] = useState<Record<string, Environment[]>>({});
+  const [createForm, setCreateForm] = useState<CreateProjectInput>({
+    name: "",
+    group: "personal",
+    tags: [],
+    initGit: false,
+  });
+  const [createError, setCreateError] = useState("");
   const [importForm, setImportForm] = useState<ImportInput>({
       copyClaudeChats: false,
       mode: "copy",
@@ -541,6 +549,45 @@ export default function App() {
     setSelected(p.id);
     setTab("overview");
     setInspector(true);
+  }
+  async function beginCreate() {
+    if (!requireNative() || busy) return;
+    await perform(async () => {
+      setCreateForm({
+        name: "",
+        group: Object.hasOwn(groups, nav) ? nav : "personal",
+        tags: [],
+        initGit: false,
+      });
+      setCreateError("");
+      setModal("create");
+    });
+  }
+  async function doCreate() {
+    await perform(async () => {
+      setCreateError("");
+      let created;
+      try {
+        created = await api!.createProject({
+          ...createForm,
+          name: createForm.name.trim(),
+        });
+      } catch (e) {
+        setCreateError((e as Error).message);
+        return;
+      }
+      setModal("");
+      await refresh();
+      setSelected(created.id);
+      setNav("all");
+      setSearch("");
+      setStack("all");
+      setStatus("all");
+      setGroupFilter("all");
+      setTab("overview");
+      setInspector(true);
+      setToast("项目已创建");
+    });
   }
   function beginImport() {
     if (!requireNative()) return;
@@ -835,11 +882,24 @@ export default function App() {
                   </p>
                 </div>
                 {nav !== "storage" && (
-                  <button className="button primary" onClick={beginImport}>
-                    <Plus size={17} />
-                    导入项目
-                    <ChevronDown size={14} />
-                  </button>
+                  <div className="project-create-actions">
+                    <button
+                      className="button"
+                      onClick={beginImport}
+                      disabled={busy}
+                    >
+                      <Download size={17} />
+                      导入项目
+                    </button>
+                    <button
+                      className="button primary"
+                      onClick={beginCreate}
+                      disabled={busy}
+                    >
+                      <Plus size={17} />
+                      新建项目
+                    </button>
+                  </div>
                 )}
               </div>
               {demoMode && (
@@ -1005,6 +1065,14 @@ export default function App() {
                         >
                           <FolderOpen size={17} />
                           {state.root ? "导入第一个项目" : "选择项目根目录"}
+                        </button>
+                        <button
+                          className="button"
+                          onClick={beginCreate}
+                          disabled={busy}
+                        >
+                          <Plus size={17} />
+                          新建第一个项目
                         </button>
                         <button
                           className="text-button"
@@ -1635,6 +1703,79 @@ export default function App() {
           </pre>
         </section>
       )}
+      <Modal
+        title="新建项目"
+        description="选择分组、填写名称，CodeDog 会自动创建项目文件夹。"
+        open={modal === "create"}
+        onClose={() => !busy && setModal("")}
+      >
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (!busy && createForm.name.trim()) void doCreate();
+          }}
+        >
+          <div className="form">
+            <label>
+              项目名称
+              <input
+                autoFocus
+                required
+                maxLength={100}
+                placeholder="my-awesome-project"
+                value={createForm.name}
+                disabled={busy}
+                onChange={(e) =>
+                  setCreateForm((f) => ({ ...f, name: e.target.value }))
+                }
+              />
+            </label>
+            <label>
+              项目分组
+              <select
+                value={createForm.group}
+                disabled={busy}
+                onChange={(e) =>
+                  setCreateForm((f) => ({ ...f, group: e.target.value }))
+                }
+              >
+                {Object.entries(groups).map(([id, name]) => (
+                  <option key={id} value={id}>
+                    {name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {createError && (
+              <div className="inline-error" role="alert">
+                {createError}
+              </div>
+            )}
+          </div>
+          <div className="modal-footer">
+            <button
+              type="button"
+              className="button"
+              disabled={busy}
+              onClick={() => setModal("")}
+            >
+              取消
+            </button>
+            <button
+              type="submit"
+              className="button primary"
+              disabled={busy || !createForm.name.trim()}
+            >
+              {busy ? (
+                <Loader2 size={15} className="spin" />
+              ) : (
+                <Plus size={15} />
+              )}
+              {busy ? "正在创建…" : "创建项目"}
+            </button>
+          </div>
+        </form>
+      </Modal>
       <Modal
         title="导入项目"
         description="把已有代码或远程仓库，安放到你的项目空间。"

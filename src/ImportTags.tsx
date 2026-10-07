@@ -37,13 +37,13 @@ export default function ImportTags({
     setQuery("");
   };
   return (
-    <section className="import-tags" aria-label="导入标签">
+    <section className="import-tags" aria-label="项目标签">
       <div className="import-tags-heading">
         <span>项目标签</span>
         <small>{value.length} / 20</small>
       </div>
       <p>
-        {batch ? "统一应用到本次勾选的所有项目。" : "导入时为项目添加标签。"}
+        {batch ? "统一应用到本次勾选的所有项目。" : "为项目添加标签。"}
         可选择已有标签，或新建标签。
       </p>
       {!!value.length && (

@@ -3125,3 +3125,9 @@ input:where([type="checkbox"], [type="radio"]) {
 .project-card h3 .result-kind {
   margin-left: 4px;
 }
+
+.project-create-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}

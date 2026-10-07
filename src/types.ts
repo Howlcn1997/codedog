@@ -108,7 +108,15 @@ export type ImportInput = {
   name: string;
   group: Group;
 };
+export type CreateProjectInput = {
+  name: string;
+  group: Group;
+  tags: string[];
+  initGit: boolean;
+};
 export type Api = {
+  createProject: (input: CreateProjectInput) => Promise<{ id: string }>;
+
   createWorkspace: (input: WorkspaceInput) => Promise<Workspace>;
   getWorkspace: (id: string) => Promise<Workspace & { description: string }>;
   updateWorkspace: (id: string, input: WorkspaceInput) => Promise<Workspace>;

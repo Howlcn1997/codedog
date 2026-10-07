@@ -33,7 +33,12 @@ const env = {
   CODEDOG_SKIP_PATH: "1",
 };
 delete env.ELECTRON_RUN_AS_NODE;
-const app = await electron.launch({ args: ["."], env });
+const executablePath = process.env.CODEDOG_EXECUTABLE;
+const app = await electron.launch({
+  executablePath,
+  args: executablePath ? [] : ["."],
+  env,
+});
 try {
   await app.evaluate(({ app }, home) => app.setPath("home", home), profile);
   const page = await app.firstWindow();
@@ -332,5 +337,11 @@ try {
     "Project group desktop smoke passed: create, edit, repair, conflict protection, removal.",
   );
 } finally {
+  // The production launcher intercepts quit to stay in the background.
+  await app.evaluate(({ app, BrowserWindow }) => {
+    app.removeAllListeners("before-quit");
+    for (const window of BrowserWindow.getAllWindows())
+      window.removeAllListeners("close");
+  });
   await app.close();
 }

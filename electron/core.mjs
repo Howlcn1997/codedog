@@ -1,5 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import os from "node:os";
 import { randomUUID } from "node:crypto";
 import { spawn } from "node:child_process";
 import { createRequire } from "node:module";
@@ -522,8 +523,9 @@ export async function cleanProjectDependencies(folder) {
   };
 }
 export class ProjectStore {
-  constructor(file) {
+  constructor(file, { defaultRoot = path.join(os.homedir(), "CodeDog") } = {}) {
     this.file = file;
+    this.defaultRoot = defaultRoot;
     this.state = { version: 1, root: "", ide: "Cursor", projects: [] };
     this.queue = Promise.resolve();
   }
@@ -821,10 +823,20 @@ export class ProjectStore {
       return projects.length;
     });
   }
+  async createProject(input, onLog = () => {}) {
+    if (input.initGit !== undefined && typeof input.initGit !== "boolean")
+      throw Error("Git 初始化选项无效");
+    return this.addProject({ ...input, mode: "create", url: "" }, onLog);
+  }
   async importProject(input, onLog = () => {}) {
+    if (!["copy", "move", "register", "clone"].includes(input.mode))
+      throw Error("无效的导入方式");
+    return this.addProject(input, onLog);
+  }
+  async addProject(input, onLog = () => {}) {
     return this.transaction(async () => {
-      if (!this.state.root) throw Error("请先选择项目根目录");
-      const root = await fs.realpath(this.state.root);
+      if (!this.state.root && input.mode !== "create")
+        throw Error("请先选择项目根目录");
       const name = safeName(input.name);
       const group = input.group;
       const rawTags = input.tags ?? [];
@@ -839,17 +851,20 @@ export class ProjectStore {
       if (tags.length > 20 || tags.some((tag) => tag.length > 40))
         throw Error("最多选择 20 个标签，每个标签最多 40 个字符");
       if (!Object.hasOwn(this.groups(), group)) throw Error("无效的项目分组");
-      if (!["copy", "move", "register", "clone"].includes(input.mode))
+      if (!["copy", "move", "register", "clone", "create"].includes(input.mode))
         throw Error("无效的导入方式");
       if (
         input.copyClaudeChats !== undefined &&
         typeof input.copyClaudeChats !== "boolean"
       )
         throw Error("Claude Code 聊天记录选项无效");
+      if (!this.state.root && input.mode === "create")
+        await fs.mkdir(this.defaultRoot, { recursive: true });
+      const root = await fs.realpath(this.state.root || this.defaultRoot);
       let source = "";
       let target = "";
       let created = false;
-      if (input.mode !== "clone") {
+      if (input.mode !== "clone" && input.mode !== "create") {
         source = await fs.realpath(input.source);
         if (!(await fs.stat(source)).isDirectory()) throw Error("请选择文件夹");
       }
@@ -882,10 +897,16 @@ export class ProjectStore {
         if (this.state.projects.some((p) => p.cloneUrl === input.url))
           throw Error("这个仓库已经导入");
       }
-      onLog("开始导入…\n");
+      onLog(input.mode === "create" ? "开始创建…\n" : "开始导入…\n");
       let moved = false;
       let chatCopy;
       try {
+        if (input.mode === "create") {
+          await fs.mkdir(target);
+          created = true;
+          if (input.initGit)
+            await run("git", ["init", "--", target], root, onLog);
+        }
         if (input.mode === "copy") {
           await fs.mkdir(target);
           created = true;
@@ -941,14 +962,17 @@ export class ProjectStore {
           cloneUrl: input.url || "",
           searchIndex: await createSearchIndex(target),
         };
+        const previousRoot = this.state.root;
+        this.state.root = root;
         this.state.projects.push(record);
         try {
           await this.save();
         } catch (e) {
+          this.state.root = previousRoot;
           this.state.projects.pop();
           throw e;
         }
-        onLog("导入完成\n");
+        onLog(input.mode === "create" ? "创建完成\n" : "导入完成\n");
         return record;
       } catch (e) {
         if (chatCopy?.rollback) await chatCopy.rollback().catch(() => {});

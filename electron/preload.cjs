@@ -19,6 +19,7 @@ const methods = [
   "repairWorkspace",
   "forgetWorkspace",
   "openWorkspace",
+  "createProject",
   "import",
   "scan",
   "refreshSearchIndex",
