@@ -1,0 +1,42 @@
+electron/main.mjs
+  s_82ed99e4bdd413::t_600df8087754e2 16,373-375
+src/types.ts
+  s_82ed99e4bdd413::t_600df8087754e2 117-121,123-124
+src/App.tsx
+  s_82ed99e4bdd413::t_0fadd8eb8ad57e 57,263,366-369,381-389,2091,2094-2113,2125-2129
+  s_82ed99e4bdd413::t_a0eae9a42e5b16 370-380,2114-2124
+src/style.css
+  s_82ed99e4bdd413::t_0fadd8eb8ad57e 1395-1426
+README.md
+  s_82ed99e4bdd413::t_c46b1f2dd4a5d1 52-56
+electron/login-item.mjs
+  s_82ed99e4bdd413::t_600df8087754e2 1-3,9,15,20-37,43-46
+  s_82ed99e4bdd413::t_a0eae9a42e5b16 4-8,10-14,16-19,38-42
+tests/startup.test.mjs
+  s_82ed99e4bdd413::t_600df8087754e2 33-35
+tests/login-item.test.mjs
+  s_82ed99e4bdd413::t_c46b1f2dd4a5d1 1-12,17-18,27-52,55-61,65-76
+  s_82ed99e4bdd413::t_a0eae9a42e5b16 13-16,19-26,53-54,62-64
+package-lock.json
+  s_82ed99e4bdd413::t_d0a912901eedf6 3,9
+electron/preload.cjs
+  s_82ed99e4bdd413::t_600df8087754e2 4-5
+package.json
+  s_82ed99e4bdd413::t_ba25c6c9f8f3ba 3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.45-trip",
+  "base_commit_sha": "d12073a0f0ef67210d49639e1d3d9b3146be93d1",
+  "prompts": {},
+  "sessions": {
+    "s_82ed99e4bdd413": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a11ea5-88cf-7b10-b999-87af6fc92aab",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "w.ning <w.ning@trip.com>"
+    }
+  }
+}
