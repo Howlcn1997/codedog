@@ -13,6 +13,7 @@ import { setupAutoUpdates } from "./updates.mjs";
 import { applyWindowMode, sizeForMode } from "./window-mode.mjs";
 import { executeCli } from "./cli.mjs";
 import { setupBackground } from "./background.mjs";
+import { createLoginItemSettings } from "./login-item.mjs";
 import {
   app,
   autoUpdater,
@@ -369,6 +370,9 @@ app
         workspaces: await listWorkspaces(store),
       };
     });
+    const loginItem = createLoginItemSettings(app);
+    handle("loginItemSettings", () => loginItem.get());
+    handle("setOpenAtLogin", (enabled) => loginItem.set(enabled));
     handle("setMode", async (mode) => {
       sizeForMode(mode);
       const sequence = ++modeChangeSequence;

@@ -1,6 +1,8 @@
 const { contextBridge, ipcRenderer } = require("electron");
 const methods = [
   "state",
+  "loginItemSettings",
+  "setOpenAtLogin",
   "setMode",
   "setSavedFilters",
   "setLauncherShortcut",

@@ -1392,6 +1392,38 @@ h1 {
   color: light-dark(#a4a8b8, #aeb3c5);
   margin: 6px 0 0;
 }
+.settings-switch {
+  width: 34px;
+  height: 20px;
+  padding: 3px;
+  border: 0;
+  border-radius: 10px;
+  background: light-dark(#c5c8d3, #555b6b);
+  flex-shrink: 0;
+  cursor: pointer;
+}
+.settings-switch > span {
+  display: block;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: white;
+  transition: transform 150ms ease;
+}
+.settings-switch[aria-checked="true"] {
+  background: light-dark(#6862cd, #8b83ee);
+}
+.settings-switch[aria-checked="true"] > span {
+  transform: translateX(14px);
+}
+.settings-switch:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.settings-switch:focus-visible {
+  outline: 2px solid light-dark(#6862cd, #8b83ee);
+  outline-offset: 3px;
+}
 .settings-modal {
   display: flex;
   width: 780px;

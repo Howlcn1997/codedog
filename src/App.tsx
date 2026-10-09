@@ -54,6 +54,7 @@ import type {
   Environment,
   Theme,
   SavedFilter,
+  LoginItemSettings,
 } from "./types";
 import { demo } from "./demo";
 import { searchProjects, createSearchItems } from "./projectSearch";
@@ -259,6 +260,7 @@ export default function App() {
     [error, setError] = useState(""),
     [modal, setModal] = useState(""),
     [recordingShortcut, setRecordingShortcut] = useState(false),
+    [loginItem, setLoginItem] = useState<LoginItemSettings | null>(null),
     [settingsSection, setSettingsSection] = useState<
       "general" | "appearance" | "open" | "data"
     >("general"),
@@ -360,6 +362,30 @@ export default function App() {
         .cliStatus()
         .then(setCliInfo)
         .catch(() => setCliInfo(null));
+  }, [modal]);
+  useEffect(() => {
+    if (modal !== "settings" || !api) return;
+    let active = true;
+    const load = () => {
+      api
+        .loginItemSettings()
+        .then((value) => {
+          if (active) setLoginItem(value);
+        })
+        .catch((e) => {
+          if (active) {
+            setLoginItem(null);
+            setError(e.message);
+          }
+        });
+    };
+    setLoginItem(null);
+    load();
+    window.addEventListener("focus", load);
+    return () => {
+      active = false;
+      window.removeEventListener("focus", load);
+    };
   }, [modal]);
   useEffect(() => {
     if (!toast) return;
@@ -2062,9 +2088,45 @@ export default function App() {
               <section className="settings-pane">
                 <div className="settings-section-heading">
                   <h3>通用</h3>
-                  <p>设置项目的统一存放位置和应用数据来源。</p>
+                  <p>设置应用启动行为、项目存放位置和数据来源。</p>
                 </div>
                 <div className="form settings-form">
+                  <div className="settings-line">
+                    <div>
+                      <strong id="open-at-login-label">开机自启</strong>
+                      <p id="open-at-login-description">
+                        {!api || demoMode
+                          ? "请在桌面应用的本地模式中设置开机自启。"
+                          : loginItem?.reason || "正在读取系统启动项…"}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      role="switch"
+                      className="settings-switch"
+                      aria-labelledby="open-at-login-label"
+                      aria-describedby="open-at-login-description"
+                      aria-checked={loginItem?.enabled ?? false}
+                      disabled={busy || demoMode || !loginItem?.supported}
+                      onClick={() => {
+                        if (!api || !loginItem) return;
+                        const enabled = !loginItem.enabled;
+                        void perform(
+                          async () => {
+                            try {
+                              setLoginItem(await api.setOpenAtLogin(enabled));
+                            } catch (e) {
+                              setLoginItem(await api.loginItemSettings());
+                              throw e;
+                            }
+                          },
+                          enabled ? "已开启开机自启" : "已关闭开机自启",
+                        );
+                      }}
+                    >
+                      <span />
+                    </button>
+                  </div>
                   <label>
                     项目根目录
                     <div className="input-action">

@@ -114,7 +114,14 @@ export type CreateProjectInput = {
   tags: string[];
   initGit: boolean;
 };
+export type LoginItemSettings = {
+  supported: boolean;
+  enabled: boolean;
+  reason: string;
+};
 export type Api = {
+  loginItemSettings: () => Promise<LoginItemSettings>;
+  setOpenAtLogin: (enabled: boolean) => Promise<LoginItemSettings>;
   createProject: (input: CreateProjectInput) => Promise<{ id: string }>;
 
   createWorkspace: (input: WorkspaceInput) => Promise<Workspace>;
