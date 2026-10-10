@@ -2,6 +2,7 @@ import ProjectWorkspaces from "./ProjectWorkspaces";
 import { version as appVersion } from "../package.json";
 import GroupCreator from "./GroupCreator";
 import CompactMode from "./CompactMode";
+import CompactAppearanceEditor from "./CompactAppearanceEditor";
 import ImportTags from "./ImportTags";
 import TechStackIcon from "./TechStackIcon";
 import StorageWorkspace from "./StorageWorkspace";
@@ -53,7 +54,7 @@ import type {
   CreateProjectInput,
   Environment,
   Theme,
-  SavedFilter,
+  CompactAppearance,
   LoginItemSettings,
 } from "./types";
 import { demo } from "./demo";
@@ -318,6 +319,21 @@ export default function App() {
     await refresh();
     return group.id;
   }
+  const [compactAppearanceDraft, setCompactAppearanceDraft] =
+    useState<CompactAppearance>({ opacity: 70, blurRadius: 20 });
+  const compactAppearance = state.compactAppearance || {
+    opacity: 70,
+    blurRadius: 20,
+  };
+  useEffect(() => {
+    setCompactAppearanceDraft({
+      opacity: compactAppearance.opacity,
+      blurRadius: compactAppearance.blurRadius,
+    });
+  }, [compactAppearance.opacity, compactAppearance.blurRadius]);
+  const compactAppearanceChanged =
+    compactAppearanceDraft.opacity !== compactAppearance.opacity ||
+    compactAppearanceDraft.blurRadius !== compactAppearance.blurRadius;
   const theme = state.theme || "system";
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -756,23 +772,13 @@ export default function App() {
     return (
       <CompactMode
         projects={searchItems}
+        appearance={compactAppearance}
         groups={groups}
         root={data.root}
         busy={busy}
         demo={demoMode}
         onStandard={() => switchMode("standard")}
         onProjectMenu={showProjectMenu}
-        savedFilters={data.savedFilters || []}
-        onSaveFilters={(filters: SavedFilter[]) => {
-          if (!api || demoMode) {
-            setError("演示模式不能保存筛选。");
-            return;
-          }
-          void perform(async () => {
-            await api.setSavedFilters(filters);
-            await refresh();
-          }, "筛选已保存");
-        }}
         onHide={() => void api?.hideLauncher()}
         onRefreshIndex={() => {
           if (!api || demoMode) {
@@ -2293,6 +2299,48 @@ export default function App() {
                     </select>
                     <small>标准模式和精简模式会使用同一主题。</small>
                   </label>
+                  <div className="compact-appearance-settings">
+                    <h4>精简模式背景</h4>
+                    <CompactAppearanceEditor
+                      value={compactAppearanceDraft}
+                      blurError={state.windowBlurError}
+                      disabled={busy}
+                      onChange={setCompactAppearanceDraft}
+                    />
+                    <div className="appearance-actions">
+                      <button
+                        className="button"
+                        disabled={busy}
+                        onClick={() =>
+                          setCompactAppearanceDraft({
+                            opacity: 70,
+                            blurRadius: 20,
+                          })
+                        }
+                      >
+                        恢复默认
+                      </button>
+                      <button
+                        className="button primary"
+                        disabled={busy || !compactAppearanceChanged}
+                        onClick={() => {
+                          const next = { ...compactAppearanceDraft };
+                          void perform(async () => {
+                            if (api) {
+                              await api.setCompactAppearance(next);
+                              await refresh();
+                            } else
+                              setState((value) => ({
+                                ...value,
+                                compactAppearance: next,
+                              }));
+                          }, "精简模式外观已保存");
+                        }}
+                      >
+                        保存外观
+                      </button>
+                    </div>
+                  </div>
                   <div className="settings-choice">
                     <span>界面模式</span>
                     <div className="settings-choice-grid">

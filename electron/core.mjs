@@ -661,6 +661,29 @@ export class ProjectStore {
       return group;
     });
   }
+  async setCompactAppearance(value) {
+    if (
+      !value ||
+      !Number.isInteger(value.opacity) ||
+      value.opacity < 0 ||
+      value.opacity > 100 ||
+      !Number.isInteger(value.blurRadius) ||
+      value.blurRadius < 0 ||
+      value.blurRadius > 80
+    )
+      throw Error("无效的精简模式外观设置");
+    const next = { opacity: value.opacity, blurRadius: value.blurRadius };
+    return this.transaction(async () => {
+      const previous = this.state.compactAppearance;
+      this.state.compactAppearance = next;
+      try {
+        await this.save();
+      } catch (error) {
+        this.state.compactAppearance = previous;
+        throw error;
+      }
+    });
+  }
   async setTheme(theme) {
     if (!["system", "light", "dark"].includes(theme)) throw Error("无效的主题");
     return this.transaction(async () => {

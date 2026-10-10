@@ -1,6 +1,6 @@
 {
   "name": "codedog",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "private": true,
   "type": "module",
   "description": "A quiet home for all your projects",
@@ -10,13 +10,16 @@
   "scripts": {
     "dev": "node scripts/dev.mjs",
     "dev:web": "vite --host 127.0.0.1",
-    "build": "tsc --noEmit && vite build",
+    "build": "npm run build:native && tsc --noEmit && vite build",
     "start": "electron .",
     "test": "node --test tests/*.test.mjs",
     "pack": "npm run build && node scripts/package.mjs --dir",
     "dist": "npm run build && node scripts/package.mjs",
     "release:mac": "npm run build && electron-builder --mac dmg zip --publish never",
-    "format": "prettier --write src electron scripts tests vite.config.ts tsconfig.json package.json docs README.md"
+    "format": "prettier --write src electron scripts tests vite.config.ts tsconfig.json package.json docs README.md",
+    "build:native": "node scripts/build-native.mjs",
+    "predev": "npm run build:native",
+    "prestart": "npm run build:native"
   },
   "devDependencies": {
     "@playwright/test": "latest",
@@ -28,6 +31,7 @@
     "electron-builder": "latest",
     "lucide-react": "latest",
     "mermaid": "^12.0.0",
+    "node-api-headers": "1.9.0",
     "prettier": "^3.9.6",
     "react": "latest",
     "react-dom": "latest",
@@ -72,6 +76,9 @@
         "AppImage"
       ],
       "icon": "public/icon.png"
-    }
+    },
+    "asarUnpack": [
+      "electron/native/*.node"
+    ]
   }
 }

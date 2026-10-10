@@ -4,3 +4,4 @@ release/
 work/
 .DS_Store
 *.log
+electron/native/*.node

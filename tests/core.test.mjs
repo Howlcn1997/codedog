@@ -764,3 +764,35 @@ test("create automatically sets up a root and rejects group symlinks outside it"
   );
   assert.equal(await exists(path.join(source, "demo")), false);
 });
+
+test("compact appearance validates, persists and rolls back failed saves", async (t) => {
+  const { store } = await fixture(t);
+  const value = { opacity: 45, blurRadius: 32 };
+  await store.setCompactAppearance(value);
+  const restored = new ProjectStore(store.file);
+  await restored.init();
+  assert.deepEqual(restored.state.compactAppearance, value);
+  for (const bad of [
+    null,
+    {},
+    { ...value, opacity: -1 },
+    { ...value, opacity: 101 },
+    { ...value, opacity: NaN },
+    { ...value, opacity: 2.5 },
+    { ...value, blurRadius: 81 },
+    { ...value, blurRadius: -1 },
+    { ...value, blurRadius: 1.5 },
+    { ...value, blurRadius: NaN },
+  ]) {
+    await assert.rejects(store.setCompactAppearance(bad), /无效/);
+    assert.deepEqual(store.state.compactAppearance, value);
+  }
+  store.save = async () => {
+    throw Error("disk full");
+  };
+  await assert.rejects(
+    store.setCompactAppearance({ opacity: 0, blurRadius: 0 }),
+    /disk full/,
+  );
+  assert.deepEqual(store.state.compactAppearance, value);
+});

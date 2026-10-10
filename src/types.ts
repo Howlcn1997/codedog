@@ -87,7 +87,13 @@ export type WorkspaceInput = {
   description?: string;
   expectedDescription?: string;
 };
+export type CompactAppearance = {
+  opacity: number;
+  blurRadius: number;
+};
 export type State = {
+  windowBlurError?: string;
+  compactAppearance?: CompactAppearance;
   groups?: Record<string, string>;
   theme?: Theme;
   terminal?: "system" | "warp";
@@ -136,6 +142,7 @@ export type Api = {
   initialMode: "standard" | "compact";
   createGroup: (name: string) => Promise<{ id: string; name: string }>;
   setTheme: (theme: Theme) => Promise<void>;
+  setCompactAppearance: (value: CompactAppearance) => Promise<void>;
   setTerminal: (terminal: "system" | "warp") => Promise<void>;
   projectMenu: (
     id: string,

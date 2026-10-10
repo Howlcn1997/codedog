@@ -46,7 +46,7 @@ async function restart() {
     while (pendingRestart && !closing) {
       pendingRestart = false;
       console.info(
-        "[codedog] Main/preload changed; restarting desktop process…",
+        "[codedog] Main/preload/native module changed; restarting desktop process…",
       );
       await stopChild();
       if (!closing) launch();
@@ -59,7 +59,7 @@ const watcher = watch(
   path.resolve("electron"),
   { recursive: true },
   (_event, file) => {
-    if (!file || !/\.(?:mjs|cjs|js)$/.test(file)) return;
+    if (!file || !/\.(?:mjs|cjs|js|node)$/.test(file)) return;
     clearTimeout(timer);
     timer = setTimeout(
       () =>

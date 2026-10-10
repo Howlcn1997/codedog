@@ -1,4 +1,10 @@
 import {
+  getWindowBlurError,
+  setWindowBlurRadius,
+  refreshWindowBlur,
+} from "./window-effects.mjs";
+import { normalizeCompactAppearance } from "./compact-appearance.mjs";
+import {
   listWorkspaces,
   getWorkspace,
   workspaceLocation,
@@ -10,7 +16,11 @@ import {
 import { terminalLaunch } from "./terminal.mjs";
 import { chooseEditor, projectMenuTemplate } from "./project-menu.mjs";
 import { setupAutoUpdates } from "./updates.mjs";
-import { applyWindowMode, sizeForMode } from "./window-mode.mjs";
+import {
+  applyWindowMode,
+  applyWindowAppearance,
+  sizeForMode,
+} from "./window-mode.mjs";
 import { executeCli } from "./cli.mjs";
 import { setupBackground } from "./background.mjs";
 import { createLoginItemSettings } from "./login-item.mjs";
@@ -222,8 +232,12 @@ app
     nativeTheme.themeSource = store.state.theme || "system";
     nativeTheme.on("updated", () => {
       if (window && !window.isDestroyed())
-        window.setBackgroundColor(
-          nativeTheme.shouldUseDarkColors ? "#191b23" : "#fafbfc",
+        applyWindowAppearance(
+          window,
+          currentMode,
+          nativeTheme.shouldUseDarkColors,
+          process.platform,
+          store.state.compactAppearance,
         );
     });
     let currentMode = store.state.uiMode === "compact" ? "compact" : "standard";
@@ -307,6 +321,13 @@ app
     function resizeMode(mode) {
       if (mode === currentMode || !window || window.isDestroyed()) return;
       currentMode = mode;
+      applyWindowAppearance(
+        window,
+        mode,
+        nativeTheme.shouldUseDarkColors,
+        process.platform,
+        store.state.compactAppearance,
+      );
       applyWindowMode(window, mode);
     }
     function createWindow() {
@@ -317,6 +338,9 @@ app
         minWidth: width,
         minHeight: height,
         title: "codedog",
+        transparent: process.platform === "darwin",
+        roundedCorners: true,
+        visualEffectState: "active",
         backgroundColor: nativeTheme.shouldUseDarkColors
           ? "#191b23"
           : "#fafbfc",
@@ -331,7 +355,53 @@ app
           sandbox: true,
         },
       });
+      applyWindowAppearance(
+        window,
+        currentMode,
+        nativeTheme.shouldUseDarkColors,
+        process.platform,
+        store.state.compactAppearance,
+      );
       window.center();
+      const createdWindow = window;
+      let clipUpdate;
+      const refreshClip = () => {
+        if (process.platform !== "darwin") return;
+        clearTimeout(clipUpdate);
+        clipUpdate = setTimeout(() => {
+          if (createdWindow.isDestroyed()) return;
+          const compact = currentMode === "compact";
+          setWindowBlurRadius(
+            createdWindow,
+            compact
+              ? normalizeCompactAppearance(store.state.compactAppearance)
+                  .blurRadius
+              : 0,
+            compact,
+          );
+        }, 250);
+      };
+      // AppKit can replace the window clip while showing/resizing its frame.
+      // Reapply after the native operation, not from inside its notification.
+      for (const event of ["resize", "resized", "show"])
+        window.on(event, refreshClip);
+      const refreshBlurNow = () => {
+        if (process.platform !== "darwin" || createdWindow.isDestroyed())
+          return;
+        refreshWindowBlur(
+          createdWindow,
+          currentMode === "compact"
+            ? normalizeCompactAppearance(store.state.compactAppearance)
+                .blurRadius
+            : 0,
+        );
+      };
+      // Activation is not a geometry change: no debounce, style reset or shadow rebuild.
+      window.on("focus", refreshBlurNow);
+      window.on("blur", refreshBlurNow);
+      window.on("show", refreshBlurNow);
+      window.webContents.on("did-finish-load", refreshClip);
+      window.on("closed", () => clearTimeout(clipUpdate));
       background?.attach(window);
       window.on("closed", () => {
         window = undefined;
@@ -363,6 +433,10 @@ app
         ide: store.state.ide,
         groups: store.groups(),
         theme: store.state.theme || "system",
+        compactAppearance: normalizeCompactAppearance(
+          store.state.compactAppearance,
+        ),
+        windowBlurError: getWindowBlurError(),
         terminal: store.state.terminal || "system",
         launcherShortcut,
         savedFilters: store.state.savedFilters || [],
@@ -446,6 +520,17 @@ app
     handle("openWorkspace", (id, kind) =>
       openProject(id, kind, undefined, true),
     );
+    handle("setCompactAppearance", async (value) => {
+      await store.setCompactAppearance(value);
+      if (window && !window.isDestroyed())
+        applyWindowAppearance(
+          window,
+          currentMode,
+          nativeTheme.shouldUseDarkColors,
+          process.platform,
+          store.state.compactAppearance,
+        );
+    });
     handle("setTheme", async (theme) => {
       await store.setTheme(theme);
       nativeTheme.themeSource = theme;
@@ -689,7 +774,7 @@ app
               resetSearchWatchers();
               window?.webContents.send("codedog:searchIndexUpdated");
             } catch {}
-          }, 100);
+          }, 250);
         },
       );
       dataWatcher.on("error", () => dataWatcher?.close());

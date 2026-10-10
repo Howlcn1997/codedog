@@ -14,6 +14,7 @@ const methods = [
   "setIde",
   "setTerminal",
   "setTheme",
+  "setCompactAppearance",
   "createGroup",
   "createWorkspace",
   "getWorkspace",
