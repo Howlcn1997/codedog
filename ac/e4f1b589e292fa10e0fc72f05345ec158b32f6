@@ -1,0 +1,23 @@
+package-lock.json
+  s_183e5ef14092e2::t_82ed364af21a2c 3,9,6286
+.github/workflows/release.yml
+  s_183e5ef14092e2::t_3e0a50c1bd49c9 16,25-38
+package.json
+  s_183e5ef14092e2::t_3e0a50c1bd49c9 3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.45-trip",
+  "base_commit_sha": "ace4f1b589e292fa10e0fc72f05345ec158b32f6",
+  "prompts": {},
+  "sessions": {
+    "s_183e5ef14092e2": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a11fc1-e519-76c0-be8c-c2acbadba896",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "w.ning <w.ning@trip.com>"
+    }
+  }
+}
