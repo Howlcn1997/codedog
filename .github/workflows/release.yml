@@ -13,6 +13,7 @@ jobs:
     name: Build macOS ${{ matrix.arch }}
     runs-on: macos-15
     strategy:
+      fail-fast: false
       matrix:
         arch: [arm64, x64]
     steps:
@@ -21,7 +22,20 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
+      - name: Verify dependencies use the public npm registry
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const { packages } = JSON.parse(fs.readFileSync('package-lock.json', 'utf8'));
+          for (const [name, pkg] of Object.entries(packages)) {
+            if (!pkg.resolved) continue;
+            const url = new URL(pkg.resolved);
+            if (url.protocol !== 'https:' || url.hostname !== 'registry.npmjs.org') {
+              throw new Error(`${name} must resolve from the public npm registry`);
+            }
+          }
+          NODE
+      - run: npm ci --registry=https://registry.npmjs.org
       - run: npm test
       - run: npm run build
       - name: Verify tag matches package version
