@@ -97,7 +97,7 @@ struct RootView: View {
         ToolbarSpacer(.fixed)
         ToolbarItem {
             Button {
-                Task { await model.rescan() }
+                Task { await model.rescan(full: true) }
             } label: {
                 Label("重新扫描", systemImage: "arrow.clockwise")
                     .symbolEffect(.rotate, isActive: model.isScanning)
@@ -115,7 +115,7 @@ struct RootView: View {
                     .onTapGesture { closeDetail() }
                     .transition(.opacity)
                 ProjectDetailView(item: item, onClose: closeDetail)
-                    .frame(width: 620)
+                    .frame(width: 465)
                     .padding(.vertical, 10)
                     .padding(.trailing, 10)
                     .transition(.move(edge: .trailing).combined(with: .opacity))
