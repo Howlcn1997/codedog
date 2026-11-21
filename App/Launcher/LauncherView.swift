@@ -79,9 +79,9 @@ struct LauncherView: View {
 
     private var searchField: some View {
         HStack(spacing: 12) {
-            Image(systemName: "pawprint.fill")
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundStyle(Color.brand)
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 18, weight: .medium))
+                .foregroundStyle(.secondary)
             TextField("搜索项目、README、依赖…", text: $state.query)
                 .textFieldStyle(.plain)
                 .font(.system(size: 21, weight: .regular))
@@ -157,6 +157,25 @@ struct LauncherView: View {
     }
 }
 
+/// 半叠放的工具图标：每个图标放在圆形底座里，后一个压住前一个的一半左右。
+private struct ToolStack: View {
+    var tools: [AITool]
+    private let chip: CGFloat = 24
+
+    var body: some View {
+        HStack(spacing: -chip * 0.4) {
+            ForEach(Array(tools.enumerated()), id: \.element) { i, tool in
+                ToolIcon(tool: tool, size: 14)
+                    .frame(width: chip, height: chip)
+                    .background(Circle().fill(Color(nsColor: .windowBackgroundColor)))
+                    .overlay(Circle().strokeBorder(.primary.opacity(0.08), lineWidth: 0.5))
+                    .shadow(color: .black.opacity(0.12), radius: 1.5, x: -1, y: 0.5)
+                    .zIndex(Double(i))
+            }
+        }
+    }
+}
+
 private struct LauncherRow: View {
     var item: ProjectItem
     var match: SearchMatch
@@ -174,9 +193,7 @@ private struct LauncherRow: View {
             }
             Spacer(minLength: 8)
             StatusPill(item: item)
-            HStack(spacing: -3) {
-                ForEach(item.tools.prefix(3), id: \.tool) { ToolIcon(tool: $0.tool, size: 15) }
-            }
+            ToolStack(tools: item.tools.prefix(3).map(\.tool))
             Text(Formatting.activity(item.lastActivity))
                 .font(.system(size: 11))
                 .foregroundStyle(.tertiary)
