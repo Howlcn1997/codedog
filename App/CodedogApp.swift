@@ -15,6 +15,9 @@ struct CodedogApp: App {
         .defaultSize(width: 1240, height: 820)
         .windowToolbarStyle(.unified(showsTitle: false))
         .commands {
+            CommandGroup(after: .appInfo) {
+                Button("检查更新…") { Task { await model.checkForUpdates(manual: true) } }
+            }
             CommandGroup(after: .newItem) {
                 Button("打开启动器") { AppDelegate.shared.launcher.show() }
                 Button("重新扫描") { Task { await model.rescan() } }

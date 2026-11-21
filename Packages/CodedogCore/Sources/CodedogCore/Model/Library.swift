@@ -45,8 +45,23 @@ public struct Preferences: Codable, Sendable, Hashable {
     public var terminal: AppRef?
     public var launcherShortcut: String = "cmd+shift+space"
     public var menuBarResident = true
+    public var checkForUpdates = true
+    public var lastUpdateCheck: Date?
 
     public init() {}
+
+    enum CodingKeys: String, CodingKey { case editor, terminal, launcherShortcut, menuBarResident, checkForUpdates, lastUpdateCheck }
+
+    // 新增字段对旧 library.json 缺省兼容
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        editor = try c.decodeIfPresent(AppRef.self, forKey: .editor)
+        terminal = try c.decodeIfPresent(AppRef.self, forKey: .terminal)
+        launcherShortcut = try c.decodeIfPresent(String.self, forKey: .launcherShortcut) ?? "cmd+shift+space"
+        menuBarResident = try c.decodeIfPresent(Bool.self, forKey: .menuBarResident) ?? true
+        checkForUpdates = try c.decodeIfPresent(Bool.self, forKey: .checkForUpdates) ?? true
+        lastUpdateCheck = try c.decodeIfPresent(Date.self, forKey: .lastUpdateCheck)
+    }
 }
 
 /// `library.json`：用户数据。

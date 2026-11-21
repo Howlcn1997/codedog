@@ -1,13 +1,12 @@
-node_modules/
-dist/
-release/
-work/
 .DS_Store
 *.log
-electron/native/*.node
-# Swift
+
+# Xcode / SwiftPM（工程由 XcodeGen 生成，不入库）
 *.xcodeproj/
 .build/
+.swiftpm/
 DerivedData/
 build/
-.swiftpm/
+
+# 发布产物
+release/

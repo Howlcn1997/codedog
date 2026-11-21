@@ -165,7 +165,7 @@ codedog/
 | **P4 活跃度与 AI 工具** | ActivityAggregator、柱状图与时间筛选、Claude Code / Codex 读取、"在等你"、一键续上 | 数据与真实会话吻合 |
 | **P5 启动器与系统集成** | 启动器面板 + 快捷键、菜单栏、开机启动、CLI、设置、首次引导 | 键盘全流程可用 |
 | **P6 大小与清理、新建项目** | SizeCalculator、占空间排序、批量清理依赖、新建项目、分类一起打开 | 清理前确认、清理后大小刷新 |
-| **P7 发布** | 签名公证、Sparkle appcast、GitHub Actions 改为 `xcodebuild archive` → dmg/zip → Release；最后发一个 Electron 版提示用户下载新版；删除 Electron 代码与 node 依赖；更新 README/docs | v1.0.0 |
+| **P7 发布** | ad-hoc 签名的通用二进制、GitHub Releases 版本检查、GitHub Actions 用 xcodebuild 构建 → dmg/zip → Release；删除 Electron 代码与 node 依赖；更新 README/docs | v1.0.0 |
 
 每阶段结束：`xcodebuild test` 通过，并手动运行 App 截图验收。
 
@@ -177,8 +177,8 @@ codedog/
 |---|---|
 | 扫描大目录慢、FSEvents 事件风暴 | 限深度、跳过依赖目录、去抖、增量缓存 |
 | AI 工具会话格式变化 | 每个工具独立 Reader，解析失败只降级显示，不影响主流程 |
-| 老 Electron 用户无法自动升级 | 最后一个 Electron 版弹窗引导下载 |
-| 自动更新、开机启动依赖签名 | 需要 Developer ID；没有则改为手动更新 |
+| 老 Electron 用户无法自动升级 | README 说明直接替换 App；首次启动自动迁移旧数据 |
+| 没有签名：无法自动更新，首次打开被 Gatekeeper 拦截 | 应用内检查 GitHub Releases 提示下载；README 提供 `xattr` 去隔离说明 |
 | 访问桌面/文稿/下载目录需要授权 | 首次引导中说明，Info.plist 写好用途说明 |
 
 ---
@@ -189,8 +189,9 @@ codedog/
 2. 在 `swiftui` 分支并行开发，P7 合并时删除 Electron 代码。
 3. 强调色沿用 codedog 紫 `#6563da`。
 4. 工程由 XcodeGen 生成（`project.yml`），`.xcodeproj` 不入库；`make build` / `make test`。
-5. 签名：暂按 ad-hoc 签名开发，P7 再定 Developer ID 与 Sparkle。
+5. 签名：没有 Apple Developer ID，发布包使用 ad-hoc 签名；不接 Sparkle，改为每天检查一次 GitHub Releases 并提示手动下载（2026-11-22）。
 6. AI 工具首版支持 Claude Code + Codex。
+7. 不发过渡用的 Electron 版本；老用户直接替换 App，首次启动自动迁移旧数据（2026-11-22）。
 
 ## 9. 进度
 
@@ -201,4 +202,4 @@ codedog/
 - [x] P4 活跃度与 AI 工具：Claude Code / Codex 会话读取（按文件缓存，613MB 日志首次索引约 1.3 秒）、VS Code 系编辑器记录、运行中智能体检测、"在等你"、一键续上（AppleScript 驱动终端）、近一年提交 + AI 热力图、按模型 token 与 API 价估算、最近提交
 - [x] P5 启动器与系统集成：⌘⇧Space 全局快捷键（Carbon，可在设置里录制、冲突时回退）、不抢焦点的浮动启动器（全键盘：↑↓ 选项目、←→ 选操作、↵ 执行、⌘↵ 续上 AI、⌥↵ 终端）、菜单栏（启动器、等你回复、最近打开）、常驻菜单栏时关窗隐藏 Dock 图标、登录时启动（SMAppService）、命令行工具安装到 ~/.local/bin（不覆盖他人文件）、设置页"通用"分页
 - [x] P6 大小与清理、新建项目：后台统计占用空间（一次遍历区分源码与可再生目录，24 小时缓存）、卡片与详情显示大小、"占空间"快速筛选（≥500 MB，按大小排序，顶部汇总与批量清理）、清理移到废纸篓（可还原，逐个复核：真实目录、非符号链接、位于项目内、名称在白名单）、新建项目（名称校验、可选 git init 与 README）；52 个单元测试
-- [ ] P7 发布
+- [x] P7 发布：`scripts/release.sh`（Xcode 构建 arm64 + x86_64 通用二进制、ad-hoc 签名、校验架构/签名/版本一致、产出 dmg/zip/SHA256SUMS）、`release.yml`（推 v* 标签自动发布）、`swift-ci.yml`、应用内版本检查、删除全部 Electron 代码、重写 README 与用户指南。正式发布需要合并到 master 后推送 `v1.0.0` 标签

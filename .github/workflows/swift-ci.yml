@@ -1,8 +1,8 @@
-name: Swift CI
+name: CI
 
 on:
   push:
-    branches: [swiftui]
+    branches: [master, swiftui]
   pull_request:
 
 jobs:

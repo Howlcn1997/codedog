@@ -2,7 +2,11 @@ import Foundation
 
 /// codedog 核心库：项目发现、搜索、元数据存储，与 UI 无关，App 与 CLI 共用。
 public enum Codedog {
-    public static let version = "1.0.0"
+    /// 版本号唯一来源：project.yml 的 MARKETING_VERSION（写入 App 的 Info.plist）。
+    /// 命令行工具位于 App 包内，同样能读到；脱离 App 运行（如 swift test）时为 "dev"。
+    public static var version: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "dev"
+    }
 
     /// `~/Library/Application Support/codedog`，可用环境变量 `CODEDOG_DATA_DIR` 覆盖。
     public static var dataDirectory: URL {

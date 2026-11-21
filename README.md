@@ -1,172 +1,76 @@
-# codedog
+<p align="center"><img src="docs/assets/icon.png" width="112" alt="codedog"></p>
 
-我开发 codedog，是为了更快地找到工作中积累的众多项目、清理闲置项目的依赖以释放磁盘空间，并将关联项目组织在同一目录下，方便 AI Agent 跨项目协作，共享记忆与文档。
+<h1 align="center">codedog</h1>
 
-一个本地优先的桌面项目管理中心。Node.js、Go、Python，公司项目、个人作品与临时实验，都有自己的位置。
+<p align="center">看见所有项目，最快打开它。<br>原生 macOS 应用：自动发现你电脑上的代码项目，关联 Claude Code / Codex 会话，一键续上。</p>
 
-[Download for macOS](https://github.com/Howlcn1997/codedog/releases/latest)
+<p align="center"><a href="https://github.com/Howlcn1997/codedog/releases/latest">下载 macOS 版</a> · <a href="docs/user-guide.md">用户指南</a></p>
 
-> [!IMPORTANT]
-> 当前发布包尚未经过 Apple 签名与公证。首次打开时，macOS 可能提示
-> “codedog 已损坏，无法打开”。从本仓库的 GitHub Releases 下载并将
-> `codedog.app` 移入“应用程序”后，可在终端运行以下命令移除 macOS 添加的
-> 下载隔离标识，再重新打开应用：
->
-> ```sh
-> xattr -dr com.apple.quarantine /Applications/codedog.app
-> ```
->
-> 仅应对你确认来自本仓库官方 Release 的应用执行此命令。
+---
 
-第一次使用？请阅读 [Code Dog 用户指南](docs/user-guide.md)。
+## 它能做什么
 
-## 特色功能
+- **自动发现项目**：选好放代码的文件夹，codedog 自动找到里面的项目（Git、Node、Go、Python、Rust、Swift、Java 等），文件变化时增量更新。不移动、不修改任何文件。
+- **今日脉搏**：一眼看到哪些项目有 AI 正在运行、哪些 AI 已经答完在等你回复、哪些还有未提交的改动、本周动过哪些。
+- **AI 会话一键续上**：读取本机 Claude Code 与 Codex 的会话记录，列出每个项目最近的会话，点"续上"就在终端里接着聊（`claude --resume` / `codex resume`）。
+- **活跃圆点图与用量**：近一年的提交与 AI 回复按天汇成圆点图；按模型统计 token，并按公开 API 价格估算 Claude 花费。
+- **启动器**：在任何地方按 `⌘⇧Space`，输入几个字母，`↵` 用编辑器打开，`⌘↵` 续上 AI 会话，`⌥↵` 在终端打开。
+- **搜索**：名称模糊匹配，也能搜标签、描述、备注、路径、依赖名和 README 正文，并告诉你命中在哪里。
+- **磁盘清理**：统计每个项目的源码与依赖占用，批量把 `node_modules`、`.venv` 等可再生目录移到废纸篓（可还原）。
+- **任意编辑器与终端**：Cursor、VS Code、Zed、Xcode、JetBrains 全家……或你选的任何 App；每个项目可以单独指定。
+- **命令行**：`codedog open web`、`cd "$(codedog path web)"`、`codedog list lottie`。
 
-当前能力按使用场景可归纳为 **8 类**：
+## 安装
 
-1. **本地优先的项目中心**：源码留在本机，管理数据以 JSON 原子写入；统一浏览公司、个人、临时及自定义分组中的项目。
-2. **新建与导入项目**：只需选择分组、填写名称，即可自动创建空白项目文件夹；未设置根目录时默认使用用户主目录下的 `CodeDog`；已有代码支持复制、移动、原地登记、Git HTTPS/SSH 克隆和批量扫描，移动项目时还能迁移 Claude Code 聊天记录副本。
-3. **面向代码库的智能搜索**：名称支持子序列模糊匹配，也可检索别名、路径、标签、描述、备注、远程仓库、根目录 README 与依赖名称，并展示命中原因。索引支持手动刷新，也会跟随相关源文件变化自动更新。
-4. **随时呼出的项目启动器**：按 `⌘/Ctrl + Shift + Space` 可在任何应用中打开或收起精简模式；全键盘完成搜索、选择项目、切换动作和打开。
-5. **IDE、终端与 CLI 联动**：可使用全局或项目独立 IDE 打开，在系统终端或 Warp 中启动，也可通过 `codedog add/list/open/path` 从命令行访问同一份项目数据。
-6. **多技术栈环境洞察**：识别 Node.js、Go、Python 的项目声明、运行时、包管理器和依赖状态，查看依赖清单并在原生确认后安装或同步依赖。
-7. **存储空间治理**：按需区分源码与本地依赖占用，批量选择项目并安全清理项目内的 `node_modules`、`.venv` 和 `venv`，展示预计及实际释放空间。
-8. **日常项目管理**：查看 Git 分支、未提交修改与远程地址，使用收藏、最近打开、归档、标签、备注、保存筛选、列表/卡片视图和亮色/暗色主题整理工作区。
+1. 从 [Releases](https://github.com/Howlcn1997/codedog/releases/latest) 下载 `codedog-<版本>-mac-universal.dmg`，把 codedog 拖进"应用程序"。
+2. codedog 没有 Apple 开发者签名。首次打开如果提示"已损坏"或"无法验证开发者"，在终端执行：
 
-## 运行
+   ```sh
+   xattr -dr com.apple.quarantine /Applications/codedog.app
+   ```
 
-需要 Node.js 22.12+、npm，以及相应项目使用的 Git、语言运行时与包管理器。
+   只对确认来自本仓库 Releases 的应用执行这条命令。
 
-```sh
-npm ci
-npm run dev
-```
+需要 macOS 26 或更新版本，Apple 芯片与 Intel 均可。
 
-```sh
-npm run build
-npm start
-```
+### 从旧版（0.x，Electron）升级
 
-`npm run dev:web` 只提供界面演示；本地文件和 IDE 操作需要桌面应用。
+直接用新版替换 `/Applications/codedog.app` 即可。首次启动会自动导入旧版的收藏、分组与标签（合并为"标签"）、备注、项目专属编辑器和全局偏好，旧数据文件 `projects.json` 只读不改。旧版的"项目组"目录会作为一个项目出现，仍然可以打开。
 
-在「设置 → 通用 → 开机自启」中，可以设置登录电脑后自动启动 codedog。
-此功能支持安装后的 macOS 和 Windows 应用，开发模式和 Linux 暂不可用。
-开关读取系统启动项状态；若系统要求批准或禁用了启动项，界面会提示前往系统设置处理。
-macOS 未签名应用的登录项可能无法生效，需以安装包的实际系统验证为准。
+新版不再提供导入/移动/克隆项目、依赖安装、环境检测、导出备份等功能，原因见[重写计划](docs/swiftui-rewrite-plan.md#2-功能取舍)。
 
-## 命令行工具（macOS）
+## 隐私
 
-在「设置 → 通用 → 命令行工具」中点击安装，命令会写入
-`~/.local/bin/codedog`。如果终端找不到 `codedog`，请将下面一行加入
-`~/.zshrc` 后重新打开终端：
+- 所有数据都在本机：`~/Library/Application Support/codedog/`。
+- 读取但从不修改：你的代码目录、`~/.claude/projects`、`~/.codex/sessions`、VS Code 系编辑器的工作区记录。
+- 唯一的网络请求是每天一次向 GitHub Releases 检查新版本（可在设置中关闭）。
+
+## 开发
+
+需要 Xcode 26+ 与 [XcodeGen](https://github.com/yonaskolb/XcodeGen)（`brew install xcodegen`）。
 
 ```sh
-export PATH="$HOME/.local/bin:$PATH"
+make test     # 核心库单元测试（swift test）
+make run      # 生成工程、调试构建并启动
+make dist     # 发布包：通用二进制、ad-hoc 签名 → release/*.dmg|zip
 ```
 
-```sh
-codedog add .                 # 登记当前目录，源码保留在原位置
-codedog list [关键词]          # 列出或筛选项目
-codedog open <名称或别名>     # 使用项目默认 IDE 打开
-codedog path <名称或别名>     # 只输出绝对路径
+- 工程文件由 `project.yml` 生成，`codedog.xcodeproj` 不入库；用 Xcode 开发时先 `make project`。
+- 调试构建默认使用 `~/Library/Application Support/codedog-dev`，不会碰到正式数据；也可以用 `CODEDOG_DATA_DIR` 指定任意目录。
+
+### 结构
+
+```
+project.yml                 XcodeGen 工程定义（版本号唯一来源：MARKETING_VERSION）
+Packages/CodedogCore/       纯逻辑：扫描、分类、Git、搜索、AI 会话、磁盘、存储（含测试）
+App/                        SwiftUI 应用：主窗口、项目面板、启动器、菜单栏、设置
+CLI/                        codedog 命令行（随 App 打包在 Contents/MacOS/codedog-cli）
+scripts/release.sh          打包脚本
+.github/workflows/          CI 与发布（推送 v* 标签自动构建并发布到 Releases）
 ```
 
-命令与桌面端共用项目数据；桌面端未运行时也可使用。
+### 发布
 
-## 打包
-
-```sh
-npm run pack  # 当前系统可运行的应用目录，输出至 release/
-npm run dist  # macOS DMG / Windows NSIS / Linux AppImage
-```
-
-React、Mermaid、图标库等前端依赖由 Vite 编译进 `dist/`，统一放在 `devDependencies`，避免 electron-builder 再将完整依赖打入应用。构建时需安装开发依赖（使用 `npm ci`，不要加 `--omit=dev`）。只有主进程运行时需要、且未被构建工具打包的第三方模块才放入 `dependencies`。
-
-冒烟测试默认运行源码应用；设置 `CODEDOG_EXECUTABLE` 为打包后的可执行文件路径，可验证实际发布产物。例如在 Apple Silicon Mac 上：
-
-```bash
-CODEDOG_EXECUTABLE="$PWD/release/mac-arm64/codedog.app/Contents/MacOS/codedog" node scripts/smoke.mjs
-CODEDOG_EXECUTABLE="$PWD/release/mac-arm64/codedog.app/Contents/MacOS/codedog" node scripts/smoke-workspaces.mjs
-```
-
-此版本未配置应用签名与公证，适合本机开发使用。macOS 是本轮主要验证平台；Windows/Linux 的打包配置已保留，尚未实机验证。
-
-## 功能明细
-
-- 首次选择统一项目根目录，真实数据初始为空。可切换显式标注的演示模式。
-- 从已有文件夹复制、移动或直接登记根目录内项目；Git HTTPS/SSH 克隆；批量扫描最多 4 层、300 个项目。批量移动时可选择把 Claude Code 聊天记录复制到新项目路径，旧记录会保留。
-- 根目录下默认使用 company、personal、temporary 分组目录，也可新增自定义分组。编辑项目的名称或分组只改变管理信息，不移动磁盘文件。
-- 项目名称子序列模糊搜索；别名、路径、标签、描述、备注、远程仓库、根目录 README 和依赖名称关键词搜索；结果展示匹配原因，并支持手动或随源文件变化刷新本地索引。
-- 标准模式支持技术栈、分组、标签和依赖状态筛选。
-- 最近打开、收藏、归档、名称或导入时间排序、列表/卡片切换；主题可跟随系统或固定为亮色/暗色。
-- `⌘/Ctrl + Shift + Space` 从任意应用呼出全局项目启动器；精简模式支持纯键盘搜索、选择项目和打开动作。
-- macOS 支持后台常驻：关闭窗口、从 Dock 选择退出或按 `⌘Q` 会收起窗口并隐藏 Dock 图标，全局快捷键仍可唤起。顶部菜单栏的爪印图标提供显示窗口、打开启动器、后台运行和「彻底退出 codedog」；彻底退出后快捷键不再生效。自动更新的重启安装仍会正常退出。
-- 使用默认或项目独立 IDE 打开；打开终端、文件夹、复制路径。
-- 项目组：多选关联项目生成软链工作目录，编辑组内目录名和 README 关系说明；支持 IDE、终端、文件夹打开，以及链接检查和修复。同一项目可加入多个项目组。主界面和精简模式搜索支持项目组名称、路径与成员名称，并通过类型标签区分项目和项目组。
-- 可选系统终端或 Warp；macOS 可安装与桌面端共用数据的 `codedog` 命令行工具。
-- 识别 package.json、Go 模块、Python 项目声明；检查当前运行时和包管理器。
-- 查看依赖声明，执行 npm/pnpm/Yarn 安装、go mod download、uv sync、Poetry install，或在项目 .venv 中使用 pip。原生确认框展示执行命令。
-- 项目 Git 分支、未提交状态与远程地址（本地读取，不自动 fetch）。
-- 按需计算项目与本地依赖体积，不遍历符号链接和共享缓存；确认后可批量清理项目内的 Node.js/Python 依赖目录。
-- 管理信息原子写入本地 JSON，支持导出备份；移出管理保留全部磁盘文件。
-
-## 数据与边界
-
-管理元数据保存在 Electron userData 下的 projects.json（macOS 通常为 ~/Library/Application Support/codedog）。项目源码位于用户在应用内选择的根目录，和 codedog 自身源码目录相互独立。
-
-已有项目或项目组时禁止直接切换根目录，以免索引失效。跨磁盘移动请使用复制模式；不会自动删除原目录。批量导入逐项完成，失败前已完成项目会保留并展示在列表中。
-
-Node.js 的“依赖就绪”表示 node_modules 存在，Python 表示 .venv 存在，不代表锁文件一致或运行时版本兼容。Go 共享缓存不据此推断为已安装。依赖页面展示已解析的声明版本；复杂 TOML/requirements 引用、Poetry 外部虚拟环境和 monorepo 子包还未完整展开。安装动作可能更新锁文件并执行安装脚本，用户必须在原生对话框中确认。
-
-尚未实现：自动依赖升级、共享依赖缓存清理、整体根目录迁移、备份恢复和批量编辑。不会把这些操作作为可用按钮展示。
-
-## 测试
-
-```sh
-npm test
-npm run build
-node scripts/smoke.mjs
-node scripts/smoke-workspaces.mjs
-```
-
-核心测试在临时目录验证真实文件操作。桌面测试使用 work/smoke 下的隔离资料与示例项目，不触碰现有项目。桌面测试需图形环境。
-
-## 结构
-
-- electron/core.mjs：项目存储、导入、语言检测、命令与空间统计
-- electron/main.mjs：原生窗口、目录对话框、IPC、IDE 与依赖操作
-- electron/preload.cjs：隔离的白名单桥接
-- src/：React + TypeScript 界面，Radix Dialog 与自定义视觉组件
-- public/icon.png：codedog 应用图标
-- tests/：文件系统与核心回归测试
-- scripts/：开发启动与 Electron 交互测试
-
-不启用 Node renderer 集成；preload 使用上下文隔离与 sandbox；IPC 校验主窗口来源；命令用参数数组调用，不拼接项目文本到 shell；外部导航与新窗口默认拒绝。
-
-## 项目组
-
-标准模式左侧「工作台 → 项目组」可新建项目组。选择成员、设置组内目录名并填写 Markdown 关系说明后，codedog 固定在 `~/codespace/workspaces/` 下创建带唯一标识的目录，保存位置不可编辑。成员通过软链（Windows 使用目录 junction）指向原目录，README.md 保存关系说明。
-
-项目组独立于现有分类，同一个项目可以加入多个项目组；修改软链中的源码就是修改原项目。组目录可通过默认 IDE、终端或文件夹打开，codedog 只负责项目组织。
-
-重命名项目组保持目录路径稳定。移除成员仅解除登记的软链；移出项目组管理保留整个组目录和所有源码。项目仍被项目组引用时，须先从项目组移除成员才能将项目移出管理。链接缺失可以修复；原目录丢失或链接被其他文件替换时会提示问题，不覆盖冲突文件。README 被外部编辑后，重新打开编辑窗口再保存，避免覆盖外部改动。
-
-管理备份中的项目组配置保存于 projects.json；README 和组目录内其他文件仍需自行备份。项目组功能目前在 macOS 完成桌面验证。
-
-## 精简模式
-
-「设置 → 外观 → 精简模式背景」提供两个独立滑块：模糊半径（0–80px，默认 20px，0 为关闭）和窗口背景不透明度（0–100%，默认 70%，数值越大越不透明）。文字和图标保持清晰，不会随背景一起变淡。实时预览随拖动更新，点击「保存外观」后应用并保留至下次启动；「恢复默认」重置待保存值。旧版透明度自动反向转换为不透明度，关闭材质迁移为半径 0，其他材质迁移为默认半径。macOS 通过运行时解析的 WindowServer 私有接口 `CGSSetWindowBackgroundBlurRadius` 控制桌面背景模糊，不使用 Vibrancy；系统更新可能影响该接口，失败时保留透明背景并在设置页显示错误，不阻止应用启动。设置页的 CSS 预览为示意，不能保证与系统原生模糊完全一致。其他平台保留纯色背景。`npm run build` / `npm run dev` 自动编译通用架构 Node-API 模块，macOS 开发环境需要 Xcode Command Line Tools。
-
-标题栏「精简模式」按钮切换到圆角紧凑启动器，macOS 使用系统半透明毛玻璃。顶部搜索，下方显示最多 5 个最近实际打开的项目，再下方为全部项目列表；搜索时收起最近项目区。右上角「更多选项」可切回标准模式或刷新搜索索引。选择会保存，下一次启动恢复所选模式。
-
-精简模式启动时搜索框自动聚焦；⌘/Ctrl K 聚焦搜索，↑/↓ 选择结果，←/→ 切换 IDE、终端、仓库或访达动作，Enter 执行，Escape 清空搜索，再次按下收起窗口。点击最近项目直接使用默认 IDE 打开。项目筛选、导入、编辑与依赖管理在标准模式中操作。
-
-项目右键菜单：精简列表、标准列表与卡片均支持选择 VS Code、Cursor、WebStorm、GoLand、PyCharm 或项目默认 IDE 打开，以及在终端中打开。单次选择不修改默认 IDE。聚焦项目项后也可以按 Shift+F10 打开菜单。IDE 需要已安装在电脑上。
-
-默认终端可在「设置 → 默认终端」中选择系统终端或 Warp；默认使用系统终端，选择会持久保存，并统一应用于项目详情和右键菜单。Warp 通过官方目录 URI 打开项目：已有窗口时在当前窗口新建标签页，否则启动 Warp 窗口。路径会进行 URL 编码，需预先安装 Warp。参考：https://docs.warp.dev/terminal/more-features/uri-scheme 。
-
-## 发布与更新
-
-推送与 `package.json` 版本一致的 Git 标签（例如 `v0.2.0`）后，GitHub Actions 会构建 Intel 和 Apple Silicon 两种 macOS DMG/ZIP，并自动创建 GitHub Release。已安装的发布版会在启动时和每 10 分钟检查一次新版本，下载完成后提示重启安装。
-
-要让 macOS Gatekeeper 和应用内自动更新正常工作，需在仓库 Actions secrets 配置 `CSC_LINK`、`CSC_KEY_PASSWORD`、`APPLE_ID`、`APPLE_APP_SPECIFIC_PASSWORD` 和 `APPLE_TEAM_ID`。未配置时仍会发布未签名 DMG，但用户需手动允许安装，且无法完成应用内自动替换。
+1. 修改 `project.yml` 中的 `MARKETING_VERSION` 与 `CURRENT_PROJECT_VERSION`。
+2. 提交后打标签并推送：`git tag v1.0.0 && git push origin v1.0.0`。
+3. GitHub Actions 校验标签与版本一致、运行测试、构建通用二进制，并把 dmg、zip 和 `SHA256SUMS.txt` 发布到 Releases。

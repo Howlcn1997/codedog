@@ -8,6 +8,10 @@ struct MenuBarContent: View {
     @Environment(\.openSettings) private var openSettings
 
     var body: some View {
+        if let update = model.availableUpdate {
+            Button("新版本 \(update.version) 可下载…") { NSWorkspace.shared.open(update.url) }
+            Divider()
+        }
         let shortcut = Shortcut(string: model.library.preferences.launcherShortcut)?.display ?? ""
         Button("打开启动器\t\(shortcut)") { AppDelegate.shared.launcher.show() }
 

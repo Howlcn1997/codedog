@@ -111,6 +111,24 @@ struct SidebarView: View {
     }
 
     private var footer: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            if let update = model.availableUpdate {
+                Button {
+                    NSWorkspace.shared.open(update.url)
+                } label: {
+                    Label("新版本 \(update.version) 可下载", systemImage: "arrow.down.circle.fill")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Color.brand)
+                }
+                .buttonStyle(.plain)
+                .help("打开下载页面")
+                .padding(.horizontal, 14)
+            }
+            footerRow
+        }
+    }
+
+    private var footerRow: some View {
         HStack(spacing: 8) {
             SettingsLink {
                 Image(systemName: "gearshape")

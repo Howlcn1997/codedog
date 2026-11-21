@@ -131,6 +131,24 @@ private struct GeneralSettings: View {
                     .font(.caption).foregroundStyle(.secondary)
             }
 
+            Section("更新") {
+                Toggle("自动检查新版本", isOn: Binding(
+                    get: { model.library.preferences.checkForUpdates },
+                    set: { v in model.setPreferences { $0.checkForUpdates = v } }))
+                LabeledContent("当前版本 \(Codedog.version)") {
+                    HStack {
+                        if model.isCheckingUpdate { ProgressView().controlSize(.small) }
+                        if let u = model.availableUpdate {
+                            Button("下载 \(u.version)") { NSWorkspace.shared.open(u.url) }
+                        }
+                        Button("立即检查") { Task { await model.checkForUpdates(manual: true) } }
+                            .disabled(model.isCheckingUpdate)
+                    }
+                }
+                Text("从 GitHub Releases 检查，每天最多一次，不上传任何信息。codedog 没有开发者签名，新版本需要手动下载替换。")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+
             Section("命令行工具") {
                 LabeledContent("codedog") {
                     switch cliStatus {

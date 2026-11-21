@@ -15,6 +15,8 @@ final class LibraryModel {
     private(set) var running: [String: Set<AITool>] = [:]
     private(set) var sizes: [String: SizeInfo] = SizeCache.load().sizes
     private(set) var isMeasuring = false
+    private(set) var availableUpdate: UpdateChecker.Release?
+    private(set) var isCheckingUpdate = false
     var errorMessage: String?
     var toast: String?
 
@@ -156,6 +158,27 @@ final class LibraryModel {
             toast = "已移到废纸篓，释放 \(freed)"
         } else {
             errorMessage = "释放了 \(freed)，但有 \(result.failures.count) 个目录没有清理：\n" + result.failures.prefix(5).map { "· \($0.1)" }.joined(separator: "\n")
+        }
+    }
+
+    // MARK: 更新
+
+    /// 检查新版本。自动检查每天最多一次；手动检查总会执行并给出结果提示。
+    func checkForUpdates(manual: Bool = false) async {
+        let prefs = library.preferences
+        if !manual {
+            guard prefs.checkForUpdates else { return }
+            if let last = prefs.lastUpdateCheck, Date.now.timeIntervalSince(last) < 24 * 3600 { return }
+        }
+        isCheckingUpdate = true
+        defer { isCheckingUpdate = false }
+        let release = await UpdateChecker.latest()
+        setPreferences { $0.lastUpdateCheck = .now }
+        if let release, UpdateChecker.isNewer(release.version, than: Codedog.version) {
+            availableUpdate = release
+            if manual { toast = "发现新版本 \(release.version)" }
+        } else if manual {
+            toast = release == nil ? "暂时无法连接 GitHub，请稍后再试" : "已经是最新版本（\(Codedog.version)）"
         }
     }
 

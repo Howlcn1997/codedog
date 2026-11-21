@@ -21,6 +21,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Task {
             await model.start()
             registerHotKey(model.library.preferences.launcherShortcut)
+            await model.checkForUpdates()
         }
         NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: nil, queue: .main) { note in
             let isMain = (note.object as? NSWindow)?.title == "codedog"

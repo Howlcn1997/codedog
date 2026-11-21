@@ -125,3 +125,21 @@ import Testing
         #expect(AIIndex.owner(of: "/r/c", in: projects) == nil)
     }
 }
+
+@Suite struct UpdateCheckerTests {
+    @Test func versionComparison() {
+        #expect(UpdateChecker.isNewer("1.2.10", than: "1.2.9"))
+        #expect(UpdateChecker.isNewer("2.0", than: "1.9.9"))
+        #expect(!UpdateChecker.isNewer("1.0.0", than: "1.0"))
+        #expect(!UpdateChecker.isNewer("1.0.0-beta", than: "1.0.0"))
+        #expect(!UpdateChecker.isNewer("0.3.5", than: "1.0.0"))
+    }
+
+    @Test func parsesReleaseAndSkipsPrerelease() {
+        let ok: [String: Any] = ["tag_name": "v1.1.0", "html_url": "https://github.com/x/y/releases/tag/v1.1.0", "body": "notes", "draft": false, "prerelease": false]
+        #expect(UpdateChecker.parse(ok)?.version == "1.1.0")
+        var pre = ok
+        pre["prerelease"] = true
+        #expect(UpdateChecker.parse(pre) == nil)
+    }
+}
