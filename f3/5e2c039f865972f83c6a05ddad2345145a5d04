@@ -1,0 +1,19 @@
+App/Launcher/LauncherView.swift
+  s_32be49732be21f::t_fbc316462d285b 82-84,160-178,196
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.52-trip",
+  "base_commit_sha": "f35e2c039f865972f83c6a05ddad2345145a5d04",
+  "prompts": {},
+  "sessions": {
+    "s_32be49732be21f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "bdc9c1d1-308e-4604-ae9e-2449137d36ba",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "w.ning <w.ning@trip.com>"
+    }
+  }
+}
