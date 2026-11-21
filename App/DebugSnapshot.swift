@@ -69,6 +69,7 @@ enum DebugSnapshot {
                             try? rep.representation(using: .png, properties: [:])?.write(to: URL(filePath: "\(prefix)-cards-\(dark ? "dark" : "light").png"))
                         }
                     }
+                case "zoom": model.zoomCards(Int(arg) ?? 0)
                 case "windows":
                     for w in NSApp.windows { print("[window]", String(describing: type(of: w)), w.isVisible, w.frame) }
                 case "quit":

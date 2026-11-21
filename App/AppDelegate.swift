@@ -23,6 +23,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             registerHotKey(model.library.preferences.launcherShortcut)
             await model.checkForUpdates()
         }
+        installZoomKeys()
         NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: nil, queue: .main) { note in
             let isMain = (note.object as? NSWindow)?.title == "codedog"
             MainActor.assumeIsolated {
@@ -30,6 +31,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 // 主窗口关闭后只留菜单栏图标
                 NSApp.setActivationPolicy(.accessory)
             }
+        }
+    }
+
+    /// 主窗口里的 ⌘= / ⌘+ / ⌘- / ⌘0：⌘+ 实际按键是 ⌘=（不按 Shift），菜单快捷键不一定能匹配，这里统一处理。
+    private func installZoomKeys() {
+        NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+            let mods = event.modifierFlags.intersection([.command, .option, .control])
+            guard mods == .command, NSApp.keyWindow?.title == "codedog",
+                  let ch = event.charactersIgnoringModifiers else { return event }
+            let step: Int? = switch ch {
+            case "=", "+": 1
+            case "-", "_": -1
+            case "0": 0
+            default: nil
+            }
+            guard let step else { return event }
+            MainActor.assumeIsolated { AppDelegate.shared.model.zoomCards(step) }
+            return nil
         }
     }
 

@@ -24,6 +24,13 @@ struct CodedogApp: App {
                     .keyboardShortcut("r", modifiers: .command)
             }
             CommandGroup(after: .toolbar) {
+                Button("放大卡片") { model.zoomCards(1) }
+                    .keyboardShortcut("+", modifiers: .command)
+                Button("缩小卡片") { model.zoomCards(-1) }
+                    .keyboardShortcut("-", modifiers: .command)
+                Button("实际大小") { model.zoomCards(0) }
+                    .keyboardShortcut("0", modifiers: .command)
+                Divider()
                 Button(model.viewMode == .grid ? "列表视图" : "卡片视图") {
                     model.viewMode = model.viewMode == .grid ? .list : .grid
                 }

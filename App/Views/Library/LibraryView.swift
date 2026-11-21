@@ -59,12 +59,16 @@ struct LibraryView: View {
     }
 
     private func grid(_ rows: [(item: ProjectItem, match: SearchMatch)]) -> some View {
-        LazyVGrid(columns: [GridItem(.adaptive(minimum: ProjectCard.size.width, maximum: ProjectCard.size.width + 40), spacing: 26)], spacing: 30) {
+        let k = model.cardScale
+        let w = ProjectCard.size.width * k, h = ProjectCard.size.height * k
+        return LazyVGrid(columns: [GridItem(.adaptive(minimum: w, maximum: w + 40 * k), spacing: 26 * k)], spacing: 30 * k) {
             ForEach(rows, id: \.item.id) { row in
                 ProjectCard(item: row.item, match: row.match, isSelected: model.selectedID == row.item.id) {
                     model.selectedID = row.item.id
                     withAnimation(.spring(response: 0.38, dampingFraction: 0.86)) { model.detailID = row.item.id }
                 }
+                    .scaleEffect(k, anchor: .topLeading)
+                    .frame(width: w, height: h, alignment: .topLeading)
                     .contextMenu { ProjectMenu(item: row.item) }
                     .help(Formatting.shortPath(row.item.id))
             }

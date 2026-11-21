@@ -28,6 +28,15 @@ final class LibraryModel {
     var sortOrder: SortOrder = .activity
     var viewMode: ViewMode = .grid
     var selectedID: String?
+    /// 文件夹卡片缩放（⌘+ / ⌘- / ⌘0），按用户偏好记住
+    var cardScale: Double = LibraryModel.storedCardScale {
+        didSet { UserDefaults.standard.set(cardScale, forKey: "cardScale") }
+    }
+    static let cardScaleRange: ClosedRange<Double> = 0.7...1.6
+    private static var storedCardScale: Double {
+        let v = UserDefaults.standard.double(forKey: "cardScale")
+        return v == 0 ? 1 : min(max(v, cardScaleRange.lowerBound), cardScaleRange.upperBound)
+    }
     /// 正在查看详情的项目
     var detailID: String?
 
@@ -111,6 +120,15 @@ final class LibraryModel {
     }
 
     func count(_ p: Pulse) -> Int { scopedItems.filter { p.contains($0) }.count }
+
+    /// 调整卡片缩放：+1 放大一档，-1 缩小一档，0 恢复默认。
+    func zoomCards(_ step: Int) {
+        let next = step == 0 ? 1 : (cardScale + Double(step) * 0.1)
+        let clamped = (min(max(next, Self.cardScaleRange.lowerBound), Self.cardScaleRange.upperBound) * 10).rounded() / 10
+        guard clamped != cardScale || step == 0 else { return }
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) { cardScale = clamped }
+        toast = "卡片大小 \(Int((clamped * 100).rounded()))%"
+    }
 
     // MARK: 启动
 

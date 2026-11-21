@@ -12,8 +12,8 @@ build: project
 	@mkdir -p build
 	@xcodebuild -project codedog.xcodeproj -scheme codedog -configuration Debug -destination 'generic/platform=macOS' \
 		-derivedDataPath $(DERIVED) build > build/xcodebuild.log 2>&1 \
-		|| (grep -E "error:" build/xcodebuild.log | head -20; tail -20 build/xcodebuild.log; exit 1)
-	@grep -E "^\*\* BUILD" build/xcodebuild.log
+		|| (grep -aE "error:" build/xcodebuild.log | head -20; tail -20 build/xcodebuild.log; exit 1)
+	@grep -aE "^\*\* BUILD" build/xcodebuild.log
 
 test:
 	cd Packages/CodedogCore && swift test
