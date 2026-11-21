@@ -1,0 +1,19 @@
+App/DebugSnapshot.swift
+  s_d55cd86b79f8fc::t_8facc78b2ba2fd 34-41
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.52-trip",
+  "base_commit_sha": "7c750e46b77ab195e890aae240e6aac8eec1be55",
+  "prompts": {},
+  "sessions": {
+    "s_d55cd86b79f8fc": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "90c23200-dc9c-4987-8c64-5740d2a62e02",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "w.ning <w.ning@trip.com>"
+    }
+  }
+}
