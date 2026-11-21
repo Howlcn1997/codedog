@@ -11,4 +11,8 @@ public enum Codedog {
         }
         return URL.applicationSupportDirectory.appending(path: "codedog", directoryHint: .isDirectory)
     }
+
+    public static var libraryURL: URL { dataDirectory.appending(path: "library.json") }
+    public static var cacheURL: URL { dataDirectory.appending(path: "cache.json") }
+    public static var legacyURL: URL { dataDirectory.appending(path: "projects.json") }
 }

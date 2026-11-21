@@ -201,11 +201,22 @@ codedog/
 
 ---
 
-## 8. 待决定
+## 8. 已定决策（2026-11-21）
 
-1. **最低 macOS**：26（原生 Liquid Glass，代码最简）还是 14（与 Dozoo 一致，需材质回退）？
-2. **工程位置**：本仓库直接替换，还是新开 `swiftui` 分支并行开发？
-3. **强调色**：沿用 codedog 紫 `#6563da`，还是改蓝？
-4. **工程生成**：手写 `.xcodeproj`，还是 XcodeGen（便于 diff 与 CI）？
-5. **签名**：是否有 Apple Developer ID？
-6. **AI 工具范围**：首版只支持 Claude Code + Codex，还是一并支持 Cursor、Gemini CLI 等？
+1. 最低 macOS 26，直接使用 Liquid Glass。
+2. 在 `swiftui` 分支并行开发，P7 合并时删除 Electron 代码。
+3. 强调色沿用 codedog 紫 `#6563da`。
+4. 工程由 XcodeGen 生成（`project.yml`），`.xcodeproj` 不入库；`make build` / `make test`。
+5. 签名：暂按 ad-hoc 签名开发，P7 再定 Developer ID 与 Sparkle。
+6. AI 工具首版支持 Claude Code + Codex。
+
+## 9. 进度
+
+- [x] P0 骨架：XcodeGen 工程、CodedogCore 包、App、内嵌 `codedog-cli`、Swift CI
+- [x] P1 发现与数据：FolderScanner、ProjectClassifier、GitInspector、ShellRunner（登录 shell PATH）、LibraryStore（文件协调）、ProjectCache、FSEventsWatcher、LegacyImporter；23 个单元测试。真实数据：`~/codespace` 冷扫描 64 个项目约 4.4 秒，旧数据 58 条元数据迁移 57 条（剩 1 条是空目录）
+- [ ] P2 搜索与打开
+- [ ] P3 主窗口
+- [ ] P4 活跃度与 AI 工具
+- [ ] P5 启动器与系统集成
+- [ ] P6 大小与清理、新建项目
+- [ ] P7 发布
