@@ -1,0 +1,23 @@
+Packages/CodedogCore/Sources/CodedogCore/Model/KnownApps.swift
+  s_eb5334bbf5a08a::t_cf02ca5a58e4d9 7,35-37,39-45
+Packages/CodedogCore/Sources/CodedogCore/Model/Library.swift
+  s_eb5334bbf5a08a::t_cf02ca5a58e4d9 12-20
+Packages/CodedogCore/Sources/CodedogCore/Actions/Opener.swift
+  s_eb5334bbf5a08a::t_cf02ca5a58e4d9 37
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.52-trip",
+  "base_commit_sha": "86a0667b1fa2b10b7cc38b6bb3f09e6cc7b6aa84",
+  "prompts": {},
+  "sessions": {
+    "s_eb5334bbf5a08a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6170b357-e418-4a52-82d4-29547d156182",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "w.ning <w.ning@trip.com>"
+    }
+  }
+}
