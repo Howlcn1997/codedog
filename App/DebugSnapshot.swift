@@ -31,8 +31,14 @@ enum DebugSnapshot {
                         w.setContentSize(NSSize(width: wh[0], height: wh[1]))
                     }
                 case "activate":
-                    NSApp.activate()
-                    NSApp.windows.first { $0.title == "codedog" }?.makeKeyAndOrderFront(nil)
+                    NSApp.setActivationPolicy(.regular)
+                    NSApp.activate(ignoringOtherApps: true)
+                    NSRunningApplication.current.activate(options: [.activateAllWindows])
+                    if let w = NSApp.windows.first(where: { $0.title == "codedog" }) {
+                        w.deminiaturize(nil)
+                        w.makeKeyAndOrderFront(nil)
+                        w.orderFrontRegardless()
+                    }
                 case "settings": NotificationCenter.default.post(name: .openSettingsRequest, object: nil)
                 case "launcher": AppDelegate.shared.launcher.show()
                 case "lquery": AppDelegate.shared.launcher.state.query = arg
