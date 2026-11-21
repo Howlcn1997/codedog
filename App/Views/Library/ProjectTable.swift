@@ -47,7 +47,7 @@ struct ProjectTable: View {
                 }
             }
             .width(min: 80, ideal: 140)
-            TableColumn("分类") { row in Text(row.item.categoryNames.joined(separator: "、")).foregroundStyle(.secondary) }
+            TableColumn("标签") { row in Text(row.item.categoryNames.joined(separator: "、")).foregroundStyle(.secondary) }
                 .width(min: 60, ideal: 120)
             TableColumn("最近活动") { row in Text(Formatting.activity(row.item.lastActivity)).foregroundStyle(.secondary) }
                 .width(min: 70, ideal: 90)

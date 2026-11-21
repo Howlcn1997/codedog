@@ -18,14 +18,14 @@ struct RootView: View {
         }
         .searchable(text: $model.searchText, placement: .toolbar, prompt: "搜索项目、README、依赖…")
         .toolbar { toolbar }
-        .onChange(of: model.selection) { model.bucketFilter = nil }
+        .onChange(of: model.selection) { model.pulse = nil }
         .onReceive(NotificationCenter.default.publisher(for: .newCategory)) { note in
             newCategoryFor = note.object as? String
             newCategoryName = ""
             showNewCategory = true
         }
-        .alert("新建分类", isPresented: $showNewCategory) {
-            TextField("分类名称", text: $newCategoryName)
+        .alert("新建标签", isPresented: $showNewCategory) {
+            TextField("标签名称", text: $newCategoryName)
             Button("取消", role: .cancel) {}
             Button("创建") {
                 if let id = model.createCategory(newCategoryName), let path = newCategoryFor {
@@ -67,14 +67,18 @@ struct RootView: View {
         }
         ToolbarItem {
             Menu {
+                Picker("时间", selection: $model.timeRange) {
+                    ForEach(TimeRange.allCases) { Text($0.menuTitle).tag($0) }
+                }
+                .pickerStyle(.inline)
                 Picker("排序", selection: $model.sortOrder) {
                     ForEach(SortOrder.allCases) { Text($0.title).tag($0) }
                 }
                 .pickerStyle(.inline)
             } label: {
-                Label("排序", systemImage: "arrow.up.arrow.down")
+                Label("时间与排序", systemImage: model.timeRange == .all ? "line.3.horizontal.decrease" : "line.3.horizontal.decrease.circle.fill")
             }
-            .help("排序：\(model.sortOrder.title)")
+            .help("时间：\(model.timeRange.menuTitle) · 排序：\(model.sortOrder.title)")
         }
         ToolbarSpacer(.fixed)
         ToolbarItem {
@@ -91,23 +95,17 @@ struct RootView: View {
 
     @ViewBuilder private var detailOverlay: some View {
         if let item = model.detailItem {
-            ZStack(alignment: .topTrailing) {
-                Rectangle()
-                    .fill(.ultraThinMaterial)
-                    .overlay(Color.black.opacity(0.25))
+            ZStack(alignment: .trailing) {
+                Color.black.opacity(0.18)
                     .ignoresSafeArea()
                     .onTapGesture { closeDetail() }
-                ProjectDetailView(item: item)
-                Button { closeDetail() } label: {
-                    Image(systemName: "xmark").font(.system(size: 15, weight: .semibold)).frame(width: 30, height: 30)
-                }
-                .buttonStyle(.glass)
-                .buttonBorderShape(.circle)
-                .keyboardShortcut(.cancelAction)
-                .padding(.top, 12)
-                .padding(.trailing, 16)
+                    .transition(.opacity)
+                ProjectDetailView(item: item, onClose: closeDetail)
+                    .frame(width: 620)
+                    .padding(.vertical, 10)
+                    .padding(.trailing, 10)
+                    .transition(.move(edge: .trailing).combined(with: .opacity))
             }
-            .transition(.opacity.combined(with: .scale(scale: 0.98)))
         }
     }
 

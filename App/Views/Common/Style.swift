@@ -2,6 +2,49 @@ import AppKit
 import CodedogCore
 import SwiftUI
 
+extension Color {
+    /// codedog 品牌紫，固定使用，不跟随系统强调色。
+    static let brand = Color(red: 0x65 / 255, green: 0x63 / 255, blue: 0xDA / 255)
+}
+
+extension TechStack {
+    var color: Color {
+        switch self {
+        case .swift: Color(red: 0.98, green: 0.45, blue: 0.24)
+        case .typescript: Color(red: 0.19, green: 0.47, blue: 0.78)
+        case .javascript: Color(red: 0.86, green: 0.70, blue: 0.10)
+        case .go: Color(red: 0.0, green: 0.68, blue: 0.85)
+        case .python: Color(red: 0.22, green: 0.45, blue: 0.66)
+        case .rust: Color(red: 0.72, green: 0.33, blue: 0.20)
+        case .java: Color(red: 0.69, green: 0.27, blue: 0.20)
+        case .kotlin: Color(red: 0.49, green: 0.32, blue: 0.95)
+        case .ruby: Color(red: 0.80, green: 0.15, blue: 0.20)
+        case .php: Color(red: 0.47, green: 0.48, blue: 0.70)
+        case .dart: Color(red: 0.0, green: 0.55, blue: 0.80)
+        case .cpp: Color(red: 0.0, green: 0.35, blue: 0.62)
+        case .html: Color(red: 0.89, green: 0.30, blue: 0.15)
+        }
+    }
+
+    var abbreviation: String {
+        switch self {
+        case .swift: "Sw"
+        case .typescript: "TS"
+        case .javascript: "JS"
+        case .go: "Go"
+        case .python: "Py"
+        case .rust: "Rs"
+        case .java: "Jv"
+        case .kotlin: "Kt"
+        case .ruby: "Rb"
+        case .php: "PHP"
+        case .dart: "Dt"
+        case .cpp: "C++"
+        case .html: "</>"
+        }
+    }
+}
+
 extension ProjectKind {
     var symbol: String {
         switch self {
@@ -15,7 +58,7 @@ extension ProjectKind {
     }
 }
 
-/// 分类可选颜色（名称 → 颜色）。
+/// 标签可选颜色（名称 → 颜色）。
 enum CategoryPalette {
     static let all: [(id: String, name: String, color: Color)] = [
         ("red", "红色", .red), ("orange", "橙色", .orange), ("yellow", "黄色", .yellow),
@@ -30,13 +73,12 @@ enum CategoryPalette {
 }
 
 enum Formatting {
-    /// 口语化的活动时间："今天在做""昨天在做""3 天前""2 周前""5 个月前""2024 年"
+    /// 口语化的活动时间："今天活跃""昨天活跃""3 天前""2 周前""5 个月前""2024 年"
     static func activity(_ date: Date?, now: Date = .now) -> String {
         guard let date else { return "很久没动" }
         let cal = Calendar.current
-        if date > now { return "今天在做" }
-        if cal.isDateInToday(date) { return "今天在做" }
-        if cal.isDateInYesterday(date) { return "昨天在做" }
+        if date > now || cal.isDateInToday(date) { return "今天活跃" }
+        if cal.isDateInYesterday(date) { return "昨天活跃" }
         let days = cal.dateComponents([.day], from: cal.startOfDay(for: date), to: cal.startOfDay(for: now)).day ?? 0
         if days < 7 { return "\(days) 天前" }
         if days < 30 { return "\(days / 7) 周前" }
@@ -106,12 +148,12 @@ struct ProjectMenu: View {
         Button(item.meta.favorite ? "取消收藏" : "收藏", systemImage: item.meta.favorite ? "star.slash" : "star") {
             model.toggleFavorite(item.id)
         }
-        Menu("分类") {
+        Menu("标签") {
             ForEach(model.library.categories) { c in
                 Toggle(c.name, isOn: Binding(get: { item.meta.categories.contains(c.id) }, set: { _ in model.toggleCategory(item.id, c.id) }))
             }
             if !model.library.categories.isEmpty { Divider() }
-            Button("新建分类…") { NotificationCenter.default.post(name: .newCategory, object: item.id) }
+            Button("新建标签…") { NotificationCenter.default.post(name: .newCategory, object: item.id) }
         }
         Divider()
         Button(item.meta.hidden ? "取消隐藏" : "隐藏", systemImage: item.meta.hidden ? "eye" : "eye.slash") {
@@ -121,7 +163,7 @@ struct ProjectMenu: View {
 }
 
 extension Notification.Name {
-    /// object: 可选的项目路径（新建后自动加入该分类）
+    /// object: 可选的项目路径（新建后自动加入该标签）
     static let newCategory = Notification.Name("codedog.newCategory")
     static let focusSearch = Notification.Name("codedog.focusSearch")
 }
@@ -215,7 +257,7 @@ extension Text {
     init(_ parts: [String]) { self.init(parts.filter { !$0.isEmpty }.joined(separator: " · ")) }
 }
 
-/// 简单的换行布局（分类胶囊）。
+/// 简单的换行布局（标签胶囊）。
 struct FlowLayout: Layout {
     var spacing: CGFloat = 6
 

@@ -11,7 +11,7 @@ struct SidebarView: View {
         List(selection: $model.selection) {
             row(.all, "全部项目", "square.grid.2x2")
 
-            Section("智能文件夹") {
+            Section("快速筛选") {
                 ForEach(SmartFolder.allCases, id: \.self) { f in
                     if f != .hidden || model.count(.smart(.hidden)) > 0 {
                         row(.smart(f), f.title, f.symbol)
@@ -19,22 +19,22 @@ struct SidebarView: View {
                 }
             }
 
-            Section("我的分类") {
+            Section("标签") {
                 ForEach(model.library.categories) { c in
-                    row(.category(c.id), c.name, "circle.fill", tint: CategoryPalette.color(c.color) ?? .secondary, small: true)
+                    row(.category(c.id), c.name, "tag.fill", tint: CategoryPalette.color(c.color) ?? .secondary, small: true)
                         .contextMenu { categoryMenu(c) }
                 }
                 Button {
                     NotificationCenter.default.post(name: .newCategory, object: nil)
                 } label: {
-                    Label("新建分类", systemImage: "plus")
+                    Label("新建标签", systemImage: "plus")
                         .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
             }
 
             if !model.toolsPresent.isEmpty {
-                Section("AI 与编辑器") {
+                Section("AI 助手与编辑器") {
                     ForEach(model.toolsPresent, id: \.self) { t in
                         toolRow(t)
                     }
@@ -42,7 +42,7 @@ struct SidebarView: View {
             }
 
             if !model.kindsPresent.isEmpty {
-                Section("项目类型") {
+                Section("项目形态") {
                     ForEach(model.kindsPresent, id: \.self) { k in
                         row(.kind(k), k.displayName, k.symbol)
                     }
@@ -51,7 +51,7 @@ struct SidebarView: View {
         }
         .listStyle(.sidebar)
         .safeAreaInset(edge: .bottom) { footer }
-        .alert("重命名分类", isPresented: Binding(get: { renaming != nil }, set: { if !$0 { renaming = nil } })) {
+        .alert("重命名标签", isPresented: Binding(get: { renaming != nil }, set: { if !$0 { renaming = nil } })) {
             TextField("名称", text: $renameText)
             Button("取消", role: .cancel) {}
             Button("保存") { if let c = renaming { model.renameCategory(c.id, renameText) } }
@@ -70,9 +70,12 @@ struct SidebarView: View {
                     .opacity(n == 0 ? 0.5 : 1)
             }
         } icon: {
-            Image(systemName: symbol)
-                .imageScale(small ? .small : .medium)
-                .foregroundStyle(tint ?? .accentColor)
+            // 只有标签用自定义颜色；其余交给系统，选中时自动变白
+            if let tint {
+                Image(systemName: symbol).imageScale(small ? .small : .medium).foregroundStyle(tint)
+            } else {
+                Image(systemName: symbol).imageScale(small ? .small : .medium)
+            }
         }
         .tag(s)
     }
@@ -104,7 +107,7 @@ struct SidebarView: View {
             Button("去掉颜色") { model.setCategoryColor(c.id, nil) }
         }
         Divider()
-        Button("删除分类", role: .destructive) { model.deleteCategory(c.id) }
+        Button("删除标签", role: .destructive) { model.deleteCategory(c.id) }
     }
 
     private var footer: some View {

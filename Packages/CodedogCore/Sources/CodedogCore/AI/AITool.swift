@@ -89,6 +89,8 @@ public struct ToolUsage: Codable, Sendable, Hashable {
     public var tokens: [String: TokenUsage] = [:]
     public var sessionCount = 0
     public var lastSession: SessionSummary?
+    /// 最近 5 个会话（不含按天统计与 token 明细），按时间倒序。
+    public var recentSessions: [SessionSummary] = []
 
     public init(tool: AITool) { self.tool = tool }
 
@@ -99,12 +101,13 @@ public struct ToolUsage: Codable, Sendable, Hashable {
         if let d = s.startedAt { firstAt = min(firstAt ?? d, d) }
         if let d = s.lastAt {
             if lastAt == nil || d > lastAt! { lastAt = d }
-            if lastSession?.lastAt == nil || d > lastSession!.lastAt! {
-                var light = s
-                light.days = [:]
-                light.tokens = [:]
-                lastSession = light
-            }
+            var light = s
+            light.days = [:]
+            light.tokens = [:]
+            if lastSession?.lastAt == nil || d > lastSession!.lastAt! { lastSession = light }
+            recentSessions.append(light)
+            recentSessions.sort { ($0.lastAt ?? .distantPast) > ($1.lastAt ?? .distantPast) }
+            if recentSessions.count > 5 { recentSessions.removeLast(recentSessions.count - 5) }
         }
         days.merge(s.days, uniquingKeysWith: +)
         for (m, t) in s.tokens { tokens[m, default: TokenUsage()] += t }

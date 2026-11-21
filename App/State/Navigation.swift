@@ -7,9 +7,9 @@ enum SmartFolder: String, CaseIterable, Hashable, Codable {
     var title: String {
         switch self {
         case .favorites: "收藏"
-        case .waiting: "在等你"
+        case .waiting: "等你回复"
         case .recent: "最近打开"
-        case .dirty: "有改动没提交"
+        case .dirty: "未提交"
         case .hidden: "已隐藏"
         }
     }
@@ -17,9 +17,9 @@ enum SmartFolder: String, CaseIterable, Hashable, Codable {
     var symbol: String {
         switch self {
         case .favorites: "star"
-        case .waiting: "hourglass"
-        case .recent: "clock"
-        case .dirty: "pencil.and.outline"
+        case .waiting: "bubble.left.and.text.bubble.right"
+        case .recent: "clock.arrow.circlepath"
+        case .dirty: "plusminus.circle"
         case .hidden: "eye.slash"
         }
     }
@@ -54,6 +54,16 @@ enum TimeRange: String, CaseIterable, Identifiable {
         case .quarter: "近3月"
         case .halfYear: "近半年"
         case .all: "全部"
+        }
+    }
+
+    var menuTitle: String {
+        switch self {
+        case .week: "7 天内活跃"
+        case .month: "30 天内活跃"
+        case .quarter: "3 个月内活跃"
+        case .halfYear: "半年内活跃"
+        case .all: "不限时间"
         }
     }
 
@@ -102,17 +112,42 @@ enum ViewMode: String, CaseIterable {
     case grid, list
 }
 
-/// 活跃度柱状图的一个时间桶。
-struct ActivityBucket: Identifiable, Hashable {
-    var id: Int
-    var label: String
-    var start: Date
-    var end: Date
-    var count: Int
+/// "今日脉搏"指标，同时作为一键筛选。
+enum Pulse: String, CaseIterable, Identifiable {
+    case running, waiting, dirty, activeWeek
+    var id: Self { self }
+
+    var title: String {
+        switch self {
+        case .running: "运行中"
+        case .waiting: "等你回复"
+        case .dirty: "未提交"
+        case .activeWeek: "本周活跃"
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .running: "bolt.fill"
+        case .waiting: "bubble.left.and.text.bubble.right.fill"
+        case .dirty: "plusminus.circle.fill"
+        case .activeWeek: "flame.fill"
+        }
+    }
+
+    func contains(_ item: ProjectItem, now: Date = .now) -> Bool {
+        switch self {
+        case .running: !item.running.isEmpty
+        case .waiting: item.waiting
+        case .dirty: (item.project.git?.dirtyFiles ?? 0) > 0
+        case .activeWeek: item.lastActivity.map { now.timeIntervalSince($0) < 7 * 86_400 } ?? false
+        }
+    }
 }
 
 enum OpenAction: Hashable {
     case resume(AITool)
+    case resumeSession(SessionSummary)
     case newSession(AITool)
     case editor(AppRef?)
     case terminal

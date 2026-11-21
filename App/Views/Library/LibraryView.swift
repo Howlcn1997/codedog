@@ -19,8 +19,7 @@ struct LibraryView: View {
                     VStack(alignment: .leading, spacing: 18) {
                         header(count: visible.count)
                         if model.searchText.isEmpty {
-                            ActivityChart(buckets: model.activityBuckets)
-                                .padding(.bottom, 10)
+                            PulseStrip().padding(.bottom, 6)
                         }
                         if visible.isEmpty {
                             empty.frame(maxWidth: .infinity, minHeight: 260)
@@ -39,56 +38,31 @@ struct LibraryView: View {
     }
 
     private func header(count: Int) -> some View {
-        @Bindable var model = model
-        return HStack(alignment: .top) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(model.title)
-                    .font(.system(size: 30, weight: .bold))
-                    .lineLimit(1)
-                HStack(spacing: 6) {
-                    Text("\(count) 个项目")
-                    if let b = model.bucketFilter {
-                        Button {
-                            withAnimation(.snappy) { model.bucketFilter = nil }
-                        } label: {
-                            Label(b.label, systemImage: "xmark.circle.fill")
-                                .labelStyle(.titleAndIcon)
-                        }
-                        .buttonStyle(.borderless)
-                        .controlSize(.small)
-                    }
-                }
+        HStack(alignment: .firstTextBaseline, spacing: 10) {
+            Text(model.title)
+                .font(.system(size: 28, weight: .bold, design: .rounded))
+                .lineLimit(1)
+            Text(subtitle(count))
                 .font(.system(size: 14))
                 .foregroundStyle(.secondary)
-            }
-            Spacer(minLength: 20)
-            GlassEffectContainer(spacing: 8) {
-                HStack(spacing: 8) {
-                    ForEach(TimeRange.allCases) { r in
-                        let on = model.timeRange == r && model.bucketFilter == nil
-                        Button(r.title) {
-                            withAnimation(.snappy) {
-                                model.timeRange = r
-                                model.bucketFilter = nil
-                            }
-                        }
-                        .buttonStyle(.glass)
-                        .tint(on ? .accentColor : nil)
-                        .fontWeight(on ? .semibold : .regular)
-                        .controlSize(.large)
-                    }
-                }
-            }
+            Spacer()
         }
     }
 
+    private func subtitle(_ count: Int) -> String {
+        var parts = ["\(count) 个项目"]
+        if model.timeRange != .all { parts.append(model.timeRange.title) }
+        if let p = model.pulse { parts.append(p.title) }
+        return parts.joined(separator: " · ")
+    }
+
     private func grid(_ rows: [(item: ProjectItem, match: SearchMatch)]) -> some View {
-        LazyVGrid(columns: [GridItem(.adaptive(minimum: FolderCard.size.width, maximum: FolderCard.size.width + 40), spacing: 26)], spacing: 30) {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: ProjectCard.size.width, maximum: ProjectCard.size.width + 60), spacing: 18)], spacing: 18) {
             ForEach(rows, id: \.item.id) { row in
-                FolderCard(item: row.item, match: row.match, isSelected: model.selectedID == row.item.id)
+                ProjectCard(item: row.item, match: row.match, isSelected: model.selectedID == row.item.id)
                     .onTapGesture {
                         model.selectedID = row.item.id
-                        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) { model.detailID = row.item.id }
+                        withAnimation(.spring(response: 0.38, dampingFraction: 0.86)) { model.detailID = row.item.id }
                     }
                     .contextMenu { ProjectMenu(item: row.item) }
                     .help(Formatting.shortPath(row.item.id))
@@ -102,7 +76,7 @@ struct LibraryView: View {
         } else if model.isScanning && model.projects.isEmpty {
             ContentUnavailableView { Label("正在寻找项目…", systemImage: "magnifyingglass") } description: { Text("第一次扫描可能需要几秒钟。") }
         } else {
-            ContentUnavailableView("这里还没有项目", systemImage: "tray", description: Text("换个时间范围或分类看看。"))
+            ContentUnavailableView("这里还没有项目", systemImage: "tray", description: Text("换个时间范围或标签看看。"))
         }
     }
 }
@@ -112,9 +86,8 @@ struct BackdropView: View {
     @Environment(\.colorScheme) private var scheme
     var body: some View {
         ZStack {
-            (scheme == .dark ? Color(red: 0.11, green: 0.11, blue: 0.14) : Color(red: 0.96, green: 0.96, blue: 0.98))
-            RadialGradient(colors: [Color.accentColor.opacity(scheme == .dark ? 0.16 : 0.10), .clear], center: .topTrailing, startRadius: 0, endRadius: 700)
-            RadialGradient(colors: [Color.blue.opacity(scheme == .dark ? 0.10 : 0.06), .clear], center: .bottomLeading, startRadius: 0, endRadius: 600)
+            (scheme == .dark ? Color(red: 0.09, green: 0.09, blue: 0.11) : Color(red: 0.97, green: 0.97, blue: 0.98))
+            RadialGradient(colors: [Color.brand.opacity(scheme == .dark ? 0.20 : 0.10), .clear], center: .top, startRadius: 0, endRadius: 650)
         }
         .ignoresSafeArea()
     }
@@ -138,6 +111,56 @@ struct NoRootsView: View {
             if case .success(let urls) = result {
                 model.setScanRoots(model.library.scanRoots + urls.map { $0.path(percentEncoded: false) })
             }
+        }
+    }
+}
+
+/// 今日脉搏：四个指标块，点一下就按该状态筛选，再点取消。
+struct PulseStrip: View {
+    @Environment(LibraryModel.self) private var model
+
+    var body: some View {
+        HStack(spacing: 12) {
+            ForEach(Pulse.allCases) { p in
+                let on = model.pulse == p
+                let n = model.count(p)
+                Button {
+                    withAnimation(.snappy) { model.pulse = on ? nil : p }
+                } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: p.symbol)
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(on ? .white : color(p))
+                            .frame(width: 34, height: 34)
+                            .background(on ? color(p) : color(p).opacity(0.14), in: Circle())
+                        VStack(alignment: .leading, spacing: 0) {
+                            Text("\(n)")
+                                .font(.system(size: 22, weight: .bold, design: .rounded))
+                                .monospacedDigit()
+                                .contentTransition(.numericText())
+                            Text(p.title).font(.system(size: 12)).foregroundStyle(.secondary)
+                        }
+                        Spacer(minLength: 0)
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .frame(maxWidth: .infinity)
+                    .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .glassEffect(on ? .regular.tint(color(p).opacity(0.25)) : .regular, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .opacity(n == 0 && !on ? 0.6 : 1)
+                .help(on ? "取消筛选" : "只看\(p.title)的项目")
+            }
+        }
+    }
+
+    private func color(_ p: Pulse) -> Color {
+        switch p {
+        case .running: .green
+        case .waiting: .orange
+        case .dirty: .pink
+        case .activeWeek: .brand
         }
     }
 }

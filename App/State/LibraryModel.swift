@@ -19,7 +19,7 @@ final class LibraryModel {
     var selection: SidebarSelection? = .all
     var searchText = ""
     var timeRange: TimeRange = .all
-    var bucketFilter: ActivityBucket?
+    var pulse: Pulse?
     var sortOrder: SortOrder = .activity
     var viewMode: ViewMode = .grid
     var selectedID: String?
@@ -69,9 +69,8 @@ final class LibraryModel {
     /// 最终展示的项目与搜索命中。
     var visible: [(item: ProjectItem, match: SearchMatch)] {
         var base = scopedItems
-        if let bucket = bucketFilter {
-            base = base.filter { ($0.lastActivity ?? .distantPast) >= bucket.start && ($0.lastActivity ?? .distantPast) < bucket.end }
-        } else if let cutoff = timeRange.cutoff {
+        if let pulse { base = base.filter { pulse.contains($0) } }
+        if let cutoff = timeRange.cutoff {
             base = base.filter { ($0.lastActivity ?? .distantPast) >= cutoff }
         }
         let order = sortOrder
@@ -106,31 +105,7 @@ final class LibraryModel {
         return ProjectKind.allCases.filter(present.contains)
     }
 
-    /// 活跃度柱状图：更早 + 过去 11 个月 + 本月（不含本周）+ 本周。
-    var activityBuckets: [ActivityBucket] {
-        let cal = Calendar.current
-        let now = Date.now
-        let weekStart = cal.dateInterval(of: .weekOfYear, for: now)?.start ?? now
-        let monthStart = cal.dateInterval(of: .month, for: now)?.start ?? now
-        var edges: [(String, Date, Date)] = []
-        let oldest = cal.date(byAdding: .month, value: -11, to: monthStart)!
-        edges.append(("更早", .distantPast, oldest))
-        for i in stride(from: 11, through: 1, by: -1) {
-            let s = cal.date(byAdding: .month, value: -i, to: monthStart)!
-            let e = cal.date(byAdding: .month, value: 1, to: s)!
-            let m = cal.component(.month, from: s)
-            let label = m == 1 ? "\(cal.component(.year, from: s))年1月" : "\(m)月"
-            edges.append((label, s, e))
-        }
-        // 本周跨月时，本周从月初算起，避免与上月重叠。
-        let thisWeek = max(weekStart, monthStart)
-        edges.append(("本月", monthStart, thisWeek))
-        edges.append(("本周", thisWeek, .distantFuture))
-        let dates = scopedItems.map { $0.lastActivity ?? .distantPast }
-        return edges.enumerated().map { i, e in
-            ActivityBucket(id: i, label: e.0, start: e.1, end: e.2, count: dates.filter { $0 >= e.1 && $0 < e.2 }.count)
-        }
-    }
+    func count(_ p: Pulse) -> Int { scopedItems.filter { p.contains($0) }.count }
 
     // MARK: 启动
 
@@ -355,6 +330,10 @@ final class LibraryModel {
                 case .resume(let tool):
                     if let cmd = AgentLauncher.resumeCommand(tool: tool, sessionID: lastSession?.id) {
                         try AgentLauncher.run(cmd, in: lastSession?.cwd ?? path, terminal: prefs.terminal)
+                    }
+                case .resumeSession(let session):
+                    if let cmd = AgentLauncher.resumeCommand(tool: session.tool, sessionID: session.id) {
+                        try AgentLauncher.run(cmd, in: session.cwd ?? path, terminal: prefs.terminal)
                     }
                 case .newSession(let tool):
                     if let cmd = AgentLauncher.resumeCommand(tool: tool, sessionID: nil) {

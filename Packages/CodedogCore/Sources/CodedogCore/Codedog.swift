@@ -9,10 +9,21 @@ public enum Codedog {
         if let custom = ProcessInfo.processInfo.environment["CODEDOG_DATA_DIR"], !custom.isEmpty {
             return URL(filePath: custom, directoryHint: .isDirectory)
         }
+        #if DEBUG
+        // 调试构建默认用独立目录，避免开发测试写入真实数据
+        return URL.applicationSupportDirectory.appending(path: "codedog-dev", directoryHint: .isDirectory)
+        #else
         return URL.applicationSupportDirectory.appending(path: "codedog", directoryHint: .isDirectory)
+        #endif
     }
 
     public static var libraryURL: URL { dataDirectory.appending(path: "library.json") }
     public static var cacheURL: URL { dataDirectory.appending(path: "cache.json") }
-    public static var legacyURL: URL { dataDirectory.appending(path: "projects.json") }
+    /// 旧版 Electron codedog 的数据文件（始终位于正式目录，只读）。
+    public static var legacyURL: URL {
+        if let custom = ProcessInfo.processInfo.environment["CODEDOG_DATA_DIR"], !custom.isEmpty {
+            return URL(filePath: custom).appending(path: "projects.json")
+        }
+        return URL.applicationSupportDirectory.appending(path: "codedog/projects.json")
+    }
 }
