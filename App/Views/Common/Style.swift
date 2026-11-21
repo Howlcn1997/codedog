@@ -167,6 +167,7 @@ extension Notification.Name {
     static let newCategory = Notification.Name("codedog.newCategory")
     static let focusSearch = Notification.Name("codedog.focusSearch")
     static let openSettingsRequest = Notification.Name("codedog.openSettings")
+    static let debugSheet = Notification.Name("codedog.debugSheet")
 }
 
 extension Formatting {
@@ -176,6 +177,10 @@ extension Formatting {
         if n >= 100_000_000 { return trim(Double(n) / 100_000_000) + "亿" }
         if n >= 10_000 { return trim(Double(n) / 10_000) + "万" }
         return "\(n)"
+    }
+
+    static func bytes(_ n: Int64) -> String {
+        ByteCountFormatter.string(fromByteCount: n, countStyle: .file)
     }
 
     static func cost(_ v: Double?) -> String {

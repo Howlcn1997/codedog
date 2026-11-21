@@ -8,6 +8,7 @@ struct RootView: View {
     @State private var newCategoryFor: String?
     @State private var showNewCategory = false
     @State private var addingProject = false
+    @State private var creatingProject = false
 
     var body: some View {
         @Bindable var model = model
@@ -45,6 +46,12 @@ struct RootView: View {
         .fileImporter(isPresented: $addingProject, allowedContentTypes: [.folder], allowsMultipleSelection: true) { result in
             if case .success(let urls) = result { model.addProjects(urls) }
         }
+        .sheet(isPresented: $creatingProject) { NewProjectSheet() }
+        .onReceive(NotificationCenter.default.publisher(for: .debugSheet)) { n in if n.object as? String == "new" { creatingProject = true } }
+        .onChange(of: model.selection) { _, s in
+            // 进入"占空间"时自动按占用排序
+            if s == .smart(.large) { model.sortOrder = .size } else if model.sortOrder == .size { model.sortOrder = .activity }
+        }
         .task {
             #if DEBUG
             DebugSnapshot.startIfRequested(model: model)
@@ -56,8 +63,13 @@ struct RootView: View {
     @ToolbarContentBuilder private var toolbar: some ToolbarContent {
         @Bindable var model = model
         ToolbarItem {
-            Button("添加项目", systemImage: "folder.badge.plus") { addingProject = true }
-                .help("添加不在扫描目录里的项目")
+            Menu {
+                Button("新建项目…", systemImage: "plus.square") { creatingProject = true }
+                Button("添加已有文件夹…", systemImage: "folder.badge.plus") { addingProject = true }
+            } label: {
+                Label("新建", systemImage: "plus")
+            }
+            .help("新建项目，或添加不在扫描目录里的文件夹")
         }
         ToolbarItem {
             Picker("视图", selection: $model.viewMode) {

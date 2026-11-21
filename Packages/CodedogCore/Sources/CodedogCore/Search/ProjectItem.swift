@@ -9,15 +9,18 @@ public struct ProjectItem: Sendable, Hashable, Identifiable {
     public var tools: [ToolUsage]
     /// 正在这个项目里运行的智能体。
     public var running: Set<AITool>
+    /// 占用空间（后台统计，可能为空）。
+    public var size: SizeInfo?
 
     public var id: String { project.path }
 
-    public init(project: DiscoveredProject, meta: ProjectMeta, categoryNames: [String], tools: [ToolUsage] = [], running: Set<AITool> = []) {
+    public init(project: DiscoveredProject, meta: ProjectMeta, categoryNames: [String], tools: [ToolUsage] = [], running: Set<AITool> = [], size: SizeInfo? = nil) {
         self.project = project
         self.meta = meta
         self.categoryNames = categoryNames
         self.tools = tools
         self.running = running
+        self.size = size
     }
 
     /// 有智能体答完在等你回复（48 小时内）。
@@ -71,12 +74,12 @@ public struct ProjectItem: Sendable, Hashable, Identifiable {
 }
 
 extension Library {
-    public func items(from projects: [DiscoveredProject], tools: [String: [ToolUsage]] = [:], running: [String: Set<AITool>] = [:]) -> [ProjectItem] {
+    public func items(from projects: [DiscoveredProject], tools: [String: [ToolUsage]] = [:], running: [String: Set<AITool>] = [:], sizes: [String: SizeInfo] = [:]) -> [ProjectItem] {
         let names = Dictionary(categories.map { ($0.id, $0.name) }, uniquingKeysWith: { a, _ in a })
         return projects.map { p in
             let m = meta(for: p.path)
             return ProjectItem(project: p, meta: m, categoryNames: m.categories.compactMap { names[$0] },
-                               tools: tools[p.path] ?? [], running: RunningAgents.tools(for: p.path, in: running))
+                               tools: tools[p.path] ?? [], running: RunningAgents.tools(for: p.path, in: running), size: sizes[p.path])
         }
     }
 

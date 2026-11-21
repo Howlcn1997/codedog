@@ -10,7 +10,9 @@ public enum AIIndex {
     }
 
     struct Cache: Codable {
-        var version = 1
+        /// 解析逻辑变化时递增，旧缓存整体作废
+        static let currentVersion = 2
+        var version = Cache.currentVersion
         var files: [String: CachedFile] = [:]
     }
 
@@ -20,6 +22,7 @@ public enum AIIndex {
     public static func build(projects: [String], cacheURL: URL = AIIndex.cacheURL) async -> [String: [ToolUsage]] {
         await Task.detached(priority: .utility) {
             var cache = (try? Data(contentsOf: cacheURL)).flatMap { try? JSONDecoder.codedog.decode(Cache.self, from: $0) } ?? Cache()
+            if cache.version != Cache.currentVersion { cache = Cache() }
             let files = ClaudeCodeReader.sessionFiles().map { ($0, AITool.claudeCode) } + CodexReader.sessionFiles().map { ($0, AITool.codex) }
             var fresh: [String: CachedFile] = [:]
             let fm = FileManager.default

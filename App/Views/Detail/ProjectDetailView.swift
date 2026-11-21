@@ -21,6 +21,7 @@ struct ProjectDetailView: View {
                     SessionsSection(item: item)
                     CostSection(item: item)
                     GitSection(item: item)
+                    StorageSection(item: item)
                     NotesSection(item: item).id(item.id)
                 }
                 .padding(24)
@@ -385,6 +386,74 @@ private struct GitSection: View {
                 if let remote = git.remote {
                     Text(remote).font(.caption2).foregroundStyle(.tertiary).lineLimit(1).truncationMode(.middle).textSelection(.enabled)
                 }
+            }
+        }
+    }
+}
+
+// MARK: - 磁盘
+
+private struct StorageSection: View {
+    @Environment(LibraryModel.self) private var model
+    var item: ProjectItem
+    @State private var confirming = false
+    @State private var cleaning = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                sectionTitle("磁盘", "internaldrive")
+                Spacer()
+                if model.isMeasuring { ProgressView().controlSize(.mini) }
+                Button("重新统计") { Task { await model.measureSizes(only: [item.id]) } }
+                    .buttonStyle(.borderless).font(.caption)
+                    .disabled(model.isMeasuring)
+            }
+            if let size = item.size {
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    Text(Formatting.bytes(size.total)).font(.system(size: 20, weight: .bold, design: .rounded))
+                    Text("源码 \(Formatting.bytes(size.source)) · 依赖与缓存 \(Formatting.bytes(size.reclaimable))")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                GeometryReader { g in
+                    let frac = size.total > 0 ? CGFloat(size.source) / CGFloat(size.total) : 1
+                    HStack(spacing: 2) {
+                        Capsule().fill(Color.brand).frame(width: max(4, g.size.width * frac))
+                        Capsule().fill(Color.orange.opacity(0.7))
+                    }
+                }
+                .frame(height: 6)
+                let plan = DependencyCleaner.plan(project: item.id, size: size)
+                if !plan.isEmpty {
+                    VStack(alignment: .leading, spacing: 4) {
+                        ForEach(plan.prefix(4)) { c in
+                            HStack {
+                                Text(c.directory.replacingOccurrences(of: item.id + "/", with: ""))
+                                    .font(.system(size: 12, design: .monospaced)).lineLimit(1).truncationMode(.middle)
+                                Spacer()
+                                Text(Formatting.bytes(c.bytes)).font(.caption).foregroundStyle(.secondary).monospacedDigit()
+                            }
+                        }
+                        if plan.count > 4 { Text("还有 \(plan.count - 4) 个目录").font(.caption).foregroundStyle(.tertiary) }
+                    }
+                    Button {
+                        confirming = true
+                    } label: {
+                        Label(cleaning ? "清理中…" : "清理依赖与缓存 · \(Formatting.bytes(size.reclaimable))", systemImage: "trash")
+                    }
+                    .buttonStyle(.glass)
+                    .disabled(cleaning)
+                    .confirmationDialog("把 \(plan.count) 个目录移到废纸篓？", isPresented: $confirming) {
+                        Button("移到废纸篓", role: .destructive) {
+                            cleaning = true
+                            Task { await model.clean(plan); cleaning = false }
+                        }
+                    } message: {
+                        Text("这些是依赖与构建缓存（如 node_modules、.venv），重新安装或构建即可恢复。需要时也可以从废纸篓还原。")
+                    }
+                }
+            } else {
+                Text(model.isMeasuring ? "正在统计…" : "还没有统计").font(.callout).foregroundStyle(.secondary)
             }
         }
     }

@@ -22,7 +22,7 @@ enum CodexReader {
         var tokensByModel: [String: TokenUsage] = [:]
         var lastEvent: (date: Date, complete: Bool)?
 
-        JSONLScanner.forEachLine(path: file, matchingAny: [#""session_meta""#, #""turn_context""#, #""thread_settings_applied""#, #""token_count""#, #""task_complete""#, #""task_started""#, #""user_message""#, #""UserMessage""#, #""agent_message""#]) { obj in
+        JSONLScanner.forEachLine(path: file, matchingAny: [#""session_meta""#, #""turn_context""#, #""thread_settings_applied""#, #""token_count""#, #""task_complete""#, #""task_started""#, #""user_message""#, #""UserMessage""#, #""agent_message""#, #""item_completed""#]) { obj in
             let type = obj["type"] as? String
             let payload = obj["payload"] as? [String: Any] ?? [:]
             let ts = (obj["timestamp"] as? String).flatMap(DayKey.parseISO)
@@ -50,6 +50,7 @@ enum CodexReader {
                 switch kind {
                 case "task_complete": lastEvent = (ts, true)
                 case "task_started", "user_message": lastEvent = (ts, false)
+                case "item_completed": break
                 case "agent_message": s.days[DayKey.string(ts), default: 0] += 1
                 default: break
                 }
@@ -59,7 +60,19 @@ enum CodexReader {
                 }
                 if kind == "task_complete" {
                     s.days[DayKey.string(ts), default: 0] += 1
-                    if let msg = payload["last_agent_message"] as? String, s.title == nil { s.title = String(msg.prefix(60)) }
+                }
+                // 标题：用户发出的第一条消息（跳过环境上下文等系统注入内容）
+                if s.title == nil {
+                    var text: String?
+                    if kind == "item_completed", let item = payload["item"] as? [String: Any], item["type"] as? String == "UserMessage",
+                       let blocks = item["content"] as? [[String: Any]] {
+                        text = blocks.compactMap { $0["text"] as? String }.first
+                    } else if kind == "user_message" {
+                        text = payload["message"] as? String
+                    }
+                    if let t = text?.trimmingCharacters(in: .whitespacesAndNewlines), !t.isEmpty, !t.hasPrefix("<") {
+                        s.title = String(t.prefix(80))
+                    }
                 }
             default: break
             }

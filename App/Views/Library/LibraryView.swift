@@ -18,7 +18,9 @@ struct LibraryView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 18) {
                         header(count: visible.count)
-                        if model.searchText.isEmpty {
+                        if model.selection == .smart(.large) {
+                            CleanupBanner(items: visible.map(\.item))
+                        } else if model.searchText.isEmpty {
                             PulseStrip().padding(.bottom, 6)
                         }
                         if visible.isEmpty {
@@ -162,5 +164,42 @@ struct PulseStrip: View {
         case .dirty: .pink
         case .activeWeek: .brand
         }
+    }
+}
+
+/// "占空间"视图顶部：可清理总量 + 批量清理入口。
+struct CleanupBanner: View {
+    @Environment(LibraryModel.self) private var model
+    var items: [ProjectItem]
+    @State private var showSheet = false
+
+    var body: some View {
+        let reclaimable = items.compactMap(\.size?.reclaimable).reduce(0, +)
+        let total = items.compactMap(\.size?.total).reduce(0, +)
+        HStack(spacing: 14) {
+            Image(systemName: "internaldrive.fill")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(width: 40, height: 40)
+                .background(Color.orange.gradient, in: Circle())
+            VStack(alignment: .leading, spacing: 2) {
+                Text("共占用 \(Formatting.bytes(total))，其中 \(Formatting.bytes(reclaimable)) 是依赖与构建缓存")
+                    .font(.system(size: 14, weight: .semibold))
+                Text(model.isMeasuring ? "正在统计…" : "这里只列出 500 MB 以上的项目，按占用从大到小排列。")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            Spacer()
+            Button("重新统计") { Task { await model.measureSizes(force: true) } }
+                .buttonStyle(.glass)
+                .disabled(model.isMeasuring)
+            Button("清理…") { showSheet = true }
+                .buttonStyle(.glassProminent)
+                .tint(.brand)
+                .disabled(reclaimable == 0)
+        }
+        .padding(14)
+        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .sheet(isPresented: $showSheet) { CleanupSheet(items: items) }
+        .onReceive(NotificationCenter.default.publisher(for: .debugSheet)) { n in if n.object as? String == "cleanup" { showSheet = true } }
     }
 }

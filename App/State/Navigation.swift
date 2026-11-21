@@ -2,7 +2,7 @@ import CodedogCore
 import Foundation
 
 enum SmartFolder: String, CaseIterable, Hashable, Codable {
-    case favorites, waiting, recent, dirty, hidden
+    case favorites, waiting, recent, dirty, large, hidden
 
     var title: String {
         switch self {
@@ -10,6 +10,7 @@ enum SmartFolder: String, CaseIterable, Hashable, Codable {
         case .waiting: "等你回复"
         case .recent: "最近打开"
         case .dirty: "未提交"
+        case .large: "占空间"
         case .hidden: "已隐藏"
         }
     }
@@ -20,6 +21,7 @@ enum SmartFolder: String, CaseIterable, Hashable, Codable {
         case .waiting: "bubble.left.and.text.bubble.right"
         case .recent: "clock.arrow.circlepath"
         case .dirty: "plusminus.circle"
+        case .large: "internaldrive"
         case .hidden: "eye.slash"
         }
     }
@@ -30,9 +32,15 @@ enum SmartFolder: String, CaseIterable, Hashable, Codable {
         case .waiting: item.waiting
         case .recent: item.meta.lastOpened.map { now.timeIntervalSince($0) < 14 * 86_400 } ?? false
         case .dirty: (item.project.git?.dirtyFiles ?? 0) > 0
+        case .large: (item.size?.total ?? 0) >= SmartFolder.largeThreshold
         case .hidden: item.meta.hidden
         }
     }
+}
+
+extension SmartFolder {
+    /// "占空间"的门槛：500 MB
+    static let largeThreshold: Int64 = 500 * 1024 * 1024
 }
 
 enum SidebarSelection: Hashable, Codable {
@@ -81,7 +89,7 @@ enum TimeRange: String, CaseIterable, Identifiable {
 }
 
 enum SortOrder: String, CaseIterable, Identifiable {
-    case activity, frecency, name, created
+    case activity, frecency, name, created, size
     var id: Self { self }
 
     var title: String {
@@ -90,6 +98,7 @@ enum SortOrder: String, CaseIterable, Identifiable {
         case .frecency: "最常打开"
         case .name: "名称"
         case .created: "创建时间"
+        case .size: "占用空间"
         }
     }
 
@@ -104,6 +113,8 @@ enum SortOrder: String, CaseIterable, Identifiable {
             return a.project.name.localizedStandardCompare(b.project.name) == .orderedAscending
         case .created:
             return (a.project.createdAt ?? .distantPast) > (b.project.createdAt ?? .distantPast)
+        case .size:
+            return (a.size?.total ?? -1) > (b.size?.total ?? -1)
         }
     }
 }

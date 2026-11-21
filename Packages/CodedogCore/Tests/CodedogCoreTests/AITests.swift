@@ -76,12 +76,14 @@ import Testing
             l(["timestamp": "2026-11-21T11:00:00.000Z", "type": "session_meta", "payload": ["id": "c1", "cwd": "/p/web"]]),
             l(["timestamp": "2026-11-21T11:00:01.000Z", "type": "event_msg", "payload": ["type": "thread_settings_applied", "thread_settings": ["model": "gpt-6.2-astra"]]]),
             l(["timestamp": "2026-11-21T11:00:02.000Z", "type": "event_msg", "payload": ["type": "task_started"]]),
+            l(["timestamp": "2026-11-21T11:00:03.000Z", "type": "event_msg", "payload": ["type": "item_completed", "item": ["type": "UserMessage", "content": [["type": "text", "text": "帮我修登录页\n"]]]]]),
             l(["timestamp": "2026-11-21T11:00:05.000Z", "type": "event_msg", "payload": ["type": "token_count", "info": ["total_token_usage": ["input_tokens": 1000, "cached_input_tokens": 400, "output_tokens": 50]]]]),
             l(["timestamp": "2026-11-21T11:00:09.000Z", "type": "event_msg", "payload": ["type": "token_count", "info": ["total_token_usage": ["input_tokens": 1500, "cached_input_tokens": 600, "output_tokens": 80]]]]),
             l(["timestamp": "2026-11-21T11:00:10.000Z", "type": "event_msg", "payload": ["type": "task_complete", "last_agent_message": "完成了"]]),
         ].joined(separator: "\n"))
         let s = CodexReader.summarize(file: path)
         #expect(s.id == "c1" && s.cwd == "/p/web")
+        #expect(s.title == "帮我修登录页")
         #expect(s.waiting)
         let t = try #require(s.tokens["gpt-6.2-astra"])
         #expect(t.input == 900 && t.cacheRead == 600 && t.output == 80)

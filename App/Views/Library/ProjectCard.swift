@@ -90,6 +90,7 @@ struct StatusPill: View {
         .padding(.horizontal, 8)
         .padding(.vertical, 3)
         .background(color.opacity(color == .secondary ? 0.10 : 0.14), in: Capsule())
+        .fixedSize()
     }
 }
 
@@ -142,10 +143,15 @@ struct ProjectCard: View {
                 }
             }
             HStack(spacing: 6) {
-                Text(Formatting.activity(item.lastActivity))
+                Text(Formatting.activity(item.lastActivity)).lineLimit(1).fixedSize()
+                if let size = item.size {
+                    Text("·")
+                    Text(Formatting.bytes(size.total)).monospacedDigit().lineLimit(1).fixedSize()
+                }
                 if let branch = item.project.git?.branch {
                     Text("·")
                     Label(branch, systemImage: "arrow.triangle.branch").labelStyle(.titleAndIcon).lineLimit(1)
+                        .layoutPriority(-1)  // 空间不够时分支名先截断
                 }
                 Spacer(minLength: 4)
                 StatusPill(item: item)

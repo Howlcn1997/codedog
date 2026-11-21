@@ -1,5 +1,6 @@
 import AppKit
 import CodedogCore
+import SwiftUI
 import Foundation
 import Observation
 
@@ -12,6 +13,8 @@ final class LibraryModel {
     private(set) var lastScan: Date?
     private(set) var aiIndex: [String: [ToolUsage]] = [:]
     private(set) var running: [String: Set<AITool>] = [:]
+    private(set) var sizes: [String: SizeInfo] = SizeCache.load().sizes
+    private(set) var isMeasuring = false
     var errorMessage: String?
     var toast: String?
 
@@ -37,11 +40,11 @@ final class LibraryModel {
 
     // MARK: 派生数据
 
-    var items: [ProjectItem] { library.items(from: projects, tools: aiIndex, running: running) }
+    var items: [ProjectItem] { library.items(from: projects, tools: aiIndex, running: running, sizes: sizes) }
 
     func item(_ id: String?) -> ProjectItem? {
         guard let id, let p = projects.first(where: { $0.path == id }) else { return nil }
-        return library.items(from: [p], tools: aiIndex, running: running).first
+        return library.items(from: [p], tools: aiIndex, running: running, sizes: sizes).first
     }
 
     var selectedItem: ProjectItem? { item(selectedID) }
@@ -126,6 +129,57 @@ final class LibraryModel {
         Task { await self.pollRunning() }
     }
 
+    // MARK: 占用空间
+
+    /// 后台统计占用空间：缺失或超过 24 小时的才重新统计。`force` 时全部重算。
+    func measureSizes(force: Bool = false, only: [String]? = nil) async {
+        guard !isMeasuring else { return }
+        let stale = Date.now.addingTimeInterval(-24 * 3600)
+        let targets = (only ?? projects.map(\.path)).filter { p in force || only != nil || (sizes[p]?.measuredAt ?? .distantPast) < stale }
+        guard !targets.isEmpty else { return }
+        isMeasuring = true
+        defer { isMeasuring = false }
+        let results = await DiskUsage.measureAll(targets)
+        sizes.merge(results) { $1 }
+        let known = Set(projects.map(\.path))
+        let snapshot = SizeCache(sizes: sizes.filter { known.contains($0.key) })
+        Task.detached(priority: .background) { try? snapshot.save() }
+    }
+
+    /// 移到废纸篓并重新统计相关项目。返回提示文案。
+    func clean(_ items: [CleanupItem]) async {
+        let result = await Task.detached(priority: .userInitiated) { DependencyCleaner.clean(items) }.value
+        let projects = Array(Set(items.map(\.project)))
+        await measureSizes(only: projects)
+        let freed = ByteCountFormatter.string(fromByteCount: result.freed, countStyle: .file)
+        if result.failures.isEmpty {
+            toast = "已移到废纸篓，释放 \(freed)"
+        } else {
+            errorMessage = "释放了 \(freed)，但有 \(result.failures.count) 个目录没有清理：\n" + result.failures.prefix(5).map { "· \($0.1)" }.joined(separator: "\n")
+        }
+    }
+
+    // MARK: 新建项目
+
+    func createProject(name: String, in parent: String, gitInit: Bool, readme: Bool) async -> Bool {
+        do {
+            let path = try await ProjectCreator.create(name: name, in: parent, gitInit: gitInit, readme: readme)
+            let inRoot = library.scanRoots.contains { path.hasPrefix($0 + "/") }
+            if !inRoot { update { $0.updateMeta(path) { $0.pinned = true } } }
+            if let p = await DiscoveryService.inspect(path: path) {
+                projects.removeAll { $0.path == path }
+                projects.append(p)
+                saveCache()
+            }
+            withAnimation { detailID = path }
+            toast = "已创建 \(name)"
+            return true
+        } catch {
+            errorMessage = error.localizedDescription
+            return false
+        }
+    }
+
     // MARK: AI 工具
 
     func refreshAI() async {
@@ -188,6 +242,7 @@ final class LibraryModel {
         lastScan = .now
         saveCache()
         await refreshAI()
+        Task { await measureSizes() }
         if let id = selectedID, !found.contains(where: { $0.path == id }) { selectedID = nil }
     }
 

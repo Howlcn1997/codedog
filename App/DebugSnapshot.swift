@@ -38,9 +38,20 @@ enum DebugSnapshot {
                 case "lquery": AppDelegate.shared.launcher.state.query = arg
                 case "ldown": AppDelegate.shared.launcher.state.selection += Int(arg) ?? 1
                 case "lright": AppDelegate.shared.launcher.state.action += Int(arg) ?? 1
+                case "smart": if let f = SmartFolder(rawValue: arg) { model.selection = .smart(f) }
+                case "sizes": print("[sizes] measured=\(model.sizes.count) measuring=\(model.isMeasuring) total=\(model.sizes.values.map(\.total).reduce(0, +)) reclaimable=\(model.sizes.values.map(\.reclaimable).reduce(0, +))")
+                case "newproject": NotificationCenter.default.post(name: .debugSheet, object: "new")
+                case "cleanup": NotificationCenter.default.post(name: .debugSheet, object: "cleanup")
                 case "windows":
                     for w in NSApp.windows { print("[window]", String(describing: type(of: w)), w.isVisible, w.frame) }
-                case "quit": NSApp.terminate(nil)
+                case "quit":
+                    // 先关掉打开的表单，否则 terminate 会被表单拦下
+                    for w in NSApp.windows { if let sheet = w.attachedSheet { w.endSheet(sheet) } }
+                    try? await Task.sleep(for: .milliseconds(300))
+                    NSApp.terminate(nil)
+                    // 兜底：仍被表单等拦住时 2 秒后直接退出（仅调试版）
+                    try? await Task.sleep(for: .seconds(2))
+                    exit(0)
                 default: break
                 }
             }
