@@ -90,6 +90,15 @@ struct IconGallery: View {
         let fws = Framework.allCases.map { (StackIcon.framework($0), $0.displayName) }
         let langs = TechStack.allCases.map { (StackIcon.language($0), $0.displayName) }
         VStack(alignment: .leading, spacing: 14) {
+            Text("AI 助手与编辑器").font(.headline)
+            HStack(spacing: 22) {
+                ForEach(AITool.allCases, id: \.self) { t in
+                    VStack(spacing: 6) {
+                        HStack(spacing: 10) { ToolIcon(tool: t, size: 16); ToolIcon(tool: t, size: 28) }
+                        Text(t.displayName).font(.caption2)
+                    }
+                }
+            }
             ForEach([("语言", langs), ("框架", fws)], id: \.0) { title, items in
                 Text(title).font(.headline)
                 LazyVGrid(columns: Array(repeating: GridItem(.fixed(84)), count: 9), spacing: 12) {

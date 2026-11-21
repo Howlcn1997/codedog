@@ -174,48 +174,32 @@ extension Formatting {
     }
 }
 
-/// AI / 编辑工具图标：优先用本机 App 图标，没有安装时用系统符号。
+/// AI / 编辑工具图标：使用各工具真实的品牌标志（矢量资源，见 docs/assets/ICONS.md）。
+/// 彩色标志保留原色；单色标志随亮/暗模式显示为黑或白。
 struct ToolIcon: View {
     var tool: AITool
     var size: CGFloat = 18
 
     var body: some View {
-        if let image = Self.appIcon(tool) {
-            Image(nsImage: image).resizable().interpolation(.high).frame(width: size, height: size)
+        let (asset, mono) = Self.asset(tool)
+        if mono {
+            Image(asset).renderingMode(.template).resizable().scaledToFit()
+                .foregroundStyle(.primary)
+                .frame(width: size, height: size)
         } else {
-            Image(systemName: Self.symbol(tool))
-                .font(.system(size: size * 0.78, weight: .bold))
-                .foregroundStyle(Self.tint(tool))
+            Image(asset).renderingMode(.original).resizable().scaledToFit()
                 .frame(width: size, height: size)
         }
     }
 
-    @MainActor static func appIcon(_ tool: AITool) -> NSImage? {
-        for id in tool.iconBundleIDs {
-            if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: id) {
-                return NSWorkspace.shared.icon(forFile: url.path(percentEncoded: false))
-            }
-        }
-        return nil
-    }
-
-    static func symbol(_ tool: AITool) -> String {
+    static func asset(_ tool: AITool) -> (name: String, mono: Bool) {
         switch tool {
-        case .claudeCode: "asterisk"
-        case .codex: "circle.hexagongrid.fill"
-        case .cursor: "cursorarrow.rays"
-        case .vscode, .windsurf, .trae: "chevron.left.forwardslash.chevron.right"
-        }
-    }
-
-    static func tint(_ tool: AITool) -> Color {
-        switch tool {
-        case .claudeCode: Color(red: 0.85, green: 0.47, blue: 0.34)
-        case .codex: .primary
-        case .cursor: .primary
-        case .vscode: .blue
-        case .windsurf: .teal
-        case .trae: .green
+        case .claudeCode: ("Tool/claude", false)
+        case .codex: ("Tool/openai", true)
+        case .cursor: ("Tool/cursor", true)
+        case .vscode: ("Tool/vscode", false)
+        case .windsurf: ("Tool/windsurf", true)
+        case .trae: ("Tool/trae", false)
         }
     }
 }
