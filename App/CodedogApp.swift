@@ -20,7 +20,7 @@ struct CodedogApp: App {
             }
             CommandGroup(after: .newItem) {
                 Button("打开启动器") { AppDelegate.shared.launcher.show() }
-                Button("重新扫描") { Task { await model.rescan() } }
+                Button("重新扫描") { Task { await model.rescan(full: true) } }
                     .keyboardShortcut("r", modifiers: .command)
             }
             CommandGroup(after: .toolbar) {

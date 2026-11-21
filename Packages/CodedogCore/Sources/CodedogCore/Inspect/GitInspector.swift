@@ -3,6 +3,11 @@ import Foundation
 /// 只读 Git 信息：只在项目自身含 `.git` 时检测，不 fetch。
 public enum GitInspector {
     public static func inspect(path: String) async -> GitInfo? {
+        await inspectChecked(path: path)?.info
+    }
+
+    /// `complete` 为 false 表示有命令超时或无法运行，结果不完整，不应被当作缓存复用。
+    static func inspectChecked(path: String) async -> (info: GitInfo, complete: Bool)? {
         guard FileManager.default.fileExists(atPath: path + "/.git") else { return nil }
         async let status = try? ShellRunner.run("git", ["-C", path, "status", "--porcelain=v1", "--branch", "--untracked-files=normal"], timeout: .seconds(20))
         async let log = try? ShellRunner.run("git", ["-C", path, "log", "--since=1.year", "--max-count=20000", "--format=%cI%x1f%ae%x1f%s"], timeout: .seconds(20))
@@ -12,12 +17,10 @@ public enum GitInspector {
         async let touched = try? ShellRunner.run("git", ["-C", path, "log", "-8", "--name-only", "--format="], timeout: .seconds(10))
 
         var info = GitInfo()
-        if let s = await status, s.ok {
-            let lines = s.stdout.split(separator: "\n")
-            if let head = lines.first, head.hasPrefix("## ") { info.branch = parseBranch(String(head.dropFirst(3))) }
-            info.dirtyFiles = lines.filter { !$0.hasPrefix("## ") }.count
-            info.changedFiles = RecentFiles.parseStatus(lines)
-        }
+        // try? 得到 nil 说明命令超时或没能启动（非零退出码不算，比如没有远程时 config 返回 1）
+        var complete = true
+        for r in [await status, await log, await email, await remote, await touched] where r == nil { complete = false }
+        if let s = await status, s.ok { applyStatus(s.stdout, to: &info) }
         if let t = await touched, t.ok {
             var seen = Set<String>()
             info.recentlyCommittedFiles = t.stdout.split(separator: "\n").map(String.init).filter { !$0.isEmpty && seen.insert($0).inserted }
@@ -36,7 +39,33 @@ public enum GitInspector {
             let url = r.stdout.trimmingCharacters(in: .whitespacesAndNewlines)
             info.remote = url.isEmpty ? nil : url
         }
-        return info
+        return (info, complete)
+    }
+
+    /// 只刷新工作区状态（分支、未提交文件），用于提交历史没变的项目。
+    public static func refreshStatus(path: String, _ info: inout GitInfo) async {
+        guard let s = try? await ShellRunner.run("git", ["-C", path, "status", "--porcelain=v1", "--branch", "--untracked-files=normal"], timeout: .seconds(20)), s.ok else { return }
+        applyStatus(s.stdout, to: &info)
+    }
+
+    static func applyStatus(_ stdout: String, to info: inout GitInfo) {
+        let lines = stdout.split(separator: "\n")
+        if let head = lines.first, head.hasPrefix("## ") { info.branch = parseBranch(String(head.dropFirst(3))) }
+        info.dirtyFiles = lines.filter { !$0.hasPrefix("## ") }.count
+        info.changedFiles = RecentFiles.parseStatus(lines)
+    }
+
+    /// 提交历史指纹：HEAD、当前分支 ref、reflog、packed-refs、config 的修改时间。
+    /// `.git` 不是目录（worktree、子模块）时返回 nil，表示无法判断、需要完整检测。
+    static func historyFingerprint(path: String) -> [Double]? {
+        let git = path + "/.git"
+        var isDir: ObjCBool = false
+        guard FileManager.default.fileExists(atPath: git, isDirectory: &isDir), isDir.boolValue else { return nil }
+        var files = ["HEAD", "logs/HEAD", "packed-refs", "config", "refs/heads"]
+        if let head = try? String(contentsOfFile: git + "/HEAD", encoding: .utf8), head.hasPrefix("ref: ") {
+            files.append(head.dropFirst(5).trimmingCharacters(in: .whitespacesAndNewlines))
+        }
+        return files.map { DiscoveryService.mtime(git + "/" + $0) }
     }
 
     /// 解析 `%cI<US>%ae<US>%s`。邮箱为空时把所有提交都算作"我的"。

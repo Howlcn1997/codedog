@@ -42,7 +42,7 @@ struct MenuBarContent: View {
 
         Divider()
         Button("显示主窗口") { AppDelegate.shared.showMainWindow(openWindow) }
-        Button("重新扫描") { Task { await model.rescan() } }
+        Button("重新扫描") { Task { await model.rescan(full: true) } }
         Button("设置…") {
             NSApp.activate()
             openSettings()

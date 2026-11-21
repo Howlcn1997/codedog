@@ -14,7 +14,24 @@ public enum ShellError: Error, Sendable {
 
 /// 运行外部命令。不经过 shell，带超时，使用登录 shell 的 PATH。
 public enum ShellRunner {
+    /// 同时运行的外部进程上限。每个进程要占两个阻塞线程读输出，进程太多会耗尽 GCD 线程池，
+    /// 导致读取排不上队、命令超时（扫描几十个项目时出现过 git log 大面积超时）。
+    static let limiter = ProcessLimiter(limit: 12)
+
     public static func run(_ executable: String, _ arguments: [String], cwd: String? = nil, timeout: Duration = .seconds(30), environment extra: [String: String] = [:]) async throws -> ShellResult {
+        // 排队等待不计入超时
+        await limiter.acquire()
+        do {
+            let result = try await runNow(executable, arguments, cwd: cwd, timeout: timeout, environment: extra)
+            await limiter.release()
+            return result
+        } catch {
+            await limiter.release()
+            throw error
+        }
+    }
+
+    private static func runNow(_ executable: String, _ arguments: [String], cwd: String?, timeout: Duration, environment extra: [String: String]) async throws -> ShellResult {
         let env = await LoginEnvironment.shared.environment.merging(extra) { $1 }
         guard let exe = resolve(executable, path: env["PATH"] ?? "") else { throw ShellError.notFound(executable) }
 
@@ -72,6 +89,23 @@ public enum ShellRunner {
             if FileManager.default.isExecutableFile(atPath: candidate) { return candidate }
         }
         return nil
+    }
+}
+
+/// 简单的异步信号量。
+actor ProcessLimiter {
+    private var available: Int
+    private var waiters: [CheckedContinuation<Void, Never>] = []
+
+    init(limit: Int) { available = limit }
+
+    func acquire() async {
+        if available > 0 { available -= 1; return }
+        await withCheckedContinuation { waiters.append($0) }
+    }
+
+    func release() {
+        if waiters.isEmpty { available += 1 } else { waiters.removeFirst().resume() }
     }
 }
 

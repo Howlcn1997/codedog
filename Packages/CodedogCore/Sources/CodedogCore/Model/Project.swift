@@ -142,6 +142,10 @@ public struct DiscoveredProject: Codable, Sendable, Hashable, Identifiable {
     public var modifiedAt: Date?
     public var git: GitInfo?
     public var scannedAt: Date
+    /// 语言分布（按代码字节数从大到小）
+    public var languages: [LanguageShare] = []
+    /// 检测时的文件指纹，用于启动时判断能否直接复用缓存（见 `DiscoveryService.refresh`）。
+    public var fingerprint: [Double]?
 
     public init(path: String, name: String, stacks: [TechStack] = [], frameworks: [Framework] = [], kind: ProjectKind = .other, markers: [String] = [], description: String? = nil, readmeFile: String? = nil, readmeText: String? = nil, dependencies: [String] = [], createdAt: Date? = nil, modifiedAt: Date? = nil, git: GitInfo? = nil, scannedAt: Date = .now) {
         self.path = path

@@ -274,11 +274,12 @@ final class LibraryModel {
 
     // MARK: 扫描
 
-    func rescan() async {
+    /// 重新扫描。默认增量（指纹没变的项目复用缓存）；`full` 时全部重新检测。
+    func rescan(full: Bool = false) async {
         guard !isScanning else { return }
         isScanning = true
         defer { isScanning = false }
-        let found = await DiscoveryService.scan(roots: library.scanRoots, pinned: library.pinnedPaths)
+        let found = await DiscoveryService.scan(roots: library.scanRoots, pinned: library.pinnedPaths, previous: full ? [] : projects)
         projects = found
         lastScan = .now
         saveCache()
