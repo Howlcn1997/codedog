@@ -3,7 +3,8 @@ import SwiftUI
 
 @main
 struct CodedogApp: App {
-    @State private var model = LibraryModel()
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
+    private var model: LibraryModel { delegate.model }
 
     var body: some Scene {
         Window("codedog", id: "main") {
@@ -15,6 +16,7 @@ struct CodedogApp: App {
         .windowToolbarStyle(.unified(showsTitle: false))
         .commands {
             CommandGroup(after: .newItem) {
+                Button("打开启动器") { AppDelegate.shared.launcher.show() }
                 Button("重新扫描") { Task { await model.rescan() } }
                     .keyboardShortcut("r", modifiers: .command)
             }
@@ -29,6 +31,16 @@ struct CodedogApp: App {
         Settings {
             SettingsView()
                 .environment(model)
+        }
+
+        MenuBarExtra(isInserted: Binding(
+            get: { model.library.preferences.menuBarResident },
+            set: { v in model.setPreferences { $0.menuBarResident = v } }
+        )) {
+            MenuBarContent()
+                .environment(model)
+        } label: {
+            Image(systemName: model.items.contains(where: \.waiting) ? "pawprint.circle.fill" : "pawprint.fill")
         }
     }
 }

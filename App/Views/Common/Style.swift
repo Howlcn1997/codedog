@@ -166,6 +166,7 @@ extension Notification.Name {
     /// object: 可选的项目路径（新建后自动加入该标签）
     static let newCategory = Notification.Name("codedog.newCategory")
     static let focusSearch = Notification.Name("codedog.focusSearch")
+    static let openSettingsRequest = Notification.Name("codedog.openSettings")
 }
 
 extension Formatting {

@@ -3,6 +3,7 @@ import SwiftUI
 
 struct RootView: View {
     @Environment(LibraryModel.self) private var model
+    @Environment(\.openSettings) private var openSettings
     @State private var newCategoryName = ""
     @State private var newCategoryFor: String?
     @State private var showNewCategory = false
@@ -19,6 +20,7 @@ struct RootView: View {
         .searchable(text: $model.searchText, placement: .toolbar, prompt: "搜索项目、README、依赖…")
         .toolbar { toolbar }
         .onChange(of: model.selection) { model.pulse = nil }
+        .onReceive(NotificationCenter.default.publisher(for: .openSettingsRequest)) { _ in openSettings() }
         .onReceive(NotificationCenter.default.publisher(for: .newCategory)) { note in
             newCategoryFor = note.object as? String
             newCategoryName = ""

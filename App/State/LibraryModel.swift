@@ -245,7 +245,11 @@ final class LibraryModel {
     // MARK: 用户数据
 
     func update(_ body: @escaping @Sendable (inout Library) -> Void) {
-        body(&library)
+        var next = library
+        body(&next)
+        // 没有实际变化就不触发观察与写盘（否则绑定回写会造成界面刷新死循环）
+        guard next != library else { return }
+        library = next
         Task {
             do { library = try await store.mutate(body) } catch { errorMessage = "保存失败：\(error.localizedDescription)" }
         }

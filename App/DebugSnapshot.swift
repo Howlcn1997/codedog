@@ -33,6 +33,13 @@ enum DebugSnapshot {
                 case "activate":
                     NSApp.activate()
                     NSApp.windows.first { $0.title == "codedog" }?.makeKeyAndOrderFront(nil)
+                case "settings": NotificationCenter.default.post(name: .openSettingsRequest, object: nil)
+                case "launcher": AppDelegate.shared.launcher.show()
+                case "lquery": AppDelegate.shared.launcher.state.query = arg
+                case "ldown": AppDelegate.shared.launcher.state.selection += Int(arg) ?? 1
+                case "lright": AppDelegate.shared.launcher.state.action += Int(arg) ?? 1
+                case "windows":
+                    for w in NSApp.windows { print("[window]", String(describing: type(of: w)), w.isVisible, w.frame) }
                 case "quit": NSApp.terminate(nil)
                 default: break
                 }
