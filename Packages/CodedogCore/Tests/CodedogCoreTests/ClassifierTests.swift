@@ -86,3 +86,34 @@ import Testing
         #expect(deps == ["serde", "tokio", "insta"])
     }
 }
+
+@Suite struct FrameworkTests {
+    func frameworks(_ files: [String: String]) throws -> [Framework] {
+        let f = try Fixture()
+        for (k, v) in files { try f.file(k, v) }
+        return ProjectClassifier.classify(path: f.root, markers: FolderScanner.markers(at: f.root)).frameworks
+    }
+
+    @Test func nextBeforeReact() throws {
+        #expect(try frameworks(["package.json": #"{"dependencies":{"react":"19","next":"15"}}"#]) == [.nextjs, .react])
+    }
+
+    @Test func electronWithVue() throws {
+        #expect(try frameworks(["package.json": #"{"dependencies":{"vue":"3"},"devDependencies":{"electron":"30"}}"#]) == [.vue, .electron])
+    }
+
+    @Test func pythonAndFlutterAndSpring() throws {
+        #expect(try frameworks(["requirements.txt": "fastapi==0.1\n"]) == [.fastapi])
+        #expect(try frameworks(["pubspec.yaml": "dependencies:\n  flutter:\n    sdk: flutter\n"]) == [.flutter])
+        #expect(try frameworks(["pom.xml": "<artifactId>spring-boot-starter</artifactId>"]) == [.springboot])
+    }
+
+    @Test func shellScriptsRepo() throws {
+        let f = try Fixture()
+        try f.dir(".git")
+        try f.file("deploy.sh", "#!/bin/sh")
+        let r = ProjectClassifier.classify(path: f.root, markers: FolderScanner.markers(at: f.root))
+        #expect(r.stacks == [.shell])
+        #expect(r.kind == .tool)
+    }
+}

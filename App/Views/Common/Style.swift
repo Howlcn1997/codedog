@@ -7,44 +7,6 @@ extension Color {
     static let brand = Color(red: 0x65 / 255, green: 0x63 / 255, blue: 0xDA / 255)
 }
 
-extension TechStack {
-    var color: Color {
-        switch self {
-        case .swift: Color(red: 0.98, green: 0.45, blue: 0.24)
-        case .typescript: Color(red: 0.19, green: 0.47, blue: 0.78)
-        case .javascript: Color(red: 0.86, green: 0.70, blue: 0.10)
-        case .go: Color(red: 0.0, green: 0.68, blue: 0.85)
-        case .python: Color(red: 0.22, green: 0.45, blue: 0.66)
-        case .rust: Color(red: 0.72, green: 0.33, blue: 0.20)
-        case .java: Color(red: 0.69, green: 0.27, blue: 0.20)
-        case .kotlin: Color(red: 0.49, green: 0.32, blue: 0.95)
-        case .ruby: Color(red: 0.80, green: 0.15, blue: 0.20)
-        case .php: Color(red: 0.47, green: 0.48, blue: 0.70)
-        case .dart: Color(red: 0.0, green: 0.55, blue: 0.80)
-        case .cpp: Color(red: 0.0, green: 0.35, blue: 0.62)
-        case .html: Color(red: 0.89, green: 0.30, blue: 0.15)
-        }
-    }
-
-    var abbreviation: String {
-        switch self {
-        case .swift: "Sw"
-        case .typescript: "TS"
-        case .javascript: "JS"
-        case .go: "Go"
-        case .python: "Py"
-        case .rust: "Rs"
-        case .java: "Jv"
-        case .kotlin: "Kt"
-        case .ruby: "Rb"
-        case .php: "PHP"
-        case .dart: "Dt"
-        case .cpp: "C++"
-        case .html: "</>"
-        }
-    }
-}
-
 extension ProjectKind {
     var symbol: String {
         switch self {

@@ -1,5 +1,7 @@
 #if DEBUG
 import AppKit
+import CodedogCore
+import SwiftUI
 
 /// 调试用：设置 CODEDOG_SNAPSHOT=/path/prefix 后，App 定时把主窗口渲染成 PNG（无需屏幕录制权限）。
 /// 可选 CODEDOG_SNAPSHOT_ACTIONS 为逗号分隔的动作脚本，例如 "wait:6,shot:grid,key:list,shot:list"。
@@ -48,6 +50,15 @@ enum DebugSnapshot {
                 case "sizes": print("[sizes] measured=\(model.sizes.count) measuring=\(model.isMeasuring) total=\(model.sizes.values.map(\.total).reduce(0, +)) reclaimable=\(model.sizes.values.map(\.reclaimable).reduce(0, +))")
                 case "newproject": NotificationCenter.default.post(name: .debugSheet, object: "new")
                 case "cleanup": NotificationCenter.default.post(name: .debugSheet, object: "cleanup")
+                case "icons":
+                    for dark in [false, true] {
+                        let view = IconGallery().environment(\.colorScheme, dark ? .dark : .light)
+                        let r = ImageRenderer(content: view)
+                        r.scale = 2
+                        if let img = r.nsImage, let tiff = img.tiffRepresentation, let rep = NSBitmapImageRep(data: tiff) {
+                            try? rep.representation(using: .png, properties: [:])?.write(to: URL(filePath: "\(prefix)-icons-\(dark ? "dark" : "light").png"))
+                        }
+                    }
                 case "windows":
                     for w in NSApp.windows { print("[window]", String(describing: type(of: w)), w.isVisible, w.frame) }
                 case "quit":
@@ -70,6 +81,41 @@ enum DebugSnapshot {
               let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds) else { return }
         view.cacheDisplay(in: view.bounds, to: rep)
         try? rep.representation(using: .png, properties: [:])?.write(to: URL(filePath: path))
+    }
+}
+/// 调试：全部技术栈图标一览。
+struct IconGallery: View {
+    @Environment(\.colorScheme) private var scheme
+    var body: some View {
+        let fws = Framework.allCases.map { (StackIcon.framework($0), $0.displayName) }
+        let langs = TechStack.allCases.map { (StackIcon.language($0), $0.displayName) }
+        VStack(alignment: .leading, spacing: 14) {
+            ForEach([("语言", langs), ("框架", fws)], id: \.0) { title, items in
+                Text(title).font(.headline)
+                LazyVGrid(columns: Array(repeating: GridItem(.fixed(84)), count: 9), spacing: 12) {
+                    ForEach(items, id: \.1) { icon, name in
+                        VStack(spacing: 6) {
+                            BadgePreview(icon: icon)
+                            Text(name).font(.caption2).lineLimit(1)
+                        }
+                    }
+                }
+            }
+        }
+        .padding(20)
+        .background(scheme == .dark ? Color(white: 0.1) : Color(white: 0.96))
+    }
+}
+
+private struct BadgePreview: View {
+    var icon: StackIcon
+    @Environment(\.colorScheme) private var scheme
+    var body: some View {
+        let fill = scheme == .dark && icon.brand.relativeLuminance < 0.02 ? Color(white: 0.16) : icon.brand
+        RoundedRectangle(cornerRadius: 12, style: .continuous)
+            .fill(LinearGradient(colors: [fill.mix(with: .white, by: 0.12), fill], startPoint: .topLeading, endPoint: .bottomTrailing))
+            .overlay { Image(icon.asset).renderingMode(.template).resizable().scaledToFit().foregroundStyle(icon.glyph).padding(9) }
+            .frame(width: 40, height: 40)
     }
 }
 #endif

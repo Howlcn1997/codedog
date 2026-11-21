@@ -15,6 +15,7 @@ public enum DiscoveryService {
             path: path,
             name: (path as NSString).lastPathComponent,
             stacks: c.stacks,
+            frameworks: c.frameworks,
             kind: c.kind,
             markers: markers,
             description: c.description,

@@ -2,7 +2,7 @@ import Foundation
 
 /// 技术栈。按识别优先级排列。
 public enum TechStack: String, Codable, Sendable, CaseIterable, Hashable {
-    case swift, typescript, javascript, go, python, rust, java, kotlin, ruby, php, dart, cpp, html
+    case swift, typescript, javascript, go, python, rust, java, kotlin, ruby, php, dart, cpp, html, shell
 
     public var displayName: String {
         switch self {
@@ -19,6 +19,35 @@ public enum TechStack: String, Codable, Sendable, CaseIterable, Hashable {
         case .dart: "Dart"
         case .cpp: "C/C++"
         case .html: "HTML"
+        case .shell: "Shell"
+        }
+    }
+}
+
+/// 识别出的框架（按显示优先级排列）。
+public enum Framework: String, Codable, Sendable, CaseIterable, Hashable {
+    case nextjs, nuxt, astro, svelte, angular, vue, react, electron, tauri, flutter
+    case nestjs, express, fastapi, django, flask, springboot, deno
+
+    public var displayName: String {
+        switch self {
+        case .nextjs: "Next.js"
+        case .nuxt: "Nuxt"
+        case .astro: "Astro"
+        case .svelte: "Svelte"
+        case .angular: "Angular"
+        case .vue: "Vue"
+        case .react: "React"
+        case .electron: "Electron"
+        case .tauri: "Tauri"
+        case .flutter: "Flutter"
+        case .nestjs: "NestJS"
+        case .express: "Express"
+        case .fastapi: "FastAPI"
+        case .django: "Django"
+        case .flask: "Flask"
+        case .springboot: "Spring Boot"
+        case .deno: "Deno"
         }
     }
 }
@@ -91,6 +120,8 @@ public struct DiscoveredProject: Codable, Sendable, Hashable, Identifiable {
     public var path: String
     public var name: String
     public var stacks: [TechStack]
+    /// 识别出的框架，按 Framework 声明顺序（显示优先级）排列。
+    public var frameworks: [Framework]
     public var kind: ProjectKind
     public var markers: [String]
     public var description: String?
@@ -104,10 +135,11 @@ public struct DiscoveredProject: Codable, Sendable, Hashable, Identifiable {
     public var git: GitInfo?
     public var scannedAt: Date
 
-    public init(path: String, name: String, stacks: [TechStack] = [], kind: ProjectKind = .other, markers: [String] = [], description: String? = nil, readmeFile: String? = nil, readmeText: String? = nil, dependencies: [String] = [], createdAt: Date? = nil, modifiedAt: Date? = nil, git: GitInfo? = nil, scannedAt: Date = .now) {
+    public init(path: String, name: String, stacks: [TechStack] = [], frameworks: [Framework] = [], kind: ProjectKind = .other, markers: [String] = [], description: String? = nil, readmeFile: String? = nil, readmeText: String? = nil, dependencies: [String] = [], createdAt: Date? = nil, modifiedAt: Date? = nil, git: GitInfo? = nil, scannedAt: Date = .now) {
         self.path = path
         self.name = name
         self.stacks = stacks
+        self.frameworks = frameworks
         self.kind = kind
         self.markers = markers
         self.description = description

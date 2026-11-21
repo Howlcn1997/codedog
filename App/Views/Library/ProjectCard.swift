@@ -5,17 +5,23 @@ import SwiftUI
 struct StackBadge: View {
     var project: DiscoveredProject
     var size: CGFloat = 40
+    @Environment(\.colorScheme) private var scheme
 
     var body: some View {
-        let stack = project.stacks.first
-        let base = stack?.color ?? Color.brand
+        let icon = StackIcon.of(project)
+        let base = icon?.brand ?? Color.brand
+        // 纯黑品牌色在暗色模式下抬亮一点，避免和背景糊在一起
+        let fill = scheme == .dark && base.relativeLuminance < 0.02 ? Color(white: 0.16) : base
         RoundedRectangle(cornerRadius: size * 0.3, style: .continuous)
-            .fill(LinearGradient(colors: [base.mix(with: .white, by: 0.18), base], startPoint: .topLeading, endPoint: .bottomTrailing))
+            .fill(LinearGradient(colors: [fill.mix(with: .white, by: 0.12), fill], startPoint: .topLeading, endPoint: .bottomTrailing))
             .overlay {
-                if let stack {
-                    Text(stack.abbreviation)
-                        .font(.system(size: size * (stack.abbreviation.count > 2 ? 0.30 : 0.38), weight: .heavy, design: .rounded))
-                        .foregroundStyle(.white)
+                if let icon {
+                    Image(icon.asset)
+                        .renderingMode(.template)
+                        .resizable()
+                        .scaledToFit()
+                        .foregroundStyle(icon.glyph)
+                        .padding(size * 0.22)
                 } else {
                     Image(systemName: project.kind.symbol)
                         .font(.system(size: size * 0.42, weight: .semibold))
@@ -24,10 +30,11 @@ struct StackBadge: View {
             }
             .overlay(
                 RoundedRectangle(cornerRadius: size * 0.3, style: .continuous)
-                    .strokeBorder(.white.opacity(0.25), lineWidth: 0.5)
+                    .strokeBorder(.white.opacity(scheme == .dark ? 0.14 : 0.3), lineWidth: 0.5)
             )
-            .shadow(color: base.opacity(0.35), radius: 6, y: 3)
+            .shadow(color: base.opacity(0.3), radius: 6, y: 3)
             .frame(width: size, height: size)
+            .help(icon?.label ?? project.kind.displayName)
     }
 }
 
@@ -106,7 +113,10 @@ struct ProjectCard: View {
 
     static let size = CGSize(width: 272, height: 156)
 
-    private var tint: Color { item.project.stacks.first?.color ?? .brand }
+    private var tint: Color {
+        guard let c = StackIcon.of(item.project)?.brand, c.relativeLuminance > 0.02 else { return .brand }
+        return c
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {

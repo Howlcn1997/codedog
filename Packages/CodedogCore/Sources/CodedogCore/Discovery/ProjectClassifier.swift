@@ -4,12 +4,21 @@ import Foundation
 public enum ProjectClassifier {
     public struct Result: Sendable, Hashable {
         public var stacks: [TechStack] = []
+        public var frameworks: [Framework] = []
         public var kind: ProjectKind = .other
         public var description: String?
         public var readmeFile: String?
         public var readmeText: String?
         public var dependencies: [String] = []
     }
+
+    /// npm 包名 → 框架
+    static let nodeFrameworks: [(String, Framework)] = [
+        ("next", .nextjs), ("nuxt", .nuxt), ("astro", .astro), ("svelte", .svelte), ("@sveltejs/kit", .svelte),
+        ("@angular/core", .angular), ("vue", .vue), ("react", .react), ("react-native", .react),
+        ("electron", .electron), ("@tauri-apps/api", .tauri), ("@tauri-apps/cli", .tauri),
+        ("@nestjs/core", .nestjs), ("express", .express),
+    ]
 
     static let webDeps: Set<String> = ["react", "vue", "next", "nuxt", "svelte", "@sveltejs/kit", "vite", "astro", "@angular/core", "solid-js", "@remix-run/react", "preact", "umi", "@umijs/max", "gatsby", "webpack"]
     static let appDeps: Set<String> = ["electron", "@tauri-apps/api", "@tauri-apps/cli", "react-native", "expo"]
@@ -42,6 +51,7 @@ public enum ProjectClassifier {
             let runtime = Set(((json["dependencies"] as? [String: Any]) ?? [:]).keys)
             let deps = runtime.union(((json["devDependencies"] as? [String: Any]) ?? [:]).keys)
             r.dependencies += deps.sorted()
+            for (dep, fw) in nodeFrameworks where deps.contains(dep) && !r.frameworks.contains(fw) { r.frameworks.append(fw) }
             r.stacks.append(deps.contains("typescript") || names.contains("tsconfig.json") ? .typescript : .javascript)
             r.description = (json["description"] as? String).flatMap(nonEmpty)
             if kind == nil {
@@ -53,6 +63,7 @@ public enum ProjectClassifier {
             }
         } else if has.contains("deno.json") {
             r.stacks.append(.typescript)
+            r.frameworks.append(.deno)
         }
 
         // Go
@@ -68,6 +79,9 @@ public enum ProjectClassifier {
             let text = [read("pyproject.toml"), read("requirements.txt"), read("Pipfile")].compactMap { $0 }.joined(separator: "\n").lowercased()
             if r.description == nil, let pyproject = read("pyproject.toml") { r.description = tomlString(pyproject, key: "description") }
             r.dependencies += pythonDependencies(requirements: read("requirements.txt"), pyproject: read("pyproject.toml"))
+            for (dep, fw) in [("fastapi", Framework.fastapi), ("django", .django), ("flask", .flask)] where text.contains(dep) {
+                r.frameworks.append(fw)
+            }
             if kind == nil {
                 if pyServiceDeps.contains(where: { text.contains($0) }) { kind = .service }
                 else if text.contains("streamlit") || text.contains("gradio") { kind = .web }
@@ -92,12 +106,17 @@ public enum ProjectClassifier {
         if has.contains("pom.xml") || has.contains("build.gradle") || has.contains("build.gradle.kts") {
             r.stacks.append(has.contains("build.gradle.kts") ? .kotlin : .java)
             let gradle = (read("build.gradle") ?? "") + (read("build.gradle.kts") ?? "")
+            if (gradle + (read("pom.xml") ?? "")).contains("spring-boot") { r.frameworks.append(.springboot) }
             kind = kind ?? (gradle.contains("com.android.application") ? .app : .service)
         }
 
         if has.contains("Gemfile") { r.stacks.append(.ruby); kind = kind ?? (names.contains("config.ru") ? .service : .tool) }
         if has.contains("composer.json") { r.stacks.append(.php); kind = kind ?? .web }
-        if has.contains("pubspec.yaml") { r.stacks.append(.dart); kind = kind ?? .app }
+        if has.contains("pubspec.yaml") {
+            r.stacks.append(.dart)
+            if read("pubspec.yaml")?.contains("flutter") == true { r.frameworks.append(.flutter) }
+            kind = kind ?? .app
+        }
         if has.contains("CMakeLists.txt") { r.stacks.append(.cpp); kind = kind ?? .tool }
 
         if has.contains("index.html") {
@@ -109,12 +128,17 @@ public enum ProjectClassifier {
         if kind == nil {
             let scriptExts: Set<String> = ["sh", "zsh", "py", "js", "rb", "pl"]
             if names.contains(where: { scriptExts.contains(($0 as NSString).pathExtension) }) { kind = .tool }
+            if r.stacks.isEmpty, names.contains(where: { ["sh", "zsh", "bash"].contains(($0 as NSString).pathExtension) }) {
+                r.stacks.append(.shell)
+            }
             if names.contains(where: { ($0 as NSString).pathExtension.lowercased() == "html" }) {
                 kind = .web
                 if r.stacks.isEmpty { r.stacks.append(.html) }
             }
         }
         r.kind = kind ?? .other
+        // 按声明顺序（显示优先级）排序并去重
+        r.frameworks = Framework.allCases.filter(r.frameworks.contains)
 
         r.readmeFile = names.first { $0.range(of: #"^readme(\.(md|markdown|txt|rst))?$"#, options: [.regularExpression, .caseInsensitive]) != nil }
         if let readme = r.readmeFile, let text = read(readme) {
