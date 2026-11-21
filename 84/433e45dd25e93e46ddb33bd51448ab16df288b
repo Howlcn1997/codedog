@@ -1,0 +1,44 @@
+App/Views/MenuBar/MenuBarContent.swift
+  s_12aa9a1bb23cdd::t_2cdb6203652eee 45
+Packages/CodedogCore/Sources/CodedogCore/Inspect/GitInspector.swift
+  s_12aa9a1bb23cdd::t_c2ff9b0a2f5d09 6-10,20-22,42
+  s_12aa9a1bb23cdd::t_edd515951f3b25 23,43-68
+Packages/CodedogCore/Sources/CodedogCore/Model/Project.swift
+  s_12aa9a1bb23cdd::t_3c873be5141991 145-146
+  s_12aa9a1bb23cdd::t_edd515951f3b25 147-148
+App/CodedogApp.swift
+  s_12aa9a1bb23cdd::t_2cdb6203652eee 23
+Packages/CodedogCore/Sources/CodedogCore/Discovery/DiscoveryService.swift
+  s_12aa9a1bb23cdd::t_b1de0809f4660c 42-43,47-53
+  s_12aa9a1bb23cdd::t_2cdb6203652eee 76
+  s_12aa9a1bb23cdd::t_c2ff9b0a2f5d09 14-15,34-35,40
+  s_12aa9a1bb23cdd::t_edd515951f3b25 39,41,44-46,54-75,77-82,87-90,94-97,103,107
+  s_12aa9a1bb23cdd::t_3c873be5141991 13,33
+App/State/LibraryModel.swift
+  s_12aa9a1bb23cdd::t_edd515951f3b25 277-278,282
+Packages/CodedogCore/Sources/CodedogCore/System/ShellRunner.swift
+  s_12aa9a1bb23cdd::t_c2ff9b0a2f5d09 17-20,22-34,95-108
+Packages/CodedogCore/Tests/CodedogCoreTests/GitTests.swift
+  s_12aa9a1bb23cdd::t_2fe515b4fda513 41-43,45-55,57-68
+  s_12aa9a1bb23cdd::t_b1de0809f4660c 44,56
+Packages/CodedogCore/Tests/CodedogCoreTests/LanguageStatsTests.swift
+  s_12aa9a1bb23cdd::t_a89a2c3ff41cfd 1-40
+Packages/CodedogCore/Sources/CodedogCore/Inspect/LanguageStats.swift
+  s_12aa9a1bb23cdd::t_943c3213f9b334 1-154
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.52-trip",
+  "base_commit_sha": "84433e45dd25e93e46ddb33bd51448ab16df288b",
+  "prompts": {},
+  "sessions": {
+    "s_12aa9a1bb23cdd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6651cd19-3092-4746-b29a-d98a31d4374c",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "w.ning <w.ning@trip.com>"
+    }
+  }
+}
