@@ -1,0 +1,56 @@
+.github/workflows/swift-ci.yml
+  s_d55cd86b79f8fc::t_531986495f5f6f 1,5
+scripts/release.sh
+  s_d55cd86b79f8fc::t_8750e9db6b1c70 1-15,21-22,30-57
+  s_d55cd86b79f8fc::t_0c457473d1cb29 16-20,23-29
+Makefile
+  s_d55cd86b79f8fc::t_531986495f5f6f 4,6,8,10,24-27,29
+  s_d55cd86b79f8fc::t_0c457473d1cb29 12-16
+App/Views/Settings/SettingsView.swift
+  s_d55cd86b79f8fc::t_8f4813eef56553 134-151
+.github/workflows/release.yml
+  s_d55cd86b79f8fc::t_531986495f5f6f 1,12-14,17-21,23-26,29-35,38
+Packages/CodedogCore/Tests/CodedogCoreTests/AITests.swift
+  s_d55cd86b79f8fc::t_688d7034bbce39 128-145
+Packages/CodedogCore/Sources/CodedogCore/Model/Library.swift
+  s_d55cd86b79f8fc::t_688d7034bbce39 48-49,52-64
+App/Views/MenuBar/MenuBarContent.swift
+  s_d55cd86b79f8fc::t_8f4813eef56553 11-14
+docs/swiftui-rewrite-plan.md
+  s_d55cd86b79f8fc::t_252769d8f81d1a 168,180-181,192,205
+  s_d55cd86b79f8fc::t_aedaf32d22f933 194
+App/AppDelegate.swift
+  s_d55cd86b79f8fc::t_8f4813eef56553 24
+App/Views/Sidebar/SidebarView.swift
+  s_d55cd86b79f8fc::t_8f4813eef56553 114-131
+Packages/CodedogCore/Sources/CodedogCore/Codedog.swift
+  s_d55cd86b79f8fc::t_8f4813eef56553 5-9
+docs/user-guide.md
+  s_d55cd86b79f8fc::t_3b90cc1614ee14 1,3,5,7,9,11,13,15-20,22,24,26,28,30,32-39,41,43,45-53,55,57,59-61,63,65,67-68,70,72,74,76,78,80,83-87,90,92,94,96,98,100-106
+App/State/LibraryModel.swift
+  s_d55cd86b79f8fc::t_8f4813eef56553 18-19,164-181
+App/CodedogApp.swift
+  s_d55cd86b79f8fc::t_8f4813eef56553 18-20
+Packages/CodedogCore/Sources/CodedogCore/Actions/UpdateChecker.swift
+  s_d55cd86b79f8fc::t_688d7034bbce39 1,3-5,7-34,36-47
+README.md
+  s_d55cd86b79f8fc::t_2bd31d2d19221a 1,3,5,7,9,11,13-21,23,25-26,28-30,32,34,36,38,40,42,44-46,48,50,53-55,58-59,61,64-69,72,74-76
+.gitignore
+  s_d55cd86b79f8fc::t_531986495f5f6f 3-4,7,10-12
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.52-trip",
+  "base_commit_sha": "968ae1e08c1180c3cd1ccbe7ba189bba787b9752",
+  "prompts": {},
+  "sessions": {
+    "s_d55cd86b79f8fc": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "90c23200-dc9c-4987-8c64-5740d2a62e02",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "w.ning <w.ning@trip.com>"
+    }
+  }
+}
