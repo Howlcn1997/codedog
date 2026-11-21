@@ -50,7 +50,7 @@ struct CodedogApp: App {
             MenuBarContent()
                 .environment(model)
         } label: {
-            Image(systemName: model.items.contains(where: \.waiting) ? "pawprint.circle.fill" : "pawprint.fill")
+            Image("MenuBarDog")
         }
     }
 }

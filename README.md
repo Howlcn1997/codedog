@@ -1,4 +1,4 @@
-<p align="center"><img src="docs/assets/icon.png" width="112" alt="codedog"></p>
+<p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/icon-dark.png"><img src="docs/assets/icon.png" width="112" alt="codedog"></picture></p>
 
 <h1 align="center">codedog</h1>
 
