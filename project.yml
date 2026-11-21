@@ -47,6 +47,7 @@ targets:
         INFOPLIST_KEY_NSAppleEventsUsageDescription: 在终端中打开项目或续上 AI 会话。
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ENABLE_APP_SANDBOX: NO
+        CODE_SIGN_ENTITLEMENTS: App/codedog.entitlements
   codedog-cli:
     type: tool
     platform: macOS

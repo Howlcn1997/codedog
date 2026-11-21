@@ -34,6 +34,7 @@ enum Formatting {
     static func activity(_ date: Date?, now: Date = .now) -> String {
         guard let date else { return "很久没动" }
         let cal = Calendar.current
+        if date > now { return "今天在做" }
         if cal.isDateInToday(date) { return "今天在做" }
         if cal.isDateInYesterday(date) { return "昨天在做" }
         let days = cal.dateComponents([.day], from: cal.startOfDay(for: date), to: cal.startOfDay(for: now)).day ?? 0
@@ -41,6 +42,14 @@ enum Formatting {
         if days < 30 { return "\(days / 7) 周前" }
         if days < 365 { return "\(max(1, days / 30)) 个月前" }
         return "\(cal.component(.year, from: date)) 年"
+    }
+
+    /// 去掉 Markdown 标记，压成一行。
+    static func plain(_ s: String) -> String {
+        s.replacingOccurrences(of: #"\[([^\]]*)\]\([^)]*\)"#, with: "$1", options: .regularExpression)
+            .replacingOccurrences(of: #"[*_`#>]+"#, with: "", options: .regularExpression)
+            .split(whereSeparator: \.isNewline).joined(separator: " ")
+            .trimmingCharacters(in: .whitespaces)
     }
 
     static func shortPath(_ path: String) -> String {
@@ -115,4 +124,122 @@ extension Notification.Name {
     /// object: 可选的项目路径（新建后自动加入该分类）
     static let newCategory = Notification.Name("codedog.newCategory")
     static let focusSearch = Notification.Name("codedog.focusSearch")
+}
+
+extension Formatting {
+    /// 15亿、5755万、7.6万、980
+    static func tokens(_ n: Int) -> String {
+        func trim(_ v: Double) -> String { v < 10 ? String(format: "%.1f", v).replacingOccurrences(of: ".0", with: "") : String(Int(v.rounded())) }
+        if n >= 100_000_000 { return trim(Double(n) / 100_000_000) + "亿" }
+        if n >= 10_000 { return trim(Double(n) / 10_000) + "万" }
+        return "\(n)"
+    }
+
+    static func cost(_ v: Double?) -> String {
+        guard let v else { return "—" }
+        if v >= 1 { return "$\(Int(v.rounded()))" }
+        return v >= 0.01 ? String(format: "$%.2f", v) : "<$0.01"
+    }
+
+    /// 11月10日 – 11月21日（跨年时带年份）
+    static func dateRange(_ a: Date?, _ b: Date?) -> String {
+        guard let a, let b else { return "" }
+        let cal = Calendar.current
+        let sameYear = cal.component(.year, from: a) == cal.component(.year, from: b) && cal.component(.year, from: b) == cal.component(.year, from: .now)
+        func f(_ d: Date) -> String {
+            let c = cal.dateComponents([.year, .month, .day], from: d)
+            return sameYear ? "\(c.month!)月\(c.day!)日" : "\(c.year!)年\(c.month!)月\(c.day!)日"
+        }
+        return cal.isDate(a, inSameDayAs: b) ? f(a) : "\(f(a)) – \(f(b))"
+    }
+
+    /// 4 分钟前、5 小时前、昨天、3 天前
+    static func relative(_ date: Date, now: Date = .now) -> String {
+        let s = now.timeIntervalSince(date)
+        if s < 60 { return "刚刚" }
+        if s < 3600 { return "\(Int(s / 60)) 分钟前" }
+        if Calendar.current.isDateInToday(date) { return "\(Int(s / 3600)) 小时前" }
+        if Calendar.current.isDateInYesterday(date) { return "昨天" }
+        return activity(date, now: now)
+    }
+}
+
+/// AI / 编辑工具图标：优先用本机 App 图标，没有安装时用系统符号。
+struct ToolIcon: View {
+    var tool: AITool
+    var size: CGFloat = 18
+
+    var body: some View {
+        if let image = Self.appIcon(tool) {
+            Image(nsImage: image).resizable().interpolation(.high).frame(width: size, height: size)
+        } else {
+            Image(systemName: Self.symbol(tool))
+                .font(.system(size: size * 0.78, weight: .bold))
+                .foregroundStyle(Self.tint(tool))
+                .frame(width: size, height: size)
+        }
+    }
+
+    @MainActor static func appIcon(_ tool: AITool) -> NSImage? {
+        for id in tool.iconBundleIDs {
+            if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: id) {
+                return NSWorkspace.shared.icon(forFile: url.path(percentEncoded: false))
+            }
+        }
+        return nil
+    }
+
+    static func symbol(_ tool: AITool) -> String {
+        switch tool {
+        case .claudeCode: "asterisk"
+        case .codex: "circle.hexagongrid.fill"
+        case .cursor: "cursorarrow.rays"
+        case .vscode, .windsurf, .trae: "chevron.left.forwardslash.chevron.right"
+        }
+    }
+
+    static func tint(_ tool: AITool) -> Color {
+        switch tool {
+        case .claudeCode: Color(red: 0.85, green: 0.47, blue: 0.34)
+        case .codex: .primary
+        case .cursor: .primary
+        case .vscode: .blue
+        case .windsurf: .teal
+        case .trae: .green
+        }
+    }
+}
+
+extension Text {
+    /// 用 " · " 连接多段文字。
+    init(_ parts: [String]) { self.init(parts.filter { !$0.isEmpty }.joined(separator: " · ")) }
+}
+
+/// 简单的换行布局（分类胶囊）。
+struct FlowLayout: Layout {
+    var spacing: CGFloat = 6
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        arrange(proposal: proposal, subviews: subviews).size
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        for (i, p) in arrange(proposal: proposal, subviews: subviews).points.enumerated() {
+            subviews[i].place(at: CGPoint(x: bounds.minX + p.x, y: bounds.minY + p.y), proposal: .unspecified)
+        }
+    }
+
+    private func arrange(proposal: ProposedViewSize, subviews: Subviews) -> (size: CGSize, points: [CGPoint]) {
+        let maxWidth = proposal.width ?? .infinity
+        var points: [CGPoint] = [], x: CGFloat = 0, y: CGFloat = 0, rowHeight: CGFloat = 0, width: CGFloat = 0
+        for s in subviews {
+            let size = s.sizeThatFits(.unspecified)
+            if x > 0 && x + size.width > maxWidth { x = 0; y += rowHeight + spacing; rowHeight = 0 }
+            points.append(CGPoint(x: x, y: y))
+            x += size.width + spacing
+            rowHeight = max(rowHeight, size.height)
+            width = max(width, x - spacing)
+        }
+        return (CGSize(width: width, height: y + rowHeight), points)
+    }
 }

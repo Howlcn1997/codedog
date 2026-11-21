@@ -32,6 +32,13 @@ public struct SearchMatch: Sendable, Hashable {
     public var rank: Int
     /// 最多两条命中原因，例如 "依赖：sharp"、"README：…图片压缩…"。
     public var reasons: [String]
+
+    public init(rank: Int, reasons: [String]) {
+        self.rank = rank
+        self.reasons = reasons
+    }
+
+    public static let none = SearchMatch(rank: 0, reasons: [])
 }
 
 /// 项目搜索：NFKC 规范化、多关键词都要命中、字段分级、名称支持子序列模糊匹配。

@@ -12,7 +12,7 @@ struct CodedogApp: App {
                 .frame(minWidth: 960, minHeight: 620)
         }
         .defaultSize(width: 1240, height: 820)
-        .windowToolbarStyle(.unified)
+        .windowToolbarStyle(.unified(showsTitle: false))
         .commands {
             CommandGroup(after: .newItem) {
                 Button("重新扫描") { Task { await model.rescan() } }

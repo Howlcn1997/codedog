@@ -33,6 +33,14 @@ struct SidebarView: View {
                 .buttonStyle(.plain)
             }
 
+            if !model.toolsPresent.isEmpty {
+                Section("AI 与编辑器") {
+                    ForEach(model.toolsPresent, id: \.self) { t in
+                        toolRow(t)
+                    }
+                }
+            }
+
             if !model.kindsPresent.isEmpty {
                 Section("项目类型") {
                     ForEach(model.kindsPresent, id: \.self) { k in
@@ -67,6 +75,19 @@ struct SidebarView: View {
                 .foregroundStyle(tint ?? .accentColor)
         }
         .tag(s)
+    }
+
+    private func toolRow(_ t: AITool) -> some View {
+        Label {
+            HStack {
+                Text(t.displayName).lineLimit(1)
+                Spacer()
+                Text("\(model.count(.tool(t)))").monospacedDigit().foregroundStyle(.secondary)
+            }
+        } icon: {
+            ToolIcon(tool: t, size: 16)
+        }
+        .tag(SidebarSelection.tool(t))
     }
 
     @ViewBuilder private func categoryMenu(_ c: CodedogCore.Category) -> some View {

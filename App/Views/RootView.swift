@@ -15,15 +15,10 @@ struct RootView: View {
                 .navigationSplitViewColumnWidth(min: 210, ideal: 240, max: 300)
         } detail: {
             LibraryView()
-                .inspector(isPresented: $model.showInspector) {
-                    ProjectInspector()
-                        .inspectorColumnWidth(min: 280, ideal: 320, max: 420)
-                }
         }
         .searchable(text: $model.searchText, placement: .toolbar, prompt: "搜索项目、README、依赖…")
         .toolbar { toolbar }
         .onChange(of: model.selection) { model.bucketFilter = nil }
-        .onChange(of: model.selectedID) { _, id in if id != nil && !model.showInspector { model.showInspector = true } }
         .onReceive(NotificationCenter.default.publisher(for: .newCategory)) { note in
             newCategoryFor = note.object as? String
             newCategoryName = ""
@@ -43,6 +38,7 @@ struct RootView: View {
         } message: {
             Text(model.errorMessage ?? "")
         }
+        .overlay { detailOverlay }
         .overlay(alignment: .bottom) { toastView }
         .fileImporter(isPresented: $addingProject, allowedContentTypes: [.folder], allowsMultipleSelection: true) { result in
             if case .success(let urls) = result { model.addProjects(urls) }
@@ -91,10 +87,32 @@ struct RootView: View {
             .disabled(model.isScanning)
             .help(model.lastScan.map { "上次扫描：\($0.formatted(.relative(presentation: .named)))" } ?? "重新扫描")
         }
-        ToolbarItem {
-            Button("详情", systemImage: "sidebar.trailing") { model.showInspector.toggle() }
-                .help("显示或隐藏详情")
+    }
+
+    @ViewBuilder private var detailOverlay: some View {
+        if let item = model.detailItem {
+            ZStack(alignment: .topTrailing) {
+                Rectangle()
+                    .fill(.ultraThinMaterial)
+                    .overlay(Color.black.opacity(0.25))
+                    .ignoresSafeArea()
+                    .onTapGesture { closeDetail() }
+                ProjectDetailView(item: item)
+                Button { closeDetail() } label: {
+                    Image(systemName: "xmark").font(.system(size: 15, weight: .semibold)).frame(width: 30, height: 30)
+                }
+                .buttonStyle(.glass)
+                .buttonBorderShape(.circle)
+                .keyboardShortcut(.cancelAction)
+                .padding(.top, 12)
+                .padding(.trailing, 16)
+            }
+            .transition(.opacity.combined(with: .scale(scale: 0.98)))
         }
+    }
+
+    private func closeDetail() {
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.9)) { model.detailID = nil }
     }
 
     @ViewBuilder private var toastView: some View {

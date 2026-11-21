@@ -95,11 +95,16 @@ struct FolderCard: View {
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
             Spacer(minLength: 0)
-            HStack(spacing: 6) {
-                if let stack = item.project.stacks.first {
+            HStack(spacing: 4) {
+                if item.tools.isEmpty, let stack = item.project.stacks.first {
                     Text(stack.displayName)
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(.secondary)
+                } else {
+                    ForEach(item.tools.prefix(4), id: \.tool) { t in
+                        ToolIcon(tool: t.tool, size: 17)
+                            .help("\(t.tool.displayName) · \(Formatting.dateRange(t.firstAt, t.lastAt))")
+                    }
                 }
                 Spacer()
                 Text(item.project.kind.displayName)
@@ -127,10 +132,15 @@ struct FolderCard: View {
         } else {
             let dirty = item.project.git?.dirtyFiles ?? 0
             HStack(spacing: 4) {
-                if dirty > 0 {
+                if !item.running.isEmpty {
+                    Circle().fill(.green).frame(width: 6, height: 6)
+                    Text("运行中")
+                } else if item.waiting {
                     Circle().fill(.orange).frame(width: 6, height: 6)
+                    Text("在等你")
+                } else {
+                    Text(Formatting.activity(item.lastActivity))
                 }
-                Text(Formatting.activity(item.lastActivity))
                 if dirty > 0 { Text("· \(dirty) 处改动") }
                 else if let branch = item.project.git?.branch { Text("· \(branch)") }
             }

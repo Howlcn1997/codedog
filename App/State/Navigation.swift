@@ -2,11 +2,12 @@ import CodedogCore
 import Foundation
 
 enum SmartFolder: String, CaseIterable, Hashable, Codable {
-    case favorites, recent, dirty, hidden
+    case favorites, waiting, recent, dirty, hidden
 
     var title: String {
         switch self {
         case .favorites: "收藏"
+        case .waiting: "在等你"
         case .recent: "最近打开"
         case .dirty: "有改动没提交"
         case .hidden: "已隐藏"
@@ -16,6 +17,7 @@ enum SmartFolder: String, CaseIterable, Hashable, Codable {
     var symbol: String {
         switch self {
         case .favorites: "star"
+        case .waiting: "hourglass"
         case .recent: "clock"
         case .dirty: "pencil.and.outline"
         case .hidden: "eye.slash"
@@ -25,6 +27,7 @@ enum SmartFolder: String, CaseIterable, Hashable, Codable {
     func contains(_ item: ProjectItem, now: Date = .now) -> Bool {
         switch self {
         case .favorites: item.meta.favorite
+        case .waiting: item.waiting
         case .recent: item.meta.lastOpened.map { now.timeIntervalSince($0) < 14 * 86_400 } ?? false
         case .dirty: (item.project.git?.dirtyFiles ?? 0) > 0
         case .hidden: item.meta.hidden
@@ -37,6 +40,7 @@ enum SidebarSelection: Hashable, Codable {
     case smart(SmartFolder)
     case category(UUID)
     case kind(ProjectKind)
+    case tool(AITool)
 }
 
 enum TimeRange: String, CaseIterable, Identifiable {
@@ -108,6 +112,8 @@ struct ActivityBucket: Identifiable, Hashable {
 }
 
 enum OpenAction: Hashable {
+    case resume(AITool)
+    case newSession(AITool)
     case editor(AppRef?)
     case terminal
     case finder

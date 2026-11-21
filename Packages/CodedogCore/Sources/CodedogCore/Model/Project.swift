@@ -39,19 +39,35 @@ public enum ProjectKind: String, Codable, Sendable, CaseIterable, Hashable {
     }
 }
 
+public struct Commit: Codable, Sendable, Hashable {
+    public var date: Date
+    public var subject: String
+    public var mine: Bool
+
+    public init(date: Date, subject: String, mine: Bool = true) {
+        self.date = date
+        self.subject = subject
+        self.mine = mine
+    }
+}
+
 public struct GitInfo: Codable, Sendable, Hashable {
     public var branch: String?
     public var dirtyFiles: Int
     public var remote: String?
     public var lastCommitAt: Date?
-    public var recentCommits: [String]
+    /// 最近 10 条提交（当前分支）。
+    public var recentCommits: [Commit]
+    /// 近一年"我的提交"按天统计（yyyy-MM-dd）；没配置 user.email 时统计全部。
+    public var commitDays: [String: Int]
 
-    public init(branch: String? = nil, dirtyFiles: Int = 0, remote: String? = nil, lastCommitAt: Date? = nil, recentCommits: [String] = []) {
+    public init(branch: String? = nil, dirtyFiles: Int = 0, remote: String? = nil, lastCommitAt: Date? = nil, recentCommits: [Commit] = [], commitDays: [String: Int] = [:]) {
         self.branch = branch
         self.dirtyFiles = dirtyFiles
         self.remote = remote
         self.lastCommitAt = lastCommitAt
         self.recentCommits = recentCommits
+        self.commitDays = commitDays
     }
 
     /// `git@host:a/b.git`、`ssh://git@host/a/b` → `https://host/a/b`

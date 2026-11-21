@@ -57,7 +57,7 @@ struct ProjectTable: View {
                 ProjectMenu(item: row.item)
             }
         } primaryAction: { ids in
-            if let id = ids.first, let row = data.first(where: { $0.id == id }) { model.open(row.item) }
+            if let id = ids.first { withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) { model.detailID = id } }
         }
         .scrollContentBackground(.hidden)
     }

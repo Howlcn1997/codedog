@@ -10,6 +10,8 @@ final class LibraryModel {
     private(set) var projects: [DiscoveredProject] = []
     private(set) var isScanning = false
     private(set) var lastScan: Date?
+    private(set) var aiIndex: [String: [ToolUsage]] = [:]
+    private(set) var running: [String: Set<AITool>] = [:]
     var errorMessage: String?
     var toast: String?
 
@@ -21,21 +23,34 @@ final class LibraryModel {
     var sortOrder: SortOrder = .activity
     var viewMode: ViewMode = .grid
     var selectedID: String?
-    var showInspector = false
+    /// 正在查看详情的项目
+    var detailID: String?
 
     @ObservationIgnored private let store = LibraryStore()
     @ObservationIgnored private var watcher: FSEventsWatcher?
     @ObservationIgnored private var pendingEvents = Set<String>()
     @ObservationIgnored private var flushTask: Task<Void, Never>?
     @ObservationIgnored private var started = false
+    @ObservationIgnored private var aiWatcher: FSEventsWatcher?
+    @ObservationIgnored private var aiTask: Task<Void, Never>?
+    @ObservationIgnored private var lastAIBuild = Date.distantPast
 
     // MARK: 派生数据
 
-    var items: [ProjectItem] { library.items(from: projects) }
+    var items: [ProjectItem] { library.items(from: projects, tools: aiIndex, running: running) }
 
-    var selectedItem: ProjectItem? {
-        guard let selectedID, let p = projects.first(where: { $0.path == selectedID }) else { return nil }
-        return library.items(from: [p]).first
+    func item(_ id: String?) -> ProjectItem? {
+        guard let id, let p = projects.first(where: { $0.path == id }) else { return nil }
+        return library.items(from: [p], tools: aiIndex, running: running).first
+    }
+
+    var selectedItem: ProjectItem? { item(selectedID) }
+    var detailItem: ProjectItem? { item(detailID) }
+
+    /// 出现过的 AI 工具（按固定顺序）。
+    var toolsPresent: [AITool] {
+        let present = Set(aiIndex.values.flatMap { $0.map(\.tool) })
+        return AITool.allCases.filter(present.contains)
     }
 
     /// 当前侧栏选择下的项目（不含时间与搜索筛选）。
@@ -47,6 +62,7 @@ final class LibraryModel {
         case .smart(let f): return all.filter { !$0.meta.hidden && f.contains($0) }
         case .category(let id): return all.filter { !$0.meta.hidden && $0.meta.categories.contains(id) }
         case .kind(let k): return all.filter { !$0.meta.hidden && $0.project.kind == k }
+        case .tool(let t): return all.filter { !$0.meta.hidden && $0.tools.contains { $0.tool == t } }
         }
     }
 
@@ -68,6 +84,7 @@ final class LibraryModel {
         case .smart(let f): f.title
         case .category(let id): library.categories.first { $0.id == id }?.name ?? "分类"
         case .kind(let k): k.displayName
+        case .tool(let t): t.displayName
         }
     }
 
@@ -79,6 +96,7 @@ final class LibraryModel {
         case .smart(let f): return all.filter { !$0.meta.hidden && f.contains($0) }.count
         case .category(let id): return all.filter { !$0.meta.hidden && $0.meta.categories.contains(id) }.count
         case .kind(let k): return all.filter { !$0.meta.hidden && $0.project.kind == k }.count
+        case .tool(let t): return all.filter { !$0.meta.hidden && $0.tools.contains { $0.tool == t } }.count
         }
     }
 
@@ -128,7 +146,45 @@ final class LibraryModel {
             await firstRunSetup()
         }
         startWatching()
+        startAIWatching()
         await rescan()
+        Task { await self.pollRunning() }
+    }
+
+    // MARK: AI 工具
+
+    func refreshAI() async {
+        lastAIBuild = .now
+        aiIndex = await AIIndex.build(projects: projects.map(\.path))
+        running = await Task.detached { RunningAgents.scan() }.value
+    }
+
+    /// 每 10 秒刷新一次运行中的智能体（读取进程表，开销很小）。
+    private func pollRunning() async {
+        while !Task.isCancelled {
+            try? await Task.sleep(for: .seconds(10))
+            let now = await Task.detached { RunningAgents.scan() }.value
+            if now != running { running = now }
+        }
+    }
+
+    /// AI 日志目录变化时重建索引（至少间隔 15 秒，按文件缓存，代价很小）。
+    private func startAIWatching() {
+        let dirs = ([NSHomeDirectory() + "/.claude/projects", NSHomeDirectory() + "/.codex/sessions"])
+            .filter { FileManager.default.fileExists(atPath: $0) }
+        aiWatcher = FSEventsWatcher(paths: dirs, latency: 3) { [weak self] _ in
+            Task { @MainActor in self?.scheduleAIRefresh() }
+        }
+    }
+
+    private func scheduleAIRefresh() {
+        guard aiTask == nil else { return }
+        let wait = max(0, 15 - Date.now.timeIntervalSince(lastAIBuild))
+        aiTask = Task {
+            try? await Task.sleep(for: .seconds(wait))
+            await refreshAI()
+            aiTask = nil
+        }
     }
 
     private func firstRunSetup() async {
@@ -156,6 +212,7 @@ final class LibraryModel {
         projects = found
         lastScan = .now
         saveCache()
+        await refreshAI()
         if let id = selectedID, !found.contains(where: { $0.path == id }) { selectedID = nil }
     }
 
@@ -291,16 +348,27 @@ final class LibraryModel {
         let prefs = library.preferences
         let editor: AppRef?
         if case .editor(let override) = action { editor = library.editor(for: path, override: override) } else { editor = nil }
+        let lastSession = item.tools.first { if case .resume(let t) = action { return $0.tool == t } else { return false } }?.lastSession
         Task {
             do {
                 switch action {
+                case .resume(let tool):
+                    if let cmd = AgentLauncher.resumeCommand(tool: tool, sessionID: lastSession?.id) {
+                        try AgentLauncher.run(cmd, in: lastSession?.cwd ?? path, terminal: prefs.terminal)
+                    }
+                case .newSession(let tool):
+                    if let cmd = AgentLauncher.resumeCommand(tool: tool, sessionID: nil) {
+                        try AgentLauncher.run(cmd, in: path, terminal: prefs.terminal)
+                    }
                 case .editor: try await Opener.openInEditor(path, editor: editor)
                 case .terminal: try await Opener.openInTerminal(path, terminal: prefs.terminal)
                 case .finder: Opener.revealInFinder(path)
                 case .repository: try Opener.openRepository(item.project.git)
                 }
-                if case .editor = action { update { $0.recordOpen(path) } }
-                if case .terminal = action { update { $0.recordOpen(path) } }
+                switch action {
+                case .finder, .repository: break
+                default: update { $0.recordOpen(path) }
+                }
             } catch {
                 errorMessage = error.localizedDescription
             }

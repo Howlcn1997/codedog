@@ -86,8 +86,10 @@ struct LibraryView: View {
         LazyVGrid(columns: [GridItem(.adaptive(minimum: FolderCard.size.width, maximum: FolderCard.size.width + 40), spacing: 26)], spacing: 30) {
             ForEach(rows, id: \.item.id) { row in
                 FolderCard(item: row.item, match: row.match, isSelected: model.selectedID == row.item.id)
-                    .onTapGesture(count: 2) { model.open(row.item) }
-                    .simultaneousGesture(TapGesture().onEnded { model.selectedID = row.item.id })
+                    .onTapGesture {
+                        model.selectedID = row.item.id
+                        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) { model.detailID = row.item.id }
+                    }
                     .contextMenu { ProjectMenu(item: row.item) }
                     .help(Formatting.shortPath(row.item.id))
             }

@@ -21,12 +21,18 @@ enum DebugSnapshot {
                 case "search": model.searchText = arg
                 case "dark": NSApp.appearance = NSAppearance(named: .darkAqua)
                 case "light": NSApp.appearance = NSAppearance(named: .aqua)
-                case "inspector": model.showInspector = arg != "off"
+                case "detail":
+                    if arg == "off" { model.detailID = nil }
+                    else if let name = model.visible.first(where: { $0.item.project.name == arg })?.item.id { model.detailID = name }
+                    else { model.detailID = model.visible.dropFirst(Int(arg) ?? 0).first?.item.id }
                 case "size":
                     let wh = arg.split(separator: "x").compactMap { Double($0) }
                     if wh.count == 2, let w = NSApp.windows.first(where: { $0.isVisible && $0.contentView != nil }) {
                         w.setContentSize(NSSize(width: wh[0], height: wh[1]))
                     }
+                case "activate":
+                    NSApp.activate()
+                    NSApp.windows.first { $0.title == "codedog" }?.makeKeyAndOrderFront(nil)
                 case "quit": NSApp.terminate(nil)
                 default: break
                 }

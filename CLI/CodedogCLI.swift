@@ -104,6 +104,7 @@ struct Scan: AsyncParsableCommand {
 
     @Argument(help: "扫描目录，默认使用建议目录。") var roots: [String] = []
     @Flag(help: "试跑旧版 projects.json 迁移并输出结果（不写盘）。") var legacy = false
+    @Flag(help: "同时建立 AI 工具索引并输出摘要。") var ai = false
 
     func run() async throws {
         let roots = self.roots.isEmpty ? FolderScanner.suggestedRoots() : self.roots.map(FolderScanner.normalize)
@@ -121,6 +122,20 @@ struct Scan: AsyncParsableCommand {
         print("\n根目录：\(roots.joined(separator: ", "))")
         print("共 \(projects.count) 个项目，用时 \(elapsed.formatted(.units(allowed: [.seconds, .milliseconds])))；\(kinds.joined(separator: "，"))")
 
+        if ai {
+            let t0 = clock.now
+            let index = await AIIndex.build(projects: projects.map(\.path))
+            print("\nAI 索引：\(index.count) 个项目有记录，用时 \((clock.now - t0).formatted(.units(allowed: [.seconds, .milliseconds])))")
+            let running = RunningAgents.scan()
+            for (path, tools) in index.sorted(by: { ($0.value.first?.lastAt ?? .distantPast) > ($1.value.first?.lastAt ?? .distantPast) }).prefix(12) {
+                let tokens = tools.reduce(into: [String: TokenUsage]()) { acc, t in for (m, u) in t.tokens { acc[m, default: TokenUsage()] += u } }
+                let cost = tokens.compactMap { Pricing.cost(model: $0.key, usage: $0.value) }.reduce(0, +)
+                let total = tokens.values.map(\.total).reduce(0, +)
+                let names = tools.map { "\($0.tool.displayName)\($0.waiting ? "(等你)" : "")" }.joined(separator: ",")
+                let run = RunningAgents.tools(for: path, in: running).map(\.displayName).joined(separator: ",")
+                print("  \((path as NSString).lastPathComponent)\t\(names)\t$\(Int(cost))\t\(total / 1_000_000)M tok\(run.isEmpty ? "" : "\t运行中:" + run)")
+            }
+        }
         if legacy, let data = try? Data(contentsOf: Codedog.legacyURL) {
             var lib = Library()
             try LegacyImporter.migrate(data: data, into: &lib, suggestedRoots: roots)
