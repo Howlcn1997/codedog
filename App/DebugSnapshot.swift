@@ -59,6 +59,16 @@ enum DebugSnapshot {
                             try? rep.representation(using: .png, properties: [:])?.write(to: URL(filePath: "\(prefix)-icons-\(dark ? "dark" : "light").png"))
                         }
                     }
+                case "cards":
+                    let picks = Array(model.visible.prefix(4).map(\.item))
+                    for dark in [false, true] {
+                        let view = CardStates(items: picks).environment(model).environment(\.colorScheme, dark ? .dark : .light)
+                        let r = ImageRenderer(content: view)
+                        r.scale = 2
+                        if let img = r.nsImage, let tiff = img.tiffRepresentation, let rep = NSBitmapImageRep(data: tiff) {
+                            try? rep.representation(using: .png, properties: [:])?.write(to: URL(filePath: "\(prefix)-cards-\(dark ? "dark" : "light").png"))
+                        }
+                    }
                 case "windows":
                     for w in NSApp.windows { print("[window]", String(describing: type(of: w)), w.isVisible, w.frame) }
                 case "quit":
@@ -83,6 +93,27 @@ enum DebugSnapshot {
         try? rep.representation(using: .png, properties: [:])?.write(to: URL(filePath: path))
     }
 }
+/// 调试：卡片三种状态（静止 / 悬停 / 打开）。
+struct CardStates: View {
+    var items: [ProjectItem]
+    @Environment(\.colorScheme) private var scheme
+    var body: some View {
+        VStack(alignment: .leading, spacing: 30) {
+            ForEach(Array(items.enumerated()), id: \.offset) { _, item in
+                HStack(spacing: 40) {
+                    ForEach(0..<3, id: \.self) { s in
+                        ProjectCard(item: item, match: .none, isSelected: false, forcedState: s)
+                    }
+                }
+            }
+        }
+        .padding(.horizontal, 40)
+        .padding(.top, 90)
+        .padding(.bottom, 30)
+        .background(BackdropView())
+    }
+}
+
 /// 调试：全部技术栈图标一览。
 struct IconGallery: View {
     @Environment(\.colorScheme) private var scheme
