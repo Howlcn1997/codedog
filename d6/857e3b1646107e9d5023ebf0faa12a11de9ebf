@@ -1,0 +1,49 @@
+App/Resources/Assets.xcassets/Tool/vscode.imageset/Contents.json
+  s_d55cd86b79f8fc::t_01474f7c4dd6ca 1
+App/Resources/Assets.xcassets/Tool/openai.imageset/Contents.json
+  s_d55cd86b79f8fc::t_01474f7c4dd6ca 1
+App/Resources/Assets.xcassets/Tool/openai.imageset/openai.svg
+  s_d55cd86b79f8fc::t_01474f7c4dd6ca 1
+App/Views/Common/Style.swift
+  s_d55cd86b79f8fc::t_01474f7c4dd6ca 177-178,184-188,190,195,197-202
+App/Resources/Assets.xcassets/Tool/trae.imageset/trae.svg
+  s_d55cd86b79f8fc::t_01474f7c4dd6ca 1
+App/Resources/Assets.xcassets/Tool/vscode.imageset/vscode.svg
+  s_d55cd86b79f8fc::t_01474f7c4dd6ca 1
+docs/assets/ICONS.md
+  s_d55cd86b79f8fc::t_01474f7c4dd6ca 7-18
+App/Resources/Assets.xcassets/Tool/windsurf.imageset/Contents.json
+  s_d55cd86b79f8fc::t_01474f7c4dd6ca 1
+App/DebugSnapshot.swift
+  s_d55cd86b79f8fc::t_01474f7c4dd6ca 93-101
+App/Resources/Assets.xcassets/Tool/Contents.json
+  s_d55cd86b79f8fc::t_01474f7c4dd6ca 1
+App/Resources/Assets.xcassets/Tool/windsurf.imageset/windsurf.svg
+  s_d55cd86b79f8fc::t_01474f7c4dd6ca 1
+App/Resources/Assets.xcassets/Tool/cursor.imageset/Contents.json
+  s_d55cd86b79f8fc::t_01474f7c4dd6ca 1
+App/Resources/Assets.xcassets/Tool/trae.imageset/Contents.json
+  s_d55cd86b79f8fc::t_01474f7c4dd6ca 1
+App/Resources/Assets.xcassets/Tool/claude.imageset/claude.svg
+  s_d55cd86b79f8fc::t_01474f7c4dd6ca 1
+App/Resources/Assets.xcassets/Tool/claude.imageset/Contents.json
+  s_d55cd86b79f8fc::t_01474f7c4dd6ca 1
+App/Resources/Assets.xcassets/Tool/cursor.imageset/cursor.svg
+  s_d55cd86b79f8fc::t_01474f7c4dd6ca 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.52-trip",
+  "base_commit_sha": "d6857e3b1646107e9d5023ebf0faa12a11de9ebf",
+  "prompts": {},
+  "sessions": {
+    "s_d55cd86b79f8fc": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "90c23200-dc9c-4987-8c64-5740d2a62e02",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "w.ning <w.ning@trip.com>"
+    }
+  }
+}
