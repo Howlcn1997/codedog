@@ -3,7 +3,7 @@ import Foundation
 /// 一次性读取的库快照（CLI 使用；App 自己维护实时状态）。
 public struct LibrarySnapshot: Sendable {
     public var library: Library
-    public var items: [LibraryItem]
+    public var items: [ProjectItem]
 
     /// 优先读缓存；缓存为空时现场扫描（不写缓存，避免与 App 竞争）。
     public static func load(store: LibraryStore = LibraryStore()) async -> LibrarySnapshot {
@@ -17,7 +17,7 @@ public struct LibrarySnapshot: Sendable {
     }
 
     /// 默认排序：常用度 → 最近活动 → 名称。
-    public static func defaultOrder(_ a: LibraryItem, _ b: LibraryItem) -> Bool {
+    public static func defaultOrder(_ a: ProjectItem, _ b: ProjectItem) -> Bool {
         let fa = a.frecency(), fb = b.frecency()
         if fa != fb { return fa > fb }
         let la = a.lastActivity ?? .distantPast, lb = b.lastActivity ?? .distantPast

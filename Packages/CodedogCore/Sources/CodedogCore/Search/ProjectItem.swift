@@ -1,7 +1,7 @@
 import Foundation
 
 /// 扫描结果 + 用户元数据的组合视图，App 与 CLI 共用。
-public struct LibraryItem: Sendable, Hashable, Identifiable {
+public struct ProjectItem: Sendable, Hashable, Identifiable {
     public var project: DiscoveredProject
     public var meta: ProjectMeta
     public var categoryNames: [String]
@@ -42,11 +42,11 @@ public struct LibraryItem: Sendable, Hashable, Identifiable {
 }
 
 extension Library {
-    public func items(from projects: [DiscoveredProject]) -> [LibraryItem] {
+    public func items(from projects: [DiscoveredProject]) -> [ProjectItem] {
         let names = Dictionary(categories.map { ($0.id, $0.name) }, uniquingKeysWith: { a, _ in a })
         return projects.map { p in
             let m = meta(for: p.path)
-            return LibraryItem(project: p, meta: m, categoryNames: m.categories.compactMap { names[$0] })
+            return ProjectItem(project: p, meta: m, categoryNames: m.categories.compactMap { names[$0] })
         }
     }
 

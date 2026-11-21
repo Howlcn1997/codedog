@@ -14,7 +14,7 @@ struct CodedogCLI: AsyncParsableCommand {
 }
 
 /// 解析查询：精确名称优先，其次唯一搜索结果；多个候选时列到 stderr。
-func resolve(_ query: String, in snapshot: LibrarySnapshot) throws -> LibraryItem {
+func resolve(_ query: String, in snapshot: LibrarySnapshot) throws -> ProjectItem {
     let visible = snapshot.items.filter { !$0.meta.hidden }
     let r = ProjectSearch.resolve(visible, query: query, document: \.searchDocument, by: LibrarySnapshot.defaultOrder)
     if let item = r.item { return item }

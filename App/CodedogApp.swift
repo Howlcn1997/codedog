@@ -1,27 +1,34 @@
-import SwiftUI
 import CodedogCore
+import SwiftUI
 
 @main
 struct CodedogApp: App {
-    var body: some Scene {
-        WindowGroup("codedog", id: "main") {
-            RootView()
-                .frame(minWidth: 900, minHeight: 600)
-        }
-        .windowStyle(.hiddenTitleBar)
-        .windowToolbarStyle(.unified)
-    }
-}
+    @State private var model = LibraryModel()
 
-struct RootView: View {
-    var body: some View {
-        NavigationSplitView {
-            List {
-                Label("全部项目", systemImage: "square.grid.2x2")
+    var body: some Scene {
+        Window("codedog", id: "main") {
+            RootView()
+                .environment(model)
+                .frame(minWidth: 960, minHeight: 620)
+        }
+        .defaultSize(width: 1240, height: 820)
+        .windowToolbarStyle(.unified)
+        .commands {
+            CommandGroup(after: .newItem) {
+                Button("重新扫描") { Task { await model.rescan() } }
+                    .keyboardShortcut("r", modifiers: .command)
             }
-            .navigationSplitViewColumnWidth(min: 200, ideal: 220, max: 280)
-        } detail: {
-            ContentUnavailableView("codedog", systemImage: "pawprint", description: Text("看见所有项目，最快打开它。"))
+            CommandGroup(after: .toolbar) {
+                Button(model.viewMode == .grid ? "列表视图" : "卡片视图") {
+                    model.viewMode = model.viewMode == .grid ? .list : .grid
+                }
+                .keyboardShortcut("l", modifiers: [.command, .shift])
+            }
+        }
+
+        Settings {
+            SettingsView()
+                .environment(model)
         }
     }
 }

@@ -84,7 +84,7 @@ import Testing
         var m = ProjectMeta()
         m.openCount = 4
         m.lastOpened = Date(timeIntervalSinceNow: -7 * 86_400)
-        let item = LibraryItem(project: DiscoveredProject(path: "/x", name: "x"), meta: m, categoryNames: [])
+        let item = ProjectItem(project: DiscoveredProject(path: "/x", name: "x"), meta: m, categoryNames: [])
         #expect(abs(item.frecency() - 2) < 0.01)
     }
 }
