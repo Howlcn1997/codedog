@@ -9,6 +9,15 @@ public struct AppRef: Codable, Sendable, Hashable {
         self.bundleID = bundleID
         self.name = name
     }
+
+    private enum CodingKeys: String, CodingKey { case bundleID, name }
+
+    /// 读取旧数据时把已知 App 的名称统一成简称（如 "Visual Studio Code" → "VS Code"）。
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        bundleID = try c.decode(String.self, forKey: .bundleID)
+        name = KnownApps.displayName(bundleID: bundleID, fallback: try c.decode(String.self, forKey: .name))
+    }
 }
 
 public struct Category: Codable, Sendable, Hashable, Identifiable {

@@ -4,7 +4,7 @@ import Foundation
 public enum KnownApps {
     public static let editors: [AppRef] = [
         AppRef(bundleID: "com.todesktop.230313mzl4w4u92", name: "Cursor"),
-        AppRef(bundleID: "com.microsoft.VSCode", name: "Visual Studio Code"),
+        AppRef(bundleID: "com.microsoft.VSCode", name: "VS Code"),
         AppRef(bundleID: "dev.zed.Zed", name: "Zed"),
         AppRef(bundleID: "com.exafunction.windsurf", name: "Windsurf"),
         AppRef(bundleID: "com.trae.app", name: "Trae"),
@@ -32,7 +32,16 @@ public enum KnownApps {
         "com.todesktop.230313mzl4w4u92", "com.microsoft.VSCode", "com.exafunction.windsurf", "com.trae.app",
     ]
 
+    /// 旧名称 → 现用名称（旧数据里可能存的是 App 的完整名）。
+    static let aliases: [String: String] = ["Visual Studio Code": "VS Code"]
+
     public static func editor(named name: String) -> AppRef? {
-        editors.first { $0.name.caseInsensitiveCompare(name) == .orderedSame }
+        let name = aliases.first { $0.key.caseInsensitiveCompare(name) == .orderedSame }?.value ?? name
+        return editors.first { $0.name.caseInsensitiveCompare(name) == .orderedSame }
+    }
+
+    /// 已知 App 用统一的简称显示（例如 VS Code），未知 App 保留原名。
+    public static func displayName(bundleID: String, fallback: String) -> String {
+        (editors + terminals).first { $0.bundleID == bundleID }?.name ?? fallback
     }
 }

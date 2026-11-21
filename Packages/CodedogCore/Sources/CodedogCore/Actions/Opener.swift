@@ -34,7 +34,7 @@ public enum Opener {
         let name = (bundle.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String)
             ?? (bundle.object(forInfoDictionaryKey: "CFBundleName") as? String)
             ?? url.deletingPathExtension().lastPathComponent
-        return AppRef(bundleID: id, name: name)
+        return AppRef(bundleID: id, name: KnownApps.displayName(bundleID: id, fallback: name))
     }
 
     public static func open(_ path: String, with app: AppRef) async throws {
