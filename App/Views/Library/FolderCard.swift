@@ -97,7 +97,8 @@ struct ProjectArt: View {
 
 // MARK: - 项目卡片
 
-/// 玻璃拟态文件夹：后层渐变图 + 磨砂玻璃前层。悬停时前层后仰、露出里面的"纸张"（最近会话 / 提交）；点击时纸张扇形展开后打开项目面板。
+/// 玻璃拟态文件夹：后层渐变图 + 磨砂玻璃前层，左下名称与信息，右下项目类型徽章。
+/// 悬停时前层后仰、露出里面的"纸张"（最近会话 / 提交）；点击时纸张扇形展开后打开项目面板。
 struct ProjectCard: View {
     @Environment(LibraryModel.self) private var model
     @Environment(\.colorScheme) private var scheme
@@ -199,7 +200,6 @@ struct ProjectCard: View {
     private func paperView(_ p: Paper) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 5) {
-                if let tool = p.tool { ToolIcon(tool: tool, size: 11) }
                 Text(p.title).font(.system(size: 10.5, weight: .semibold)).lineLimit(1)
                 Spacer(minLength: 4)
                 Text(p.detail).font(.system(size: 8.5, design: .monospaced)).foregroundStyle(.secondary).lineLimit(1)
@@ -221,8 +221,7 @@ struct ProjectCard: View {
             Spacer(minLength: 0)
             HStack(alignment: .bottom, spacing: 10) {
                 VStack(alignment: .leading, spacing: 5) {
-                    HStack(spacing: 7) {
-                        StackBadge(project: item.project, size: 22)
+                    HStack(spacing: 6) {
                         Text(item.project.name)
                             .font(.system(size: 15, weight: .semibold))
                             .lineLimit(1)
@@ -233,7 +232,7 @@ struct ProjectCard: View {
                     subtitle
                 }
                 Spacer(minLength: 0)
-                actionButton
+                StackBadge(project: item.project, size: 36)   // 项目类型放在右下角
             }
         }
         .padding(.horizontal, 16)
@@ -276,32 +275,5 @@ struct ProjectCard: View {
         .font(.system(size: 10.5, design: .monospaced))
         .foregroundStyle(.secondary)
         .lineLimit(1)
-    }
-
-    /// 右下角圆形按钮：有 AI 会话时续上，否则用编辑器打开。
-    @ViewBuilder private var actionButton: some View {
-        if let agent = item.lastAgent?.tool {
-            Button { model.open(item, item.running.contains(agent) ? .editor(nil) : .resume(agent)) } label: {
-                ToolIcon(tool: agent, size: 17)
-                    .frame(width: 36, height: 36)
-                    .background(.white, in: Circle())
-                    .overlay(Circle().strokeBorder(.black.opacity(0.08), lineWidth: 0.5))
-                    .shadow(color: .black.opacity(0.18), radius: 4, y: 2)
-                    .environment(\.colorScheme, .light)
-            }
-            .buttonStyle(.plain)
-            .help(item.running.contains(agent) ? "\(agent.displayName) 运行中 · 用编辑器打开" : "续上 \(agent.displayName)")
-        } else {
-            Button { model.open(item) } label: {
-                Image(systemName: "arrow.up.right")
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(.white)
-                    .frame(width: 36, height: 36)
-                    .background(Color.black.opacity(0.88), in: Circle())
-                    .shadow(color: .black.opacity(0.25), radius: 4, y: 2)
-            }
-            .buttonStyle(.plain)
-            .help(model.editor(for: item).map { "用 \($0.name) 打开" } ?? "打开")
-        }
     }
 }
