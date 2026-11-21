@@ -79,12 +79,16 @@ public struct DiscoveredProject: Codable, Sendable, Hashable, Identifiable {
     public var markers: [String]
     public var description: String?
     public var readmeFile: String?
+    /// README 正文前 32KB，用于全文搜索。
+    public var readmeText: String?
+    /// 依赖名（package.json、go.mod、requirements、pyproject、Cargo.toml），用于搜索。
+    public var dependencies: [String]
     public var createdAt: Date?
     public var modifiedAt: Date?
     public var git: GitInfo?
     public var scannedAt: Date
 
-    public init(path: String, name: String, stacks: [TechStack] = [], kind: ProjectKind = .other, markers: [String] = [], description: String? = nil, readmeFile: String? = nil, createdAt: Date? = nil, modifiedAt: Date? = nil, git: GitInfo? = nil, scannedAt: Date = .now) {
+    public init(path: String, name: String, stacks: [TechStack] = [], kind: ProjectKind = .other, markers: [String] = [], description: String? = nil, readmeFile: String? = nil, readmeText: String? = nil, dependencies: [String] = [], createdAt: Date? = nil, modifiedAt: Date? = nil, git: GitInfo? = nil, scannedAt: Date = .now) {
         self.path = path
         self.name = name
         self.stacks = stacks
@@ -92,6 +96,8 @@ public struct DiscoveredProject: Codable, Sendable, Hashable, Identifiable {
         self.markers = markers
         self.description = description
         self.readmeFile = readmeFile
+        self.readmeText = readmeText
+        self.dependencies = dependencies
         self.createdAt = createdAt
         self.modifiedAt = modifiedAt
         self.git = git

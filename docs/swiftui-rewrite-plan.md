@@ -214,7 +214,7 @@ codedog/
 
 - [x] P0 骨架：XcodeGen 工程、CodedogCore 包、App、内嵌 `codedog-cli`、Swift CI
 - [x] P1 发现与数据：FolderScanner、ProjectClassifier、GitInspector、ShellRunner（登录 shell PATH）、LibraryStore（文件协调）、ProjectCache、FSEventsWatcher、LegacyImporter；23 个单元测试。真实数据：`~/codespace` 冷扫描 64 个项目约 4.4 秒，旧数据 58 条元数据迁移 57 条（剩 1 条是空目录）
-- [ ] P2 搜索与打开
+- [x] P2 搜索与打开：ProjectSearch（移植旧算法 + 旧测试，修正 README 片段定位）、常用度排序、Opener（任意编辑器/终端、访达、仓库、`.code-workspace` 一起打开）、CLI `open|path|list|add`；38 个单元测试
 - [ ] P3 主窗口
 - [ ] P4 活跃度与 AI 工具
 - [ ] P5 启动器与系统集成

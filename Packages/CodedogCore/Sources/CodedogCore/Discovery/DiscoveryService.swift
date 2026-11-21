@@ -19,6 +19,8 @@ public enum DiscoveryService {
             markers: markers,
             description: c.description,
             readmeFile: c.readmeFile,
+            readmeText: c.readmeText,
+            dependencies: c.dependencies,
             createdAt: attrs?[.creationDate] as? Date,
             modifiedAt: latestModification(in: path),
             git: await git)

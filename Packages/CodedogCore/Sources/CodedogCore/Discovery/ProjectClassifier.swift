@@ -7,6 +7,8 @@ public enum ProjectClassifier {
         public var kind: ProjectKind = .other
         public var description: String?
         public var readmeFile: String?
+        public var readmeText: String?
+        public var dependencies: [String] = []
     }
 
     static let webDeps: Set<String> = ["react", "vue", "next", "nuxt", "svelte", "@sveltejs/kit", "vite", "astro", "@angular/core", "solid-js", "@remix-run/react", "preact", "umi", "@umijs/max", "gatsby", "webpack"]
@@ -37,14 +39,15 @@ public enum ProjectClassifier {
         // Node
         if has.contains("package.json"), let text = read("package.json"),
            let json = (try? JSONSerialization.jsonObject(with: Data(text.utf8))) as? [String: Any] {
-            let deps = Set(((json["dependencies"] as? [String: Any]) ?? [:]).keys)
-                .union(((json["devDependencies"] as? [String: Any]) ?? [:]).keys)
+            let runtime = Set(((json["dependencies"] as? [String: Any]) ?? [:]).keys)
+            let deps = runtime.union(((json["devDependencies"] as? [String: Any]) ?? [:]).keys)
+            r.dependencies += deps.sorted()
             r.stacks.append(deps.contains("typescript") || names.contains("tsconfig.json") ? .typescript : .javascript)
             r.description = (json["description"] as? String).flatMap(nonEmpty)
             if kind == nil {
                 if !deps.isDisjoint(with: appDeps) { kind = .app }
                 else if !deps.isDisjoint(with: webDeps) { kind = .web }
-                else if !deps.isDisjoint(with: serviceDeps) { kind = .service }
+                else if !runtime.isDisjoint(with: serviceDeps) { kind = .service }
                 else if json["bin"] != nil { kind = .tool }
                 else if json["main"] != nil || json["exports"] != nil { kind = .library }
             }
@@ -55,6 +58,7 @@ public enum ProjectClassifier {
         // Go
         if has.contains("go.mod") || has.contains("go.work") {
             r.stacks.append(.go)
+            if let mod = read("go.mod") { r.dependencies += goDependencies(mod) }
             kind = kind ?? (names.contains("cmd") || names.contains("main.go") && !names.contains("internal") ? .tool : .service)
         }
 
@@ -63,6 +67,7 @@ public enum ProjectClassifier {
             r.stacks.append(.python)
             let text = [read("pyproject.toml"), read("requirements.txt"), read("Pipfile")].compactMap { $0 }.joined(separator: "\n").lowercased()
             if r.description == nil, let pyproject = read("pyproject.toml") { r.description = tomlString(pyproject, key: "description") }
+            r.dependencies += pythonDependencies(requirements: read("requirements.txt"), pyproject: read("pyproject.toml"))
             if kind == nil {
                 if pyServiceDeps.contains(where: { text.contains($0) }) { kind = .service }
                 else if text.contains("streamlit") || text.contains("gradio") { kind = .web }
@@ -73,7 +78,10 @@ public enum ProjectClassifier {
         // Rust
         if has.contains("Cargo.toml") {
             r.stacks.append(.rust)
-            if r.description == nil, let cargo = read("Cargo.toml") { r.description = tomlString(cargo, key: "description") }
+            if let cargo = read("Cargo.toml") {
+                if r.description == nil { r.description = tomlString(cargo, key: "description") }
+                r.dependencies += cargoDependencies(cargo)
+            }
             if kind == nil {
                 let src = (try? fm.contentsOfDirectory(atPath: path + "/src")) ?? []
                 kind = src.contains("main.rs") ? .tool : .library
@@ -109,10 +117,43 @@ public enum ProjectClassifier {
         r.kind = kind ?? .other
 
         r.readmeFile = names.first { $0.range(of: #"^readme(\.(md|markdown|txt|rst))?$"#, options: [.regularExpression, .caseInsensitive]) != nil }
-        if r.description == nil, let readme = r.readmeFile, let text = read(readme) {
-            r.description = readmeSummary(text)
+        if let readme = r.readmeFile, let text = read(readme) {
+            r.readmeText = text.count > 32_768 ? String(text.prefix(32_768)) : text
+            if r.description == nil { r.description = readmeSummary(text) }
         }
+        r.dependencies = Array(NSOrderedSet(array: r.dependencies)) as? [String] ?? r.dependencies
         return r
+    }
+
+    static func goDependencies(_ mod: String) -> [String] {
+        mod.split(separator: "\n").compactMap { line in
+            let m = line.firstMatch(of: /^\s*(?:require\s+)?([\w.\-\/]+)\s+v[^\s]+/)
+            return m.map { String($0.1) }
+        }
+    }
+
+    static func pythonDependencies(requirements: String?, pyproject: String?) -> [String] {
+        var out: [String] = []
+        for line in (requirements ?? "").split(separator: "\n") {
+            let t = line.trimmingCharacters(in: .whitespaces)
+            guard !t.isEmpty, !t.hasPrefix("#"), !t.hasPrefix("-") else { continue }
+            if let m = t.firstMatch(of: /^[A-Za-z0-9_.\-\[\]]+/) { out.append(String(m.0).components(separatedBy: "[")[0]) }
+        }
+        if let py = pyproject, let start = py.range(of: #"dependencies\s*=\s*\["#, options: .regularExpression),
+           let end = py[start.upperBound...].firstIndex(of: "]") {
+            for m in py[start.upperBound..<end].matches(of: /["']([A-Za-z0-9_.\-]+)/) { out.append(String(m.1)) }
+        }
+        return out
+    }
+
+    static func cargoDependencies(_ cargo: String) -> [String] {
+        var out: [String] = [], inDeps = false
+        for line in cargo.split(separator: "\n") {
+            let t = line.trimmingCharacters(in: .whitespaces)
+            if t.hasPrefix("[") { inDeps = t.contains("dependencies]"); continue }
+            if inDeps, let m = t.firstMatch(of: /^([A-Za-z0-9_\-]+)\s*=/) { out.append(String(m.1)) }
+        }
+        return out
     }
 
     static func nonEmpty(_ s: String) -> String? {
