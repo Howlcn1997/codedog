@@ -32,7 +32,9 @@ import Testing
             assistant("m1", "2026-11-20T10:00:05.000Z", stop: nil, usage: usage),
             assistant("m1", "2026-11-20T10:00:06.000Z", stop: "tool_use", usage: usage), // 同一消息的另一分片
             toolResult("2026-11-20T10:00:07.000Z"),
-            assistant("m2", "2026-11-20T10:00:09.000Z", stop: "end_turn", usage: ["input_tokens": 1, "output_tokens": 1]),
+            line(["type": "assistant", "timestamp": "2026-11-20T10:00:09.000Z", "cwd": "/p/app", "sessionId": "s1",
+                  "message": ["id": "m2", "role": "assistant", "model": "claude-opus-5-5", "stop_reason": "end_turn",
+                              "usage": ["input_tokens": 1, "output_tokens": 1], "content": [["type": "text", "text": "已经改好了，请确认。"]]]]),
             line(["type": "api-request-blob", "blob": String(repeating: "x", count: 1000)]),
         ].joined(separator: "\n")
         let path = try f.file("s1.jsonl", text)
@@ -42,6 +44,7 @@ import Testing
         #expect(s.cwd == "/p/app")
         #expect(s.title == "重构界面")
         #expect(s.waiting)
+        #expect(s.lastReply == "已经改好了，请确认。")
         #expect(s.days.values.reduce(0, +) == 2)
         let t = try #require(s.tokens["claude-opus-5-5"])
         #expect(t.input == 11 && t.output == 101 && t.cacheRead == 1000)

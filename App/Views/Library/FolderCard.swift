@@ -138,6 +138,11 @@ struct ProjectCard: View {
         .animation(.spring(response: 0.38, dampingFraction: 0.72), value: hovering)
         .animation(.spring(response: 0.32, dampingFraction: 0.7), value: opening)
         .onHover { hoveringState = $0 }
+        .task(id: item.project.htmlEntry) {
+            if let entry = item.project.htmlEntry, Self.isHTMLProject(item.project), forcedState == nil {
+                _ = await HTMLThumbnailer.shared.thumbnail(project: item.project.path, entry: entry)
+            }
+        }
         .contentShape(Rectangle())
         .onTapGesture { open() }
     }
@@ -154,23 +159,38 @@ struct ProjectCard: View {
 
     // MARK: 纸张
 
+    /// 纸张内容，按优先级挑选最多 3 张：等你回复的会话 → HTML 预览 → 便签 → 最近在改的文件 → README。
+    enum PaperKind: Hashable {
+        case session(SessionSummary)
+        case html(entry: String)
+        case note(String)
+        case file(FileRef)
+        case readme(String)
+    }
+
+    /// 纯 HTML 项目：主技术栈是 HTML（没有 package.json 等构建工具，index.html 本身就是页面）。
+    static func isHTMLProject(_ p: DiscoveredProject) -> Bool {
+        p.stacks.first == .html && p.htmlEntry != nil
+    }
+
     private struct Paper: Identifiable {
         var id: Int
-        var title: String
-        var detail: String
-        var tool: AITool?
+        var kind: PaperKind
     }
 
     private var paperItems: [Paper] {
-        var list: [Paper] = item.tools.flatMap(\.recentSessions)
-            .sorted { ($0.lastAt ?? .distantPast) > ($1.lastAt ?? .distantPast) }
-            .prefix(2)
-            .map { Paper(id: 0, title: Formatting.plain($0.title ?? $0.lastPrompt ?? "会话"), detail: $0.lastAt.map { Formatting.relative($0) } ?? "", tool: $0.tool) }
-        for c in item.project.git?.recentCommits.prefix(3 - list.count) ?? [] {
-            list.append(Paper(id: 0, title: c.subject, detail: Formatting.relative(c.date), tool: nil))
+        var kinds: [PaperKind] = []
+        if item.waiting, let s = item.tools.flatMap(\.recentSessions).filter(\.waiting).max(by: { ($0.lastAt ?? .distantPast) < ($1.lastAt ?? .distantPast) }) {
+            kinds.append(.session(s))
         }
-        if list.isEmpty { list = [Paper(id: 0, title: item.project.readmeFile ?? item.project.name, detail: item.project.kind.displayName, tool: nil)] }
-        return list.enumerated().map { i, p in var p = p; p.id = i; return p }
+        if Self.isHTMLProject(item.project), let entry = item.project.htmlEntry {
+            kinds.append(.html(entry: entry))
+        }
+        let note = item.meta.notes.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !note.isEmpty { kinds.append(.note(note)) }
+        for f in item.project.recentFiles where kinds.count < 3 { kinds.append(.file(f)) }
+        if kinds.isEmpty, let readme = item.project.readmeFile { kinds.append(.readme(readme)) }
+        return kinds.prefix(3).enumerated().map { Paper(id: $0.offset, kind: $0.element) }
     }
 
     private var papers: some View {
@@ -198,20 +218,7 @@ struct ProjectCard: View {
     }
 
     private func paperView(_ p: Paper) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 5) {
-                Text(p.title).font(.system(size: 10.5, weight: .semibold)).lineLimit(1)
-                Spacer(minLength: 4)
-                Text(p.detail).font(.system(size: 8.5, design: .monospaced)).foregroundStyle(.secondary).lineLimit(1)
-            }
-            ForEach(0..<3, id: \.self) { k in
-                Capsule().fill(Color.primary.opacity(0.08)).frame(height: 4).padding(.trailing, CGFloat(k) * 28)
-            }
-            Spacer(minLength: 0)
-        }
-        .padding(10)
-        .background(scheme == .dark ? Color(white: 0.2) : .white, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-        .shadow(color: .black.opacity(0.12), radius: 3, y: 1)
+        PaperView(kind: p.kind, project: item.project.path, active: hovering || opening)
     }
 
     // MARK: 前层玻璃
@@ -275,5 +282,156 @@ struct ProjectCard: View {
         .font(.system(size: 10.5, design: .monospaced))
         .foregroundStyle(.secondary)
         .lineLimit(1)
+    }
+}
+
+// MARK: - 纸张
+
+/// 单张纸：不同内容用不同样式。预览内容只在纸张露出（悬停 / 打开）时加载。
+struct PaperView: View {
+    var kind: ProjectCard.PaperKind
+    var project: String
+    var active: Bool
+    @Environment(\.colorScheme) private var scheme
+    @State private var lines: [String]?
+    @State private var thumbnail: NSImage?
+
+    private var paperColor: Color { scheme == .dark ? Color(white: 0.2) : .white }
+
+    var body: some View {
+        content
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .background(background, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .shadow(color: .black.opacity(0.14), radius: 3, y: 1)
+            .task(id: active) { if active { await loadPreview() } }
+            .onAppear {
+                // 先用已缓存的内容，避免每次悬停都闪一下占位
+                switch kind {
+                case .html(let entry): thumbnail = HTMLThumbnailer.shared.cached(project: project, entry: entry)
+                case .file(let f): lines = FilePreviews.shared.lines(project + "/" + f.path)
+                case .readme(let name): lines = FilePreviews.shared.lines(project + "/" + name)
+                default: break
+                }
+            }
+    }
+
+    private var background: Color {
+        if case .note = kind { return scheme == .dark ? Color(red: 0.36, green: 0.32, blue: 0.14) : Color(red: 1, green: 0.95, blue: 0.68) }
+        return paperColor
+    }
+
+    @ViewBuilder private var content: some View {
+        switch kind {
+        case .session(let s):
+            VStack(alignment: .leading, spacing: 5) {
+                header(title: Formatting.plain(s.title ?? s.lastPrompt ?? "会话"), trailing: s.lastAt.map { Formatting.relative($0) } ?? "")
+                HStack(spacing: 4) {
+                    Circle().fill(.orange).frame(width: 5, height: 5)
+                    Text("等你回复").font(.system(size: 8.5, weight: .semibold)).foregroundStyle(.orange)
+                }
+                Text(Formatting.plain(s.lastReply ?? "AI 已经答完，等你回复。"))
+                    .font(.system(size: 9.5))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(4)
+                Spacer(minLength: 0)
+            }
+            .padding(10)
+
+        case .html(let entry):
+            ZStack(alignment: .bottomLeading) {
+                if let thumbnail {
+                    Image(nsImage: thumbnail).resizable().scaledToFill()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                        .clipped()
+                } else {
+                    VStack(spacing: 6) {
+                        Image(systemName: "safari").font(.system(size: 20)).foregroundStyle(.tertiary)
+                        if active { ProgressView().controlSize(.mini) }
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Color.primary.opacity(0.04))
+                }
+                Text(entry)
+                    .font(.system(size: 8.5, weight: .semibold, design: .monospaced))
+                    .padding(.horizontal, 6).padding(.vertical, 2)
+                    .background(.ultraThinMaterial, in: Capsule())
+                    .padding(6)
+            }
+
+        case .note(let text):
+            VStack(alignment: .leading, spacing: 5) {
+                Label("便签", systemImage: "note.text").font(.system(size: 8.5, weight: .semibold)).foregroundStyle(.secondary)
+                Text(text)
+                    .font(.system(size: 10.5, design: .rounded))
+                    .lineLimit(5)
+                Spacer(minLength: 0)
+            }
+            .padding(10)
+
+        case .file(let f):
+            VStack(alignment: .leading, spacing: 3) {
+                header(title: f.name, trailing: statusText(f))
+                if !f.directory.isEmpty {
+                    Text(f.directory).font(.system(size: 8, design: .monospaced)).foregroundStyle(.tertiary).lineLimit(1).truncationMode(.head)
+                }
+                codeLines.padding(.top, 2)
+                Spacer(minLength: 0)
+            }
+            .padding(10)
+
+        case .readme(let name):
+            VStack(alignment: .leading, spacing: 4) {
+                header(title: name, trailing: "")
+                codeLines
+                Spacer(minLength: 0)
+            }
+            .padding(10)
+        }
+    }
+
+    private func header(title: String, trailing: String) -> some View {
+        HStack(spacing: 5) {
+            Text(title).font(.system(size: 10.5, weight: .semibold)).lineLimit(1)
+            Spacer(minLength: 4)
+            Text(trailing).font(.system(size: 8.5, design: .monospaced)).foregroundStyle(.secondary).lineLimit(1)
+        }
+    }
+
+    /// 代码预览；未加载时用占位条。
+    @ViewBuilder private var codeLines: some View {
+        if let lines, !lines.isEmpty {
+            VStack(alignment: .leading, spacing: 1) {
+                ForEach(Array(lines.prefix(7).enumerated()), id: \.offset) { _, l in
+                    Text(l.isEmpty ? " " : l).font(.system(size: 7.5, design: .monospaced)).foregroundStyle(.secondary).lineLimit(1)
+                }
+            }
+        } else {
+            VStack(alignment: .leading, spacing: 4) {
+                ForEach(0..<3, id: \.self) { k in
+                    Capsule().fill(Color.primary.opacity(0.08)).frame(height: 4).padding(.trailing, CGFloat(k) * 28)
+                }
+            }
+        }
+    }
+
+    private func statusText(_ f: FileRef) -> String {
+        switch f.status {
+        case .modified: "已修改"
+        case .added: "新增"
+        case .untracked: "新文件"
+        case .renamed: "已重命名"
+        case .deleted: "已删除"
+        case .committed, .recent: f.modifiedAt.map { Formatting.relative($0) } ?? ""
+        }
+    }
+
+    private func loadPreview() async {
+        switch kind {
+        case .file(let f): if lines == nil { lines = await FilePreviews.shared.load(project + "/" + f.path) }
+        case .readme(let name): if lines == nil { lines = await FilePreviews.shared.load(project + "/" + name) }
+        case .html(let entry): if thumbnail == nil { thumbnail = await HTMLThumbnailer.shared.thumbnail(project: project, entry: entry) }
+        default: break
+        }
     }
 }

@@ -60,7 +60,23 @@ enum DebugSnapshot {
                         }
                     }
                 case "cards":
-                    let picks = Array(model.visible.prefix(4).map(\.item))
+                    // 挑不同类型：等你回复、HTML、未提交改动、有备注
+                    let all = model.items.filter { !$0.meta.hidden }
+                    var picks: [ProjectItem] = []
+                    func add(_ p: ProjectItem?) { if let p, !picks.contains(where: { $0.id == p.id }) { picks.append(p) } }
+                    add(all.first { $0.waiting })
+                    add(all.first { $0.project.htmlEntry != nil && ($0.project.kind == .web || $0.project.stacks.first == .html) && $0.project.stacks.first == .html })
+                    add(all.first { $0.project.htmlEntry != nil && $0.project.kind == .web })
+                    add(all.first { ($0.project.git?.dirtyFiles ?? 0) > 0 && !$0.waiting })
+                    add(all.first { !$0.meta.notes.isEmpty })
+                    if let demo = ProcessInfo.processInfo.environment["CODEDOG_HTML_DEMO"], let p = await DiscoveryService.inspect(path: demo) {
+                        picks.insert(ProjectItem(project: p, meta: ProjectMeta(), categoryNames: []), at: 0)
+                    }
+                    for p in picks {
+                        if let e = p.project.htmlEntry { _ = await HTMLThumbnailer.shared.thumbnail(project: p.id, entry: e) }
+                        for f in p.project.recentFiles { _ = await FilePreviews.shared.load(p.id + "/" + f.path) }
+                    }
+                    print("[cards]", picks.map { "\($0.project.name) html=\($0.project.htmlEntry ?? "-") files=\($0.project.recentFiles.map(\.path)) note=\(!$0.meta.notes.isEmpty)" })
                     for dark in [false, true] {
                         let view = CardStates(items: picks).environment(model).environment(\.colorScheme, dark ? .dark : .light)
                         let r = ImageRenderer(content: view)

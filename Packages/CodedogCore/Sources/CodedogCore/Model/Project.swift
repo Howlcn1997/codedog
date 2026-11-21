@@ -89,6 +89,10 @@ public struct GitInfo: Codable, Sendable, Hashable {
     public var recentCommits: [Commit]
     /// 近一年"我的提交"按天统计（yyyy-MM-dd）；没配置 user.email 时统计全部。
     public var commitDays: [String: Int]
+    /// 未提交的文件（来自 git status）
+    public var changedFiles: [FileRef] = []
+    /// 最近几次提交改过的文件（新到旧，相对路径）
+    public var recentlyCommittedFiles: [String] = []
 
     public init(branch: String? = nil, dirtyFiles: Int = 0, remote: String? = nil, lastCommitAt: Date? = nil, recentCommits: [Commit] = [], commitDays: [String: Int] = [:]) {
         self.branch = branch
@@ -128,6 +132,10 @@ public struct DiscoveredProject: Codable, Sendable, Hashable, Identifiable {
     public var readmeFile: String?
     /// README 正文前 32KB，用于全文搜索。
     public var readmeText: String?
+    /// 根目录里的 HTML 入口（相对路径），用于 HTML 项目预览
+    public var htmlEntry: String?
+    /// 最近在改的文件（未提交 → 最近提交 → 最近修改）
+    public var recentFiles: [FileRef] = []
     /// 依赖名（package.json、go.mod、requirements、pyproject、Cargo.toml），用于搜索。
     public var dependencies: [String]
     public var createdAt: Date?

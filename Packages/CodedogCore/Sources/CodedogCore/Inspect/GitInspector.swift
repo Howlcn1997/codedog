@@ -9,12 +9,18 @@ public enum GitInspector {
         async let email = try? ShellRunner.run("git", ["-C", path, "config", "user.email"], timeout: .seconds(5))
         async let last = try? ShellRunner.run("git", ["-C", path, "log", "-1", "--format=%cI"], timeout: .seconds(5))
         async let remote = try? ShellRunner.run("git", ["-C", path, "config", "--get", "remote.origin.url"], timeout: .seconds(5))
+        async let touched = try? ShellRunner.run("git", ["-C", path, "log", "-8", "--name-only", "--format="], timeout: .seconds(10))
 
         var info = GitInfo()
         if let s = await status, s.ok {
             let lines = s.stdout.split(separator: "\n")
             if let head = lines.first, head.hasPrefix("## ") { info.branch = parseBranch(String(head.dropFirst(3))) }
             info.dirtyFiles = lines.filter { !$0.hasPrefix("## ") }.count
+            info.changedFiles = RecentFiles.parseStatus(lines)
+        }
+        if let t = await touched, t.ok {
+            var seen = Set<String>()
+            info.recentlyCommittedFiles = t.stdout.split(separator: "\n").map(String.init).filter { !$0.isEmpty && seen.insert($0).inserted }
         }
         let me = (await email)?.stdout.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() ?? ""
         if let l = await log, l.ok {

@@ -65,6 +65,8 @@ public struct SessionSummary: Codable, Sendable, Hashable {
     public var cwd: String?
     public var title: String?
     public var lastPrompt: String?
+    /// AI 最后一句回复的开头（最多 200 字）
+    public var lastReply: String?
     public var startedAt: Date?
     public var lastAt: Date?
     /// 按天（yyyy-MM-dd，本地时区）统计的 AI 回复数。

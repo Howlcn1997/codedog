@@ -11,7 +11,7 @@ public enum AIIndex {
 
     struct Cache: Codable {
         /// 解析逻辑变化时递增，旧缓存整体作废
-        static let currentVersion = 2
+        static let currentVersion = 3
         var version = Cache.currentVersion
         var files: [String: CachedFile] = [:]
     }

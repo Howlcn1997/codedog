@@ -10,8 +10,8 @@ public enum DiscoveryService {
         let markers = FolderScanner.markers(at: path)
         let c = ProjectClassifier.classify(path: path, markers: markers)
         let attrs = try? fm.attributesOfItem(atPath: path)
-        async let git = GitInspector.inspect(path: path)
-        return DiscoveredProject(
+        let gitInfo = await GitInspector.inspect(path: path)
+        var project = DiscoveredProject(
             path: path,
             name: (path as NSString).lastPathComponent,
             stacks: c.stacks,
@@ -24,7 +24,11 @@ public enum DiscoveryService {
             dependencies: c.dependencies,
             createdAt: attrs?[.creationDate] as? Date,
             modifiedAt: latestModification(in: path),
-            git: await git)
+            git: gitInfo)
+        project.htmlEntry = c.htmlEntry
+        project.recentFiles = RecentFiles.collect(project: path, changed: gitInfo?.changedFiles ?? [],
+                                                  committed: gitInfo?.recentlyCommittedFiles ?? [], isGit: gitInfo != nil)
+        return project
     }
 
     /// 完整扫描：扫描目录 + 手动添加的项目。

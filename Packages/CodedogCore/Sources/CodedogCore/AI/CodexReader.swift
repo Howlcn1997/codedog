@@ -60,6 +60,9 @@ enum CodexReader {
                 }
                 if kind == "task_complete" {
                     s.days[DayKey.string(ts), default: 0] += 1
+                    if let msg = payload["last_agent_message"] as? String, !msg.isEmpty { s.lastReply = String(msg.prefix(200)) }
+                } else if kind == "agent_message", let msg = payload["message"] as? String, !msg.isEmpty {
+                    s.lastReply = String(msg.prefix(200))
                 }
                 // 标题：用户发出的第一条消息（跳过环境上下文等系统注入内容）
                 if s.title == nil {

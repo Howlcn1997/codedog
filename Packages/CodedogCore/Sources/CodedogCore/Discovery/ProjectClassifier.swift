@@ -9,6 +9,7 @@ public enum ProjectClassifier {
         public var description: String?
         public var readmeFile: String?
         public var readmeText: String?
+        public var htmlEntry: String?
         public var dependencies: [String] = []
     }
 
@@ -139,6 +140,10 @@ public enum ProjectClassifier {
         r.kind = kind ?? .other
         // 按声明顺序（显示优先级）排序并去重
         r.frameworks = Framework.allCases.filter(r.frameworks.contains)
+
+        // 根目录的 HTML 入口：优先 index.html，其次第一个 .html
+        let htmls = names.filter { ["html", "htm"].contains(($0 as NSString).pathExtension.lowercased()) }.sorted()
+        r.htmlEntry = htmls.first { $0.lowercased() == "index.html" } ?? htmls.first
 
         r.readmeFile = names.first { $0.range(of: #"^readme(\.(md|markdown|txt|rst))?$"#, options: [.regularExpression, .caseInsensitive]) != nil }
         if let readme = r.readmeFile, let text = read(readme) {

@@ -30,6 +30,7 @@ enum ClaudeCodeReader {
         var seen = Set<String>()       // 流式回复会把同一条消息拆成多行，按 message.id 去重
         var lastHuman: Date?
         var lastAssistant: (date: Date, stop: String?)?
+        var lastReplyAt: Date?
 
         JSONLScanner.forEachLine(path: file, matchingAny: [#""type":"assistant""#, #""type":"user""#, #""type":"ai-title""#, #""type":"last-prompt""#]) { obj in
             let type = obj["type"] as? String
@@ -50,6 +51,11 @@ enum ClaudeCodeReader {
                     return
                 }
                 guard let message else { return }
+                if let blocks = message["content"] as? [[String: Any]] {
+                    let text = blocks.filter { $0["type"] as? String == "text" }.compactMap { $0["text"] as? String }.joined(separator: " ")
+                        .trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !text.isEmpty, ts >= (lastReplyAt ?? .distantPast) { s.lastReply = String(text.prefix(200)); lastReplyAt = ts }
+                }
                 let key = (message["id"] as? String) ?? (obj["uuid"] as? String) ?? UUID().uuidString
                 let stop = message["stop_reason"] as? String
                 if lastAssistant == nil || ts >= lastAssistant!.date { lastAssistant = (ts, stop ?? lastAssistant?.stop) }
