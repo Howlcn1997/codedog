@@ -1,0 +1,70 @@
+name: codedog
+options:
+  bundleIdPrefix: dev.codedog
+  deploymentTarget:
+    macOS: "26.0"
+  createIntermediateGroups: true
+  developmentLanguage: zh-Hans
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    MARKETING_VERSION: "1.0.0"
+    CURRENT_PROJECT_VERSION: "1"
+    CODE_SIGN_IDENTITY: "-"
+    CODE_SIGN_STYLE: Manual
+    ENABLE_HARDENED_RUNTIME: YES
+    SWIFT_STRICT_CONCURRENCY: complete
+packages:
+  CodedogCore:
+    path: Packages/CodedogCore
+  ArgumentParser:
+    url: https://github.com/apple/swift-argument-parser
+    from: 1.5.0
+targets:
+  codedog:
+    type: application
+    platform: macOS
+    sources:
+      - path: App
+    dependencies:
+      - package: CodedogCore
+      - target: codedog-cli
+        embed: true
+        codeSign: true
+        copy:
+          destination: executables
+    settings:
+      base:
+        PRODUCT_NAME: codedog
+        PRODUCT_BUNDLE_IDENTIFIER: dev.codedog.desktop
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: codedog
+        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.developer-tools
+        INFOPLIST_KEY_NSHumanReadableCopyright: ""
+        INFOPLIST_KEY_NSDesktopFolderUsageDescription: 查找你放在桌面上的项目。
+        INFOPLIST_KEY_NSDocumentsFolderUsageDescription: 查找你放在文稿里的项目。
+        INFOPLIST_KEY_NSDownloadsFolderUsageDescription: 查找你放在下载里的项目。
+        INFOPLIST_KEY_NSAppleEventsUsageDescription: 在终端中打开项目或续上 AI 会话。
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ENABLE_APP_SANDBOX: NO
+  codedog-cli:
+    type: tool
+    platform: macOS
+    sources:
+      - path: CLI
+    dependencies:
+      - package: CodedogCore
+      - package: ArgumentParser
+    settings:
+      base:
+        PRODUCT_NAME: codedog-cli
+schemes:
+  codedog:
+    build:
+      targets:
+        codedog: all
+        codedog-cli: all
+    run:
+      config: Debug
+    test:
+      config: Debug

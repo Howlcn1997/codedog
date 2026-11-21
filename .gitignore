@@ -5,3 +5,9 @@ work/
 .DS_Store
 *.log
 electron/native/*.node
+# Swift
+*.xcodeproj/
+.build/
+DerivedData/
+build/
+.swiftpm/
