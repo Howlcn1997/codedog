@@ -1,0 +1,60 @@
+Packages/CodedogCore/Sources/CodedogCore/Search/ProjectItem.swift
+  s_d55cd86b79f8fc::t_6be53f961aab07 12-13,17,23,77,82
+App/State/Navigation.swift
+  s_d55cd86b79f8fc::t_5f6b9962a97e38 5,13,24,35,41-45,92,101,116-117
+App/Views/Sheets/CleanupSheet.swift
+  s_d55cd86b79f8fc::t_99776e3478a671 1-148
+Packages/CodedogCore/Sources/CodedogCore/Inspect/DiskUsage.swift
+  s_d55cd86b79f8fc::t_805579f7526880 43,65
+  s_d55cd86b79f8fc::t_6be53f961aab07 1-42,44-64,66-107
+Packages/CodedogCore/Tests/CodedogCoreTests/AITests.swift
+  s_d55cd86b79f8fc::t_122350f4e800f3 79,86
+App/DebugSnapshot.swift
+  s_d55cd86b79f8fc::t_30c0774c138ef8 52-54
+  s_d55cd86b79f8fc::t_c6ecf5b317c1a6 47-51
+  s_d55cd86b79f8fc::t_bd727de11d3cf3 41-42
+  s_d55cd86b79f8fc::t_61e06694550da9 43-44
+App/Views/Common/Style.swift
+  s_d55cd86b79f8fc::t_5f6b9962a97e38 182-185
+  s_d55cd86b79f8fc::t_61e06694550da9 170
+App/Views/RootView.swift
+  s_d55cd86b79f8fc::t_61e06694550da9 50
+  s_d55cd86b79f8fc::t_99776e3478a671 11,49,51-54,66-72
+App/State/LibraryModel.swift
+  s_d55cd86b79f8fc::t_5f6b9962a97e38 3,16-17,43,47,132-182,245
+App/Views/Library/LibraryView.swift
+  s_d55cd86b79f8fc::t_99776e3478a671 21-23,169-202
+  s_d55cd86b79f8fc::t_61e06694550da9 203
+docs/swiftui-rewrite-plan.md
+  s_d55cd86b79f8fc::t_30c0774c138ef8 203
+App/Views/Detail/ProjectDetailView.swift
+  s_d55cd86b79f8fc::t_99776e3478a671 24,394-456
+Packages/CodedogCore/Sources/CodedogCore/AI/CodexReader.swift
+  s_d55cd86b79f8fc::t_122350f4e800f3 25,53,63-75
+Packages/CodedogCore/Sources/CodedogCore/AI/AIIndex.swift
+  s_d55cd86b79f8fc::t_61e06694550da9 13-15,25
+App/Views/Library/ProjectCard.swift
+  s_d55cd86b79f8fc::t_99776e3478a671 147-148,150
+  s_d55cd86b79f8fc::t_6580f4997a4a60 146,149,154
+  s_d55cd86b79f8fc::t_122350f4e800f3 93
+Packages/CodedogCore/Sources/CodedogCore/Actions/DependencyCleaner.swift
+  s_d55cd86b79f8fc::t_6be53f961aab07 1-96
+Packages/CodedogCore/Tests/CodedogCoreTests/DiskTests.swift
+  s_d55cd86b79f8fc::t_bc3ca4eedaf2bc 1-79
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.52-trip",
+  "base_commit_sha": "2866cddde736f657a1105bde6c16a6adc9fc0e37",
+  "prompts": {},
+  "sessions": {
+    "s_d55cd86b79f8fc": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "90c23200-dc9c-4987-8c64-5740d2a62e02",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "w.ning <w.ning@trip.com>"
+    }
+  }
+}
