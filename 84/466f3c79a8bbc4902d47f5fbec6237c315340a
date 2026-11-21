@@ -1,0 +1,49 @@
+App/Views/RootView.swift
+  s_d55cd86b79f8fc::t_3f33eb3dd41fc3 6,23
+App/Platform/HotKey.swift
+  s_d55cd86b79f8fc::t_b1dc5833f21fd0 1-127
+App/DebugSnapshot.swift
+  s_d55cd86b79f8fc::t_d0700eca9db237 41-42
+  s_d55cd86b79f8fc::t_b45aa73f7833dd 37-40
+  s_d55cd86b79f8fc::t_3f33eb3dd41fc3 36
+App/AppDelegate.swift
+  s_d55cd86b79f8fc::t_a880aa81c54409 1-67
+App/Views/MenuBar/MenuBarContent.swift
+  s_d55cd86b79f8fc::t_a880aa81c54409 1-51
+App/Platform/SystemIntegration.swift
+  s_d55cd86b79f8fc::t_b1dc5833f21fd0 1-66
+App/Launcher/LauncherView.swift
+  s_d55cd86b79f8fc::t_8d177577a7c156 1-66,68-116,121-195
+  s_d55cd86b79f8fc::t_2ddd522d157f21 67
+  s_d55cd86b79f8fc::t_d90449177fb207 117-120
+App/State/LibraryModel.swift
+  s_d55cd86b79f8fc::t_ea805850ff08bf 248-252
+App/CodedogApp.swift
+  s_d55cd86b79f8fc::t_d0700eca9db237 36-39
+  s_d55cd86b79f8fc::t_a880aa81c54409 6-7,19,35,40-43
+docs/swiftui-rewrite-plan.md
+  s_d55cd86b79f8fc::t_b824080eab5a87 202
+App/Launcher/LauncherController.swift
+  s_d55cd86b79f8fc::t_8d177577a7c156 1-73
+App/Views/Settings/SettingsView.swift
+  s_d55cd86b79f8fc::t_3433685161ff10 5-6,8-11
+  s_d55cd86b79f8fc::t_e65aa4c2fb6cf4 13,99-246
+App/Views/Common/Style.swift
+  s_d55cd86b79f8fc::t_3f33eb3dd41fc3 169
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.52-trip",
+  "base_commit_sha": "84466f3c79a8bbc4902d47f5fbec6237c315340a",
+  "prompts": {},
+  "sessions": {
+    "s_d55cd86b79f8fc": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "90c23200-dc9c-4987-8c64-5740d2a62e02",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "w.ning <w.ning@trip.com>"
+    }
+  }
+}
