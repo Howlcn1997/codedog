@@ -3,6 +3,8 @@ import SwiftUI
 
 struct LibraryView: View {
     @Environment(LibraryModel.self) private var model
+    /// 标题离工具栏的距离，网格和列表两种形态共用，保证切换时标题不跳
+    private let headerTop: CGFloat = 14
 
     var body: some View {
         let visible = model.visible
@@ -12,9 +14,11 @@ struct LibraryView: View {
             } else if model.viewMode == .list && !visible.isEmpty {
                 // 列表模式没有结果时走下面的滚动布局显示空态（不放在 Table 外的 VStack 里，否则标题会顶进工具栏）
                 VStack(spacing: 0) {
-                    header(count: visible.count).padding(.horizontal, 28).padding(.bottom, 8)
+                    header(count: visible.count).padding(.horizontal, 28).padding(.top, headerTop).padding(.bottom, 8)
                     ProjectTable(rows: visible)
                 }
+                // 列表模式顶部没有可滚动内容垫在工具栏下，系统会给工具栏补一块实色底，和下面的背景割裂；隐藏掉让背景一直透到顶
+                .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
             } else {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 18) {
@@ -31,7 +35,7 @@ struct LibraryView: View {
                         }
                     }
                     .padding(.horizontal, 28)
-                    .padding(.top, 8)
+                    .padding(.top, headerTop)
                     .padding(.bottom, 40)
                 }
                 .scrollEdgeEffectStyle(.soft, for: .top)
