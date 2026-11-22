@@ -49,6 +49,8 @@ enum SidebarSelection: Hashable, Codable {
     case category(UUID)
     case kind(ProjectKind)
     case tool(AITool)
+    /// 文件夹颜色（调色板 id）
+    case color(String)
 }
 
 enum TimeRange: String, CaseIterable, Identifiable {

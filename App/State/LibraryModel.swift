@@ -86,6 +86,7 @@ final class LibraryModel {
         case .category(let id): return all.filter { !$0.meta.hidden && $0.meta.categories.contains(id) }
         case .kind(let k): return all.filter { !$0.meta.hidden && $0.project.kind == k }
         case .tool(let t): return all.filter { !$0.meta.hidden && $0.tools.contains { $0.tool == t } }
+        case .color(let c): return all.filter { !$0.meta.hidden && $0.meta.color == c }
         }
     }
 
@@ -107,6 +108,7 @@ final class LibraryModel {
         case .category(let id): library.categories.first { $0.id == id }?.name ?? String(localized: "分类")
         case .kind(let k): k.displayName
         case .tool(let t): t.displayName
+        case .color(let c): FolderPalette.name(c)
         }
     }
 
@@ -119,7 +121,14 @@ final class LibraryModel {
         case .category(let id): return all.filter { !$0.meta.hidden && $0.meta.categories.contains(id) }.count
         case .kind(let k): return all.filter { !$0.meta.hidden && $0.project.kind == k }.count
         case .tool(let t): return all.filter { !$0.meta.hidden && $0.tools.contains { $0.tool == t } }.count
+        case .color(let c): return all.filter { !$0.meta.hidden && $0.meta.color == c }.count
         }
+    }
+
+    /// 用过的文件夹颜色（按调色板顺序）。
+    var colorsPresent: [String] {
+        let used = Set(items.filter { !$0.meta.hidden }.compactMap(\.meta.color))
+        return FolderPalette.all.map(\.id).filter(used.contains)
     }
 
     /// 出现过的项目类型（按固定顺序）。
@@ -392,6 +401,11 @@ final class LibraryModel {
     func toggleFavorite(_ path: String) { update { $0.updateMeta(path) { $0.favorite.toggle() } } }
     func setHidden(_ path: String, _ hidden: Bool) { update { $0.updateMeta(path) { $0.hidden = hidden } } }
     func setNotes(_ path: String, _ notes: String) { update { $0.updateMeta(path) { $0.notes = notes } } }
+    func setColor(_ path: String, _ color: String?) {
+        update { $0.updateMeta(path) { $0.color = color } }
+        // 当前正在看的颜色分类空了，就回到全部项目
+        if case .color(let c) = selection, count(.color(c)) == 0 { selection = .all }
+    }
     func setEditor(_ path: String, _ app: AppRef?) { update { $0.updateMeta(path) { $0.editor = app } } }
 
     func toggleCategory(_ path: String, _ id: UUID) {

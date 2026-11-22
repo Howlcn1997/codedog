@@ -33,6 +33,14 @@ struct SidebarView: View {
                 .buttonStyle(.plain)
             }
 
+            if !model.colorsPresent.isEmpty {
+                Section("颜色") {
+                    ForEach(model.colorsPresent, id: \.self) { c in
+                        row(.color(c), FolderPalette.name(c), "circle.fill", tint: FolderPalette.base(c), small: true)
+                    }
+                }
+            }
+
             if !model.toolsPresent.isEmpty {
                 Section("AI 助手与编辑器") {
                     ForEach(model.toolsPresent, id: \.self) { t in

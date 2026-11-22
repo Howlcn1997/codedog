@@ -43,6 +43,8 @@ public struct ProjectMeta: Codable, Sendable, Hashable {
     public var openCount = 0
     /// 用户手动添加（不在扫描目录内）的项目。
     public var pinned = false
+    /// 文件夹颜色（调色板 id，如 "blue"）；nil 为默认的灰色。
+    public var color: String?
 
     public init() {}
 

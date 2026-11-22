@@ -57,23 +57,25 @@ struct EdgeGlow<S: Shape>: View {
     var shape: S
     var size: CGSize
     var strength: Double = 1
+    /// 泛光向内渗进去的宽度比例（1 为默认，越小越贴边）
+    var spread: CGFloat = 1
 
     @MainActor private static var cache: [String: NSImage] { get { glowCache } set { glowCache = newValue } }
 
     var body: some View {
-        Image(nsImage: Self.image(shape, size))
+        Image(nsImage: Self.image(shape, size, spread: spread))
             .resizable()
             .frame(width: size.width, height: size.height)
             .opacity(strength)
             .allowsHitTesting(false)
     }
 
-    @MainActor static func image(_ shape: S, _ size: CGSize) -> NSImage {
-        let key = "\(S.self)|\(size.width)x\(size.height)"
+    @MainActor static func image(_ shape: S, _ size: CGSize, spread: CGFloat = 1) -> NSImage {
+        let key = "\(S.self)|\(size.width)x\(size.height)|\(spread)"
         if let img = cache[key] { return img }
         let r = ImageRenderer(content:
             ZStack {
-                shape.stroke(.white.opacity(0.6), lineWidth: 11).blur(radius: 5)
+                shape.stroke(.white.opacity(0.6), lineWidth: 11 * spread).blur(radius: 5 * spread)
                 shape.stroke(.white.opacity(0.35), lineWidth: 3).blur(radius: 1.2)
             }
             .frame(width: size.width, height: size.height)
@@ -131,7 +133,7 @@ struct ProjectArt: View {
 
 // MARK: - 项目卡片
 
-/// 彩色文件夹：浅色后片（带标签）+ 口袋里几张白纸 + 饱和色前片口袋。前片上白字写名称和信息，右下角是技术栈图标。
+/// 文件夹：浅色后片（带标签）+ 口袋里几张白纸 + 前片口袋。默认灰色，可在右键菜单里选颜色；前片上用深一号的同色字写名称和信息，右下角是技术栈图标。
 /// 悬停时纸张从口袋里升起散开，前片以底边为轴向前倒下；点击时纸张再飞高一些，然后打开项目面板。
 struct ProjectCard: View {
     @Environment(LibraryModel.self) private var model
@@ -150,46 +152,32 @@ struct ProjectCard: View {
     private var hovering: Bool { forcedState.map { $0 >= 1 } ?? hoveringState }
     private var opening: Bool { forcedState.map { $0 == 2 } ?? openingState }
 
-    static let size = CGSize(width: 240, height: 226)
+    static let size = CGSize(width: 214, height: 226)
     private let frontHeight: CGFloat = 166
     private let backInset: CGFloat = 12
-    private let paperSize = CGSize(width: 184, height: 140)
+    private let paperSize = CGSize(width: 162, height: 140)
 
     /// 整张卡是按 cardScale 等比缩放的，缩小后名称和徽章会显得太小；这里给前层文字和图标反向补一点（只补缩小的部分，开方让补偿温和些）
     private var labelBoost: CGFloat { model.cardScale < 1 ? 1 / sqrt(model.cardScale) : 1 }
 
-    /// 文件夹主色：保留技术栈品牌色的色相，饱和度和亮度统一到"鲜亮、能衬白字"的区间；
-    /// 黄色系往橙色偏一点（白字在黄色上看不清），黑白灰品牌色用石板灰。
-    private var tint: Color { Self.folderTint(StackIcon.of(item.project)?.brand ?? .brand, dark: scheme == .dark) }
-
-    /// 暗色模式下整体压暗、略降饱和，免得在深色背景上太刺眼。
-    static func folderTint(_ brand: Color, dark: Bool = false) -> Color {
-        let c = NSColor(brand).usingColorSpace(.sRGB) ?? .gray
-        var h: CGFloat = 0, sat: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
-        c.getHue(&h, saturation: &sat, brightness: &b, alpha: &a)
-        if sat < 0.15 { return dark ? Color(hex: 0x30363F) : Color(hex: 0x4A5263) }
-        var hue = h * 360
-        if (40...75).contains(hue) { hue = 32 + (hue - 40) * 0.2 }   // 黄 → 琥珀橙
-        let s2 = min(max(sat, 0.62), 0.85)
-        // 绿、青这类本身很亮的色相亮度压低一些
-        let b2: CGFloat = (75...200).contains(hue) ? 0.72 : 0.86
-        return Color(hue: hue / 360, saturation: dark ? s2 * 0.88 : s2, brightness: dark ? b2 * 0.66 : b2)
-    }
+    /// 文件夹配色：默认灰色，用户在右键菜单里选过颜色就用那个颜色的浅色调。
+    private var style: FolderPalette.Style { FolderPalette.style(item.meta.color, dark: scheme == .dark) }
 
     var body: some View {
-        let color = tint
+        let style = style
         ZStack(alignment: .top) {
             // 后片：同色浅一些，左上角带标签
             FolderBackShape()
-                .fill(color.mix(with: .white, by: scheme == .dark ? 0.16 : 0.36))
-                .overlay(EdgeGlow(shape: FolderBackShape(), size: CGSize(width: Self.size.width - backInset * 2, height: Self.size.height - 36), strength: scheme == .dark ? 0.34 : 0.7))
+                .fill(style.back)
+                .overlay(EdgeGlow(shape: FolderBackShape(), size: CGSize(width: Self.size.width - backInset * 2, height: Self.size.height - 36), strength: scheme == .dark ? 0.34 : 0.3, spread: scheme == .dark ? 0.5 : 1))
+                .overlay(FolderBackShape().stroke(style.edge, lineWidth: 1))
                 .frame(width: Self.size.width - backInset * 2, height: Self.size.height - 36)
                 .padding(.top, 14)
 
             papers
                 .frame(height: Self.size.height, alignment: .top)
 
-            front(color)
+            front(style)
                 .frame(height: frontHeight)
                 .frame(maxHeight: .infinity, alignment: .bottom)
                 // 以底边为轴向前倒下：底边不动，上沿靠近、透视变宽并下移
@@ -302,7 +290,7 @@ struct ProjectCard: View {
 
     // MARK: 前片口袋
 
-    private func front(_ color: Color) -> some View {
+    private func front(_ style: FolderPalette.Style) -> some View {
         let shape = FolderPocketShape()
         return VStack(alignment: .leading, spacing: 0) {
             blurb.padding(.bottom, 4)
@@ -322,23 +310,24 @@ struct ProjectCard: View {
                 stackGlyph
             }
         }
-        .foregroundStyle(.white)
-        .padding(.horizontal, 20)
+        .foregroundStyle(style.text)
+        .padding(.horizontal, 18)
         .padding(.top, 22)
         .padding(.bottom, 16)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background {
-            shape.fill(LinearGradient(colors: [color.mix(with: .white, by: 0.05), color], startPoint: .top, endPoint: .bottom))
+            shape.fill(LinearGradient(colors: [style.front.mix(with: .white, by: 0.08), style.front], startPoint: .top, endPoint: .bottom))
                 // 边缘一圈向内泛白，像鼓起来的软垫
-                .overlay(EdgeGlow(shape: shape, size: CGSize(width: Self.size.width, height: frontHeight), strength: scheme == .dark ? 0.28 : 0.55))
+                .overlay(EdgeGlow(shape: shape, size: CGSize(width: Self.size.width, height: frontHeight), strength: scheme == .dark ? 0.28 : 0.25, spread: scheme == .dark ? 0.5 : 1))
+                .overlay(shape.stroke(style.edge, lineWidth: 1))
         }
         .overlay {
-            if isSelected { shape.stroke(.white, lineWidth: 2.5).padding(1) }
+            if isSelected { shape.stroke(style.text.opacity(0.6), lineWidth: 2.5).padding(1) }
         }
         // 阴影只投在一个简单轮廓上，不对整张卡离屏合成
         .background {
-            shape.fill(color).padding(.horizontal, 8).padding(.top, 24)
-                .shadow(color: color.opacity(0.45), radius: hovering ? 16 : 12, y: hovering ? 10 : 8)
+            shape.fill(style.front).padding(.horizontal, 8).padding(.top, 24)
+                .shadow(color: style.shadow, radius: hovering ? 12 : 8, y: hovering ? 8 : 5)
         }
     }
 
@@ -347,7 +336,7 @@ struct ProjectCard: View {
         if let reason = match.reasons.first, !reason.hasPrefix(String(localized: "名称")) {
             Label(reason, systemImage: "magnifyingglass")
                 .font(.system(size: 11 * labelBoost, weight: .medium))
-                .foregroundStyle(.white.opacity(0.95))
+                .opacity(0.85)
                 .lineLimit(2)
         }
     }
@@ -361,7 +350,7 @@ struct ProjectCard: View {
         if dirty > 0 { parts.append(String(localized: "\(dirty) 未提交")) }
         return Text(parts.joined(separator: " · "))
             .font(.system(size: 11.5 * labelBoost).monospacedDigit())
-            .foregroundStyle(.white.opacity(0.8))
+            .opacity(0.7)
             .lineLimit(1)
             .truncationMode(.middle)
     }
@@ -370,26 +359,27 @@ struct ProjectCard: View {
     @ViewBuilder private var status: some View {
         HStack(spacing: 5) {
             if !item.running.isEmpty {
-                Circle().fill(Color(hex: 0x5BFF8F)).frame(width: 6, height: 6)
+                Circle().fill(Color(hex: 0x34C759)).frame(width: 6, height: 6)
                 Text("运行中")
             } else if item.waiting {
-                Circle().fill(Color(hex: 0xFFD45B)).frame(width: 6, height: 6)
+                Circle().fill(Color(hex: 0xFF9F0A)).frame(width: 6, height: 6)
                 Text("等你回复")
             } else {
-                Text(item.project.kind.displayName).foregroundStyle(.white.opacity(0.85))
+                Text(item.project.kind.displayName).opacity(0.75)
             }
         }
         .font(.system(size: 12 * labelBoost, weight: .medium))
+        .opacity(0.9)
         .lineLimit(1)
     }
 
-    /// 右下角：白色技术栈图标。
+    /// 右下角：同色技术栈图标。
     @ViewBuilder private var stackGlyph: some View {
         let size = 20 * labelBoost
         if let icon = StackIcon.of(item.project) {
             Image(icon.asset).renderingMode(.template).resizable().scaledToFit()
                 .frame(width: size, height: size)
-                .opacity(0.8)
+                .opacity(0.6)
                 .help(icon.label)
         } else {
             Image(systemName: item.project.kind.symbol).font(.system(size: size * 0.8, weight: .semibold))

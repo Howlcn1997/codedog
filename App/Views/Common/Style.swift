@@ -56,6 +56,57 @@ enum CategoryPalette {
     }
 }
 
+/// 文件夹卡片的颜色：克制的浅色调，深一号的同色字。不选颜色时是灰色。
+enum FolderPalette {
+    static let all: [(id: String, name: String, base: UInt32)] = [
+        ("blue", String(localized: "蓝色"), 0x4A7BE0), ("purple", String(localized: "紫色"), 0x9468DC),
+        ("pink", String(localized: "粉色"), 0xDD5E98), ("red", String(localized: "红色"), 0xDE5A55),
+        ("orange", String(localized: "橙色"), 0xE5843A), ("yellow", String(localized: "黄色"), 0xD6A626),
+        ("green", String(localized: "绿色"), 0x43A466), ("teal", String(localized: "青色"), 0x2F9FAA),
+        ("brown", String(localized: "棕色"), 0x9A7257),
+    ]
+    static let grayBase: UInt32 = 0x7E7E86
+
+    static func name(_ id: String) -> String { all.first { $0.id == id }?.name ?? id }
+    static func base(_ id: String?) -> Color { Color(hex: all.first { $0.id == id }?.base ?? grayBase) }
+
+    struct Style {
+        var front: Color
+        var back: Color
+        var text: Color
+        var shadow: Color
+        /// 轮廓描边：浅色底上靠它把边缘勾清楚
+        var edge: Color
+    }
+
+    static func style(_ id: String?, dark: Bool) -> Style {
+        let b = base(id)
+        if dark {
+            let ground = Color(hex: 0x2A2A2E)
+            return Style(front: b.mix(with: ground, by: 0.55), back: b.mix(with: ground, by: 0.7),
+                         text: b.mix(with: .white, by: 0.6), shadow: .black.opacity(0.35), edge: .white.opacity(0.08))
+        }
+        return Style(front: b.mix(with: .white, by: 0.58), back: b.mix(with: .white, by: 0.74),
+                     text: b.mix(with: .black, by: 0.38), shadow: b.mix(with: .black, by: 0.3).opacity(0.22),
+                     edge: b.mix(with: .black, by: 0.25).opacity(0.16))
+    }
+
+    /// 菜单里的色块：菜单会把 SF Symbol 渲染成单色，只能画成非模板图片。
+    @MainActor static func swatch(_ id: String) -> NSImage {
+        if let img = swatches[id] { return img }
+        let color = NSColor(base(id))
+        let img = NSImage(size: NSSize(width: 14, height: 14), flipped: false) { r in
+            color.setFill()
+            NSBezierPath(ovalIn: r.insetBy(dx: 0.5, dy: 0.5)).fill()
+            return true
+        }
+        img.isTemplate = false
+        swatches[id] = img
+        return img
+    }
+    @MainActor private static var swatches: [String: NSImage] = [:]
+}
+
 enum Formatting {
     /// 口语化的活动时间："今天活跃""昨天活跃""3 天前""2 周前""5 个月前""2024 年"
     static func activity(_ date: Date?, now: Date = .now) -> String {
@@ -132,6 +183,13 @@ struct ProjectMenu: View {
         Button(item.meta.favorite ? "取消收藏" : "收藏", systemImage: item.meta.favorite ? "star.slash" : "star") {
             model.toggleFavorite(item.id)
         }
+        Picker("颜色", selection: Binding(get: { item.meta.color }, set: { model.setColor(item.id, $0) })) {
+            Image(systemName: "circle.slash").help("无颜色").tag(String?.none)
+            ForEach(FolderPalette.all, id: \.id) { p in
+                Image(nsImage: FolderPalette.swatch(p.id)).help(p.name).tag(Optional(p.id))
+            }
+        }
+        .pickerStyle(.palette)
         Menu("标签") {
             ForEach(model.library.categories) { c in
                 Toggle(c.name, isOn: Binding(get: { item.meta.categories.contains(c.id) }, set: { _ in model.toggleCategory(item.id, c.id) }))
