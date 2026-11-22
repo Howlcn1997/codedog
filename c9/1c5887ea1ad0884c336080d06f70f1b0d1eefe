@@ -1,0 +1,28 @@
+Packages/CodedogCore/Tests/CodedogCoreTests/GitTests.swift
+  s_ad861e4cc6652d::t_9c163b9d8a5a33 39-79
+  s_ad861e4cc6652d::t_36ce72ba52e7b4 80-81
+Packages/CodedogCore/Sources/CodedogCore/Inspect/GitInspector.swift
+  s_ad861e4cc6652d::t_e8b732ff8a6b9e 18,43,47,49-81
+App/Views/Detail/ProjectDetailView.swift
+  s_ad861e4cc6652d::t_f01d924dd98686 497-499,571-600
+Packages/CodedogCore/Sources/CodedogCore/Model/Project.swift
+  s_ad861e4cc6652d::t_e8b732ff8a6b9e 83-97,111-112
+App/Resources/Localizable.xcstrings
+  s_ad861e4cc6652d::t_49feda25157f84 6037-6087
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.52-trip",
+  "base_commit_sha": "c91c5887ea1ad0884c336080d06f70f1b0d1eefe",
+  "prompts": {},
+  "sessions": {
+    "s_ad861e4cc6652d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "888013f7-346b-4666-b946-a47a8cc7ca36",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "w.ning <w.ning@trip.com>"
+    }
+  }
+}
