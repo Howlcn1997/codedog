@@ -25,8 +25,6 @@ struct LibraryView: View {
                         header(count: visible.count)
                         if model.selection == .smart(.large) {
                             CleanupBanner(items: visible.map(\.item))
-                        } else if model.searchText.isEmpty {
-                            PulseStrip().padding(.bottom, 6)
                         }
                         if visible.isEmpty {
                             LibraryEmptyState().frame(minHeight: 340)
@@ -230,49 +228,6 @@ extension Pulse {
         case .activeWeek: "这周还没有动过任何项目。"
         }
     }
-}
-
-/// 今日脉搏：四个指标块，点一下就按该状态筛选，再点取消。
-struct PulseStrip: View {
-    @Environment(LibraryModel.self) private var model
-
-    var body: some View {
-        HStack(spacing: 12) {
-            ForEach(Pulse.allCases) { p in
-                let on = model.pulse == p
-                let n = model.count(p)
-                Button {
-                    withAnimation(.snappy) { model.pulse = on ? nil : p }
-                } label: {
-                    HStack(spacing: 12) {
-                        Image(systemName: p.symbol)
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundStyle(on ? .white : color(p))
-                            .frame(width: 34, height: 34)
-                            .background(on ? color(p) : color(p).opacity(0.14), in: Circle())
-                        VStack(alignment: .leading, spacing: 0) {
-                            Text("\(n)")
-                                .font(.system(size: 22, weight: .bold, design: .rounded))
-                                .monospacedDigit()
-                                .contentTransition(.numericText())
-                            Text(p.title).font(.system(size: 12)).foregroundStyle(.secondary)
-                        }
-                        Spacer(minLength: 0)
-                    }
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 10)
-                    .frame(maxWidth: .infinity)
-                    .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                }
-                .buttonStyle(.plain)
-                .glassEffect(on ? .regular.tint(color(p).opacity(0.25)) : .regular, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                .opacity(n == 0 && !on ? 0.6 : 1)
-                .help(on ? Text("取消筛选") : Text("只看\(p.title)的项目"))
-            }
-        }
-    }
-
-    private func color(_ p: Pulse) -> Color { p.color }
 }
 
 /// "占空间"视图顶部：可清理总量 + 批量清理入口。
