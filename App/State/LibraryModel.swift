@@ -428,6 +428,13 @@ final class LibraryModel {
         Task {
             do {
                 switch action {
+                // Codex 装了桌面版就跳到桌面版（已有会话直接打开，否则在项目里新开）；其余在终端里续上
+                case .resume(.codex) where CodexDesktop.isInstalled:
+                    try await CodexDesktop.open(sessionID: lastSession?.id, path: path)
+                case .resumeSession(let session) where session.tool == .codex && CodexDesktop.isInstalled:
+                    try await CodexDesktop.open(sessionID: session.id, path: path)
+                case .newSession(.codex) where CodexDesktop.isInstalled:
+                    try await CodexDesktop.open(sessionID: nil, path: path)
                 case .resume(let tool):
                     if let cmd = AgentLauncher.resumeCommand(tool: tool, sessionID: lastSession?.id) {
                         try AgentLauncher.run(cmd, in: lastSession?.cwd ?? path, terminal: prefs.terminal)
