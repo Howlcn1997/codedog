@@ -1,0 +1,19 @@
+App/Views/Settings/SettingsView.swift
+  s_9a8c14b87f8bd4::t_f054ba7f36c2c3 40-43,160,175,181,190-191,206,226,462,466,510-511,516,531,540,608-609,656,674,677
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.52-trip",
+  "base_commit_sha": "7897d7fee4fc40938514825346fa8707a4ba7421",
+  "prompts": {},
+  "sessions": {
+    "s_9a8c14b87f8bd4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "df6a4b82-a567-4c43-a0f0-c3e24fbd2fb1",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "w.ning <w.ning@trip.com>"
+    }
+  }
+}
