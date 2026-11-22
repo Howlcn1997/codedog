@@ -132,8 +132,14 @@ struct ProjectCard: View {
                 .rotation3DEffect(.degrees(opening ? -20 : hovering ? -14 : 0), axis: (x: 1, y: 0, z: 0), anchor: .bottom, perspective: 0.55)
         }
         .frame(width: Self.size.width, height: Self.size.height)
-        .compositingGroup()
-        .shadow(color: .black.opacity(hovering ? 0.22 : 0.12), radius: hovering ? 18 : 10, y: hovering ? 12 : 6)
+        // 阴影只投在一个简单的轮廓上（略内缩、藏在渐变图后面），不再 compositingGroup 整张卡离屏合成后再算阴影。
+        // 静止时用小半径，悬停才加大，减轻 WindowServer / GPU 负担。
+        .background {
+            FolderBackShape()
+                .fill(.black)
+                .padding(1)
+                .shadow(color: .black.opacity(hovering ? 0.22 : 0.14), radius: hovering ? 14 : 5, y: hovering ? 10 : 4)
+        }
         .scaleEffect(hovering ? 1.015 : 1)
         .animation(.spring(response: 0.38, dampingFraction: 0.72), value: hovering)
         .animation(.spring(response: 0.32, dampingFraction: 0.7), value: opening)
@@ -247,9 +253,9 @@ struct ProjectCard: View {
         .padding(.top, 30)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
         .background {
-            FolderFrontShape()
-                .fill(.ultraThinMaterial)
-                .overlay(FolderFrontShape().fill(scheme == .dark ? Color.black.opacity(0.28) : Color.white.opacity(0.42)))
+            // 静态半透明填充代替 .ultraThinMaterial：每张卡一个实时背景模糊层，GPU 要持续合成，会拖慢整台电脑。
+            // 底下的渐变本身很平滑，模糊与否肉眼差别很小。
+            FolderFrontShape().fill(scheme == .dark ? Color(white: 0.11).opacity(0.7) : Color.white.opacity(0.66))
         }
         .overlay {
             FolderFrontShape()
