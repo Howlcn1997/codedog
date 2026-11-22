@@ -1,0 +1,26 @@
+App/Views/Library/LibraryView.swift
+  s_7f015f2a9b60b0::t_216e4bc418764c 12-13
+  s_7f015f2a9b60b0::t_c4649ae3209a03 98-111,113-115,122-213
+App/Views/Common/EmptyStateView.swift
+  s_7f015f2a9b60b0::t_7313d20fb88333 1-63
+App/Launcher/LauncherView.swift
+  s_7f015f2a9b60b0::t_e9981c8cee7611 47-51
+App/Views/Detail/ProjectDetailView.swift
+  s_7f015f2a9b60b0::t_e9981c8cee7611 382
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.52-trip",
+  "base_commit_sha": "321a9001ed5a3e3772c1a9e69630bc0d55ee5fc9",
+  "prompts": {},
+  "sessions": {
+    "s_7f015f2a9b60b0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "dde5408d-ec31-4db1-8316-24203e610350",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "w.ning <w.ning@trip.com>"
+    }
+  }
+}
