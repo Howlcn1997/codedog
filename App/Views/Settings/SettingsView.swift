@@ -173,7 +173,7 @@ private struct GeneralSettingsPage: View {
                 folderTransparencyRow
                 SettingsRow("App 图标", subtitle: "运行时 Dock 与关于窗口中显示的图标") {
                     AppIconPicker(selection: Binding(
-                        get: { AppIconStyle(rawValue: model.library.preferences.appIcon) ?? .system },
+                        get: { AppIconStyle(rawValue: model.library.preferences.appIcon) ?? .light },
                         set: { style in
                             AppIconStyle.apply(style.rawValue)
                             model.setPreferences { $0.appIcon = style.rawValue }
@@ -312,7 +312,7 @@ private struct AppearancePicker: View {
     }
 }
 
-/// App 图标款式：三个小图标，跟随系统为白底与黑底斜切拼合；选中时描品牌色圆角边框。
+/// App 图标款式：小黑狗、小白狗两个图标，选中时描品牌色圆角边框。
 private struct AppIconPicker: View {
     @Binding var selection: AppIconStyle
 
@@ -321,7 +321,7 @@ private struct AppIconPicker: View {
             ForEach(AppIconStyle.allCases, id: \.self) { style in
                 let selected = style == selection
                 Button { selection = style } label: {
-                    thumbnail(style)
+                    icon(style)
                         .frame(width: 38, height: 38)
                         .padding(3)
                         .overlay(RoundedRectangle(cornerRadius: 11, style: .continuous)
@@ -333,17 +333,6 @@ private struct AppIconPicker: View {
                 .accessibilityLabel(style.title)
                 .accessibilityAddTraits(selected ? .isSelected : [])
             }
-        }
-    }
-
-    @ViewBuilder private func thumbnail(_ style: AppIconStyle) -> some View {
-        switch style {
-        case .system:
-            ZStack {
-                icon(.light)
-                icon(.dark).mask(DiagonalHalf())
-            }
-        default: icon(style)
         }
     }
 

@@ -62,8 +62,8 @@ public struct Preferences: Codable, Sendable, Hashable {
     public var appearance = "system"
     /// 文件夹卡片前片的透明度（0–0.3）。0 为完全不透明。
     public var folderTransparency: Double = 0
-    /// App 图标："system" 跟随系统、"light" 白底黑狗、"dark" 黑底白狗。
-    public var appIcon = "system"
+    /// App 图标："light" 小黑狗（白底）、"dark" 小白狗（黑底）。
+    public var appIcon = "light"
 
     public init() {}
 
@@ -80,7 +80,7 @@ public struct Preferences: Codable, Sendable, Hashable {
         lastUpdateCheck = try c.decodeIfPresent(Date.self, forKey: .lastUpdateCheck)
         appearance = try c.decodeIfPresent(String.self, forKey: .appearance) ?? "system"
         folderTransparency = min(max(try c.decodeIfPresent(Double.self, forKey: .folderTransparency) ?? 0, 0), 0.3)
-        appIcon = try c.decodeIfPresent(String.self, forKey: .appIcon) ?? "system"
+        appIcon = try c.decodeIfPresent(String.self, forKey: .appIcon) ?? "light"
     }
 }
 

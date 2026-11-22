@@ -6249,34 +6249,34 @@
         }
       }
     },
-    "白底黑狗": {
+    "小黑狗": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Black Dog on White"
+            "value": "Black Pup"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "白底黑狗"
+            "value": "小黑狗"
           }
         }
       }
     },
-    "黑底白狗": {
+    "小白狗": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "White Dog on Black"
+            "value": "White Pup"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "黑底白狗"
+            "value": "小白狗"
           }
         }
       }

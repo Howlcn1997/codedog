@@ -28,31 +28,28 @@ enum AppearanceMode: String, CaseIterable {
     }
 }
 
-/// App 图标偏好：跟随系统 / 白底黑狗 / 黑底白狗。
-/// 跟随系统时用 bundle 里的 AppIcon.icon（系统按外观自动切换）；指定款式时替换运行中的 Dock 图标与关于窗口图标。
-/// Finder 和未运行时的 Dock 仍显示系统图标（改 bundle 会破坏签名）。
+/// App 图标偏好：小黑狗（白底）/ 小白狗（黑底），替换运行中的 Dock 图标与关于窗口图标。
+/// Finder 和未运行时的 Dock 仍显示 bundle 里的 AppIcon.icon（改 bundle 会破坏签名）。
 enum AppIconStyle: String, CaseIterable {
-    case system, light, dark
+    case light, dark
 
     var title: String {
         switch self {
-        case .system: String(localized: "跟随系统")
-        case .light: String(localized: "白底黑狗")
-        case .dark: String(localized: "黑底白狗")
+        case .light: String(localized: "小黑狗")
+        case .dark: String(localized: "小白狗")
         }
     }
 
-    /// 带 macOS 图标网格圆角和阴影的成品图标；system 返回 nil。
+    /// 带 macOS 图标网格圆角和阴影的成品图标。
     @MainActor var image: NSImage? {
         switch self {
-        case .system: nil
         case .light: Self.rendered(named: "AppIconLight")
         case .dark: Self.rendered(named: "AppIconDark")
         }
     }
 
     @MainActor static func apply(_ raw: String) {
-        NSApp.applicationIconImage = (AppIconStyle(rawValue: raw) ?? .system).image
+        NSApp.applicationIconImage = (AppIconStyle(rawValue: raw) ?? .light).image
     }
 
     @MainActor private static var cache: [String: NSImage] = [:]
