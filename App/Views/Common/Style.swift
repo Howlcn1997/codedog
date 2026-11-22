@@ -164,23 +164,8 @@ struct ProjectMenu: View {
     var item: ProjectItem
 
     var body: some View {
-        let current = model.editor(for: item)
-        Button {
-            model.open(item)
-        } label: {
-            Label(current.map { "在 \($0.name) 中打开" } ?? "打开", systemImage: "arrow.up.forward.app")
-        }
-        Menu("打开方式") {
-            ForEach(Opener.installedEditors, id: \.self) { app in
-                Button {
-                    model.open(item, .editor(app))
-                } label: {
-                    Label { Text(app.name) } icon: { Image(nsImage: AppIconView.icon(app)) }
-                }
-            }
-        }
-        Button("在终端中打开", systemImage: "apple.terminal") { model.open(item, .terminal) }
-        Button("在访达中显示", systemImage: "folder") { model.open(item, .finder) }
+        OpenWithSections(item: item)
+        Divider()
         if item.project.git?.webURL != nil {
             Button("打开远程仓库", systemImage: "globe") { model.open(item, .repository) }
         }
@@ -189,23 +174,70 @@ struct ProjectMenu: View {
         Button(item.meta.favorite ? "取消收藏" : "收藏", systemImage: item.meta.favorite ? "star.slash" : "star") {
             model.toggleFavorite(item.id)
         }
-        Picker("颜色", selection: Binding(get: { item.meta.color }, set: { model.setColor(item.id, $0) })) {
-            Image(systemName: "circle.slash").help("无颜色").tag(String?.none)
-            ForEach(FolderPalette.all, id: \.id) { p in
-                Image(nsImage: FolderPalette.swatch(p.id)).help(p.name).tag(Optional(p.id))
-            }
-        }
-        .pickerStyle(.palette)
-        Menu("标签") {
+        // 颜色分两行，菜单可以窄一些
+        let colors: [String?] = [nil] + FolderPalette.all.map { Optional($0.id) }
+        let half = (colors.count + 1) / 2
+        colorRow(Array(colors.prefix(half)))
+        colorRow(Array(colors.dropFirst(half)))
+        Menu {
             ForEach(model.library.categories) { c in
-                Toggle(c.name, isOn: Binding(get: { item.meta.categories.contains(c.id) }, set: { _ in model.toggleCategory(item.id, c.id) }))
+                Toggle(isOn: Binding(get: { item.meta.categories.contains(c.id) }, set: { _ in model.toggleCategory(item.id, c.id) })) {
+                    Label(c.name, systemImage: "tag")
+                }
             }
             if !model.library.categories.isEmpty { Divider() }
-            Button("新建标签…") { NotificationCenter.default.post(name: .newCategory, object: item.id) }
+            Button("新建标签…", systemImage: "plus") { NotificationCenter.default.post(name: .newCategory, object: item.id) }
+        } label: {
+            Label("标签", systemImage: "tag")
         }
         Divider()
         Button(item.meta.hidden ? "取消隐藏" : "隐藏", systemImage: item.meta.hidden ? "eye" : "eye.slash") {
             model.setHidden(item.id, !item.meta.hidden)
+        }
+    }
+
+    private func colorRow(_ ids: [String?]) -> some View {
+        Picker("颜色", selection: Binding(get: { item.meta.color }, set: { model.setColor(item.id, $0) })) {
+            ForEach(ids, id: \.self) { id in
+                if let id {
+                    Image(nsImage: FolderPalette.swatch(id)).help(FolderPalette.name(id)).tag(Optional(id))
+                } else {
+                    Image(systemName: "circle.slash").help("无颜色").tag(String?.none)
+                }
+            }
+        }
+        .pickerStyle(.palette)
+    }
+}
+
+/// 打开方式的两个栏目："AI 工具"（Claude Code / Codex）与 "IDE"（本机编辑器、终端、访达）。卡片右键菜单和"开始创作"按钮共用。
+struct OpenWithSections: View {
+    @Environment(LibraryModel.self) private var model
+    var item: ProjectItem
+
+    var body: some View {
+        Section("AI 工具") {
+            ForEach(AITool.allCases.filter(\.isAgent), id: \.self) { tool in
+                Button {
+                    model.open(item, .resume(tool))
+                } label: {
+                    Label { Text("用 \(tool.displayName) 开始创作") } icon: { Image(nsImage: ToolIcon.menuImage(tool)) }
+                }
+            }
+        }
+        Section("IDE") {
+            // 当前项目用的编辑器排第一
+            let current = model.editor(for: item)
+            let editors = Opener.installedEditors.filter { $0 == current } + Opener.installedEditors.filter { $0 != current }
+            ForEach(editors, id: \.self) { app in
+                Button {
+                    model.open(item, .editor(app))
+                } label: {
+                    Label { Text(app.name) } icon: { Image(nsImage: AppIconView.icon(app)) }
+                }
+            }
+            Button("终端打开", systemImage: "apple.terminal") { model.open(item, .terminal) }
+            Button("访达打开", systemImage: "folder") { model.open(item, .finder) }
         }
     }
 }
@@ -277,6 +309,19 @@ struct ToolIcon: View {
             Image(asset).renderingMode(.original).resizable().scaledToFit()
                 .frame(width: size, height: size)
         }
+    }
+
+    @MainActor private static var menuImages: [AITool: NSImage] = [:]
+
+    /// 菜单里用的图标：菜单只认 NSImage，彩色标志要关掉模板渲染，单色的保持模板跟随菜单文字色。
+    @MainActor static func menuImage(_ tool: AITool) -> NSImage {
+        if let img = menuImages[tool] { return img }
+        let (name, mono) = asset(tool)
+        let img = (NSImage(named: name)?.copy() as? NSImage) ?? NSImage()
+        img.size = NSSize(width: 16, height: 16)
+        img.isTemplate = mono
+        menuImages[tool] = img
+        return img
     }
 
     static func asset(_ tool: AITool) -> (name: String, mono: Bool) {

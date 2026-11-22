@@ -237,8 +237,8 @@ private struct NextUpCard: View {
             Spacer(minLength: 0)
             GlassEffectContainer(spacing: 4) {
                 HStack(spacing: 4) {
-                    iconButton("apple.terminal", "在终端中打开") { model.open(item, .terminal) }
-                    iconButton("folder", "在访达中显示") { model.open(item, .finder) }
+                    iconButton("apple.terminal", "终端打开") { model.open(item, .terminal) }
+                    iconButton("folder", "访达打开") { model.open(item, .finder) }
                     iconButton("globe", "打开远程仓库") { model.open(item, .repository) }
                         .disabled(item.project.git?.webURL == nil)
                     iconButton(item.meta.favorite ? "star.fill" : "star", item.meta.favorite ? "取消收藏" : "收藏") { model.toggleFavorite(item.id) }
@@ -611,7 +611,7 @@ private struct AboutSection: View {
                         Task { try? await Opener.openInEditor(wt.path, editor: editor) }
                     }
                     .disabled(wt.prunable)
-                    Button("在访达中显示") { Opener.revealInFinder(wt.path) }.disabled(wt.prunable)
+                    Button("访达打开") { Opener.revealInFinder(wt.path) }.disabled(wt.prunable)
                     Button("拷贝路径") { copy(wt.path) }
                 }
             }

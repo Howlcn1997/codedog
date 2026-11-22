@@ -102,10 +102,10 @@ private struct RowActions: View {
             } else {
                 Color.clear.frame(width: 28, height: 26)   // 没用过 AI 的项目留空，保持后两个按钮对齐
             }
-            button(help: String(localized: "在终端中打开")) { model.open(item, .terminal) } label: {
+            button(help: String(localized: "终端打开")) { model.open(item, .terminal) } label: {
                 Image(systemName: "apple.terminal")
             }
-            button(help: String(localized: "在访达中显示")) { model.open(item, .finder) } label: {
+            button(help: String(localized: "访达打开")) { model.open(item, .finder) } label: {
                 Image(systemName: "folder")
             }
         }

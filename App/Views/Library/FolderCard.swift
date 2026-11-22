@@ -326,25 +326,7 @@ struct ProjectCard: View {
     }
 
     @ViewBuilder private var resumeMenu: some View {
-        Section("AI 工具") {
-            ForEach(AITool.allCases.filter(\.isAgent), id: \.self) { tool in
-                Button {
-                    model.open(item, .resume(tool))
-                } label: {
-                    Label { Text("用 \(tool.displayName) 开始创作") } icon: { ToolIcon(tool: tool, size: 14) }
-                }
-            }
-        }
-        Section("编辑器") {
-            ForEach(Opener.installedEditors, id: \.self) { app in
-                Button {
-                    model.open(item, .editor(app))
-                } label: {
-                    Label { Text(app.name) } icon: { Image(nsImage: AppIconView.icon(app)) }
-                }
-            }
-            Button("在终端中打开", systemImage: "apple.terminal") { model.open(item, .terminal) }
-        }
+        OpenWithSections(item: item)
     }
 
     // MARK: 前片口袋

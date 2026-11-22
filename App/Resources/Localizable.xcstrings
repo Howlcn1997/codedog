@@ -6181,6 +6181,57 @@
           }
         }
       }
+    },
+    "终端打开": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open in Terminal"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "終端機打開"
+          }
+        }
+      }
+    },
+    "访达打开": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open in Finder"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finder 打開"
+          }
+        }
+      }
+    },
+    "IDE": {
+      "shouldTranslate": false
+    },
+    "「终端打开」时使用": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Used for “Open in Terminal”"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「終端機打開」時使用"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

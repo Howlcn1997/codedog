@@ -490,7 +490,7 @@ private struct OpenSettingsPage: View {
                        fallback: Opener.installedEditors.first,
                        set: { app in model.setPreferences { $0.editor = app } },
                        pick: { pickingEditor = true })
-                appRow("终端", subtitle: "「在终端中打开」时使用",
+                appRow("终端", subtitle: "「终端打开」时使用",
                        current: model.library.preferences.terminal, choices: Opener.installedTerminals,
                        fallback: KnownApps.defaultTerminal,
                        set: { app in model.setPreferences { $0.terminal = app } },
