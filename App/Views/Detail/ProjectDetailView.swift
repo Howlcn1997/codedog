@@ -465,6 +465,7 @@ private struct AboutSection: View {
     var item: ProjectItem
     @State private var pickingApp = false
     @State private var showReadme = false
+    @State private var copiedPath: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -551,41 +552,58 @@ private struct AboutSection: View {
         }
     }
 
+    /// 仓库只显示托管平台图标 + 名称，点击跳转；完整地址放在悬停提示里。
+    @ViewBuilder
     private func repo(_ git: GitInfo) -> some View {
-        HStack(spacing: 6) {
-            Text(git.branch ?? "—").font(.system(size: 12, design: .monospaced))
-            if let remote = git.remote {
-                Text("·").foregroundStyle(.tertiary)
-                if let url = git.webURL {
-                    Link(url.host().map { $0 + url.path() } ?? remote, destination: url)
-                        .font(.system(size: 12, design: .monospaced))
-                        .lineLimit(1).truncationMode(.middle)
-                } else {
-                    Text(remote).font(.system(size: 12, design: .monospaced)).foregroundStyle(.secondary)
-                        .lineLimit(1).truncationMode(.middle).textSelection(.enabled)
+        if let url = git.webURL {
+            let host = url.host()?.lowercased() ?? ""
+            let github = host.contains("github")
+            // 品牌色：GitHub 黑（深色模式跟随文字色变白），GitLab 橙
+            let brand: Color = github ? .primary : Color(hex: 0xFC6D26)
+            Link(destination: url) {
+                HStack(spacing: 5) {
+                    Image(github ? "Repo/github" : "Repo/gitlab").resizable().renderingMode(.template)
+                        .frame(width: 14, height: 14).foregroundStyle(brand)
+                    Text(verbatim: github ? "GitHub" : "GitLab").foregroundStyle(.primary)
                 }
             }
+            .buttonStyle(.borderless)
+            .help(url.absoluteString)
+        } else if let remote = git.remote {
+            Button { copy(remote) } label: {
+                HStack(spacing: 5) {
+                    Image("Repo/git").resizable().renderingMode(.template).frame(width: 14, height: 14)
+                        .foregroundStyle(Color(hex: 0xF05032))
+                    Image(systemName: copiedPath == remote ? "checkmark" : "doc.on.doc").font(.system(size: 10))
+                }
+            }
+            .buttonStyle(.borderless).foregroundStyle(.secondary)
+            .help(remote)
+        } else {
+            Text("—").foregroundStyle(.secondary)
         }
     }
 
+    /// 每个 worktree 一行：分支名 + 复制路径按钮。
     private func worktrees(_ wts: [GitWorktree]) -> some View {
-        VStack(alignment: .leading, spacing: 5) {
+        VStack(alignment: .leading, spacing: 6) {
             ForEach(wts, id: \.path) { wt in
                 HStack(spacing: 6) {
                     Image(systemName: "arrow.triangle.branch").font(.system(size: 10)).foregroundStyle(.secondary)
-                    Text(wt.branch ?? String(localized: "游离 HEAD")).font(.system(size: 12, design: .monospaced))
-                        .lineLimit(1)
-                    Button(Formatting.shortPath(wt.path)) {
-                        let editor = model.editor(for: item)
-                        Task { try? await Opener.openInEditor(wt.path, editor: editor) }
-                    }
-                    .buttonStyle(.borderless).font(.caption)
-                    .lineLimit(1).truncationMode(.middle)
-                    .disabled(wt.prunable)
-                    .help("在编辑器中打开")
+                    Text(wt.branch ?? String(localized: "游离 HEAD"))
+                        .font(.system(size: 12, design: .monospaced))
+                        .lineLimit(1).truncationMode(.middle)
+                        .foregroundStyle(wt.prunable ? .secondary : .primary)
                     if wt.prunable {
-                        Text("已删除").font(.caption).foregroundStyle(.secondary)
+                        Text("已删除").font(.caption).foregroundStyle(.secondary).fixedSize()
                     }
+                    Spacer(minLength: 4)
+                    Button { copy(wt.path) } label: {
+                        Image(systemName: copiedPath == wt.path ? "checkmark" : "doc.on.doc").font(.system(size: 11))
+                            .frame(width: 16, height: 16)
+                    }
+                    .buttonStyle(.borderless).foregroundStyle(.secondary)
+                    .help(Formatting.shortPath(wt.path))
                 }
                 .contextMenu {
                     Button("在编辑器中打开") {
@@ -594,12 +612,19 @@ private struct AboutSection: View {
                     }
                     .disabled(wt.prunable)
                     Button("在访达中显示") { Opener.revealInFinder(wt.path) }.disabled(wt.prunable)
-                    Button("拷贝路径") {
-                        NSPasteboard.general.clearContents()
-                        NSPasteboard.general.setString(wt.path, forType: .string)
-                    }
+                    Button("拷贝路径") { copy(wt.path) }
                 }
             }
+        }
+    }
+
+    private func copy(_ text: String) {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(text, forType: .string)
+        copiedPath = text
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(1.5))
+            if copiedPath == text { copiedPath = nil }
         }
     }
 
