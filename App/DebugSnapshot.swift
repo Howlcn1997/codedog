@@ -42,6 +42,8 @@ enum DebugSnapshot {
                         w.orderFrontRegardless()
                     }
                 case "settings": NotificationCenter.default.post(name: .openSettingsRequest, object: nil)
+                case "spage": NotificationCenter.default.post(name: .debugSettingsPage, object: arg)
+                case "sshot": captureSettings(to: "\(prefix)-\(arg).png")
                 case "launcher": AppDelegate.shared.launcher.show()
                 case "lquery": AppDelegate.shared.launcher.state.query = arg
                 case "ldown": AppDelegate.shared.launcher.state.selection += Int(arg) ?? 1
@@ -100,6 +102,14 @@ enum DebugSnapshot {
                 }
             }
         }
+    }
+
+    static func captureSettings(to path: String) {
+        guard let window = NSApp.windows.first(where: { $0.isVisible && $0.identifier?.rawValue.contains("Settings") == true }),
+              let view = window.contentView?.superview ?? window.contentView,
+              let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds) else { return }
+        view.cacheDisplay(in: view.bounds, to: rep)
+        try? rep.representation(using: .png, properties: [:])?.write(to: URL(filePath: path))
     }
 
     static func capture(to path: String) {

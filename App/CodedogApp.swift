@@ -42,6 +42,7 @@ struct CodedogApp: App {
             SettingsView()
                 .environment(model)
         }
+        .windowResizability(.contentSize)
 
         MenuBarExtra(isInserted: Binding(
             get: { model.library.preferences.menuBarResident },

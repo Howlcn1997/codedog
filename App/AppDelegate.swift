@@ -20,6 +20,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         Task {
             await model.start()
+            AppearanceMode.apply(model.library.preferences.appearance)
             registerHotKey(model.library.preferences.launcherShortcut)
             await model.checkForUpdates()
         }

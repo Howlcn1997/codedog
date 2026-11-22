@@ -7,6 +7,27 @@ extension Color {
     static let brand = Color(red: 0x65 / 255, green: 0x63 / 255, blue: 0xDA / 255)
 }
 
+/// 外观偏好：跟随系统 / 亮色 / 暗色，直接作用于整个 App（主窗口、启动器、菜单栏面板）。
+enum AppearanceMode: String, CaseIterable {
+    case system, light, dark
+
+    var title: String {
+        switch self {
+        case .system: "跟随系统"
+        case .light: "亮色"
+        case .dark: "暗色"
+        }
+    }
+
+    @MainActor static func apply(_ raw: String) {
+        switch AppearanceMode(rawValue: raw) ?? .system {
+        case .system: NSApp.appearance = nil
+        case .light: NSApp.appearance = NSAppearance(named: .aqua)
+        case .dark: NSApp.appearance = NSAppearance(named: .darkAqua)
+        }
+    }
+}
+
 extension ProjectKind {
     var symbol: String {
         switch self {
@@ -130,6 +151,7 @@ extension Notification.Name {
     static let focusSearch = Notification.Name("codedog.focusSearch")
     static let openSettingsRequest = Notification.Name("codedog.openSettings")
     static let debugSheet = Notification.Name("codedog.debugSheet")
+    static let debugSettingsPage = Notification.Name("codedog.debugSettingsPage")
 }
 
 extension Formatting {
