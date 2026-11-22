@@ -269,9 +269,10 @@ struct ProjectCard: View {
         .padding(.top, 32)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
         .background {
-            // 静态半透明填充代替 .ultraThinMaterial：每张卡一个实时背景模糊层，GPU 要持续合成，会拖慢整台电脑。
-            // 底下的渐变本身很平滑，模糊与否肉眼差别很小。
-            FolderFrontShape().fill(scheme == .dark ? Color(white: 0.11).opacity(0.7) : Color.white.opacity(0.66))
+            // 毛玻璃前片：透出后面的纸张与渐变。
+            FolderFrontShape()
+                .fill(.ultraThinMaterial)
+                .overlay(FolderFrontShape().fill(scheme == .dark ? Color.black.opacity(0.28) : Color.white.opacity(0.42)))
         }
         .overlay {
             FolderFrontShape()
