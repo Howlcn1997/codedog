@@ -26,20 +26,31 @@ struct HeatmapView: View {
         var future: Bool
     }
 
-    private var grid: (cells: [[Cell]], months: [(column: Int, label: String)]) {
+    /// 日期骨架（每格的日期键、是否未来、月份标签）每天只算一次，各个热力图共用；
+    /// 悬停读数会频繁重算 body，每次都做 371 次日期运算太浪费。
+    private struct Skeleton {
+        var day: Date
+        var weeks: Int
+        var keys: [[(key: String, future: Bool)]]
+        var months: [(column: Int, label: String)]
+    }
+
+    @MainActor private static var skeletonCache: Skeleton?
+
+    @MainActor private static func skeleton(weeks: Int) -> Skeleton {
         let cal = Calendar.current
         let today = cal.startOfDay(for: .now)
+        if let s = skeletonCache, s.day == today, s.weeks == weeks { return s }
         let thisWeek = cal.dateInterval(of: .weekOfYear, for: today)?.start ?? today
         let start = cal.date(byAdding: .weekOfYear, value: -(weeks - 1), to: thisWeek)!
-        var columns: [[Cell]] = []
+        var columns: [[(String, Bool)]] = []
         var months: [(Int, String)] = []
         var lastMonth = -1
         for w in 0..<weeks {
-            var col: [Cell] = []
+            var col: [(String, Bool)] = []
             for d in 0..<7 {
                 let date = cal.date(byAdding: .day, value: w * 7 + d, to: start)!
-                let key = Self.key(date)
-                col.append(Cell(id: w * 7 + d, key: key, count: days[key] ?? 0, future: date > today))
+                col.append((key(date), date > today))
                 let month = cal.component(.month, from: date)
                 if d == 0, month != lastMonth {
                     lastMonth = month
@@ -50,7 +61,17 @@ struct HeatmapView: View {
             }
             columns.append(col)
         }
-        return (columns, months)
+        let s = Skeleton(day: today, weeks: weeks, keys: columns.map { $0.map { (key: $0.0, future: $0.1) } }, months: months.map { (column: $0.0, label: $0.1) })
+        skeletonCache = s
+        return s
+    }
+
+    private var grid: (cells: [[Cell]], months: [(column: Int, label: String)]) {
+        let s = Self.skeleton(weeks: weeks)
+        let cells = s.keys.enumerated().map { w, col in
+            col.enumerated().map { d, k in Cell(id: w * 7 + d, key: k.key, count: days[k.key] ?? 0, future: k.future) }
+        }
+        return (cells, s.months)
     }
 
     /// 按非零值的四分位数分成 4 档。
@@ -65,6 +86,8 @@ struct HeatmapView: View {
     private var cell: CGFloat { step - spacing }
     private var gridHeight: CGFloat { monthHeight + 4 + 7 * step - spacing }
 
+    @State private var hovered: Cell?
+
     var body: some View {
         VStack(alignment: .trailing, spacing: 6) {
             Color.clear
@@ -72,7 +95,16 @@ struct HeatmapView: View {
                 .frame(height: width > 0 ? gridHeight : 90)
                 .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
                 .overlay(alignment: .topLeading) { if width > 0 { content } }
-            legend
+            HStack(spacing: 8) {
+                // 悬停的那一天（代替每个格子各自的提示，几百个提示视图会让详情面板打开变慢）
+                if let c = hovered, !c.future {
+                    Text(c.count > 0 ? String(localized: "\(c.key)：\(c.count) 次活动") : c.key)
+                        .font(.system(size: 10).monospacedDigit())
+                        .foregroundStyle(.secondary)
+                }
+                Spacer(minLength: 0)
+                legend
+            }
         }
     }
 
@@ -80,6 +112,7 @@ struct HeatmapView: View {
         let g = grid
         let values = days.values.filter { $0 > 0 }.sorted()
         let thresholds: [Int] = values.isEmpty ? [] : [0.25, 0.5, 0.75].map { values[min(values.count - 1, Int(Double(values.count) * $0))] }
+        let selectedKey = selection?.wrappedValue
         return VStack(alignment: .leading, spacing: 4) {
             ZStack(alignment: .topLeading) {
                 ForEach(g.months, id: \.column) { m in
@@ -99,34 +132,38 @@ struct HeatmapView: View {
                     }
                 }
                 .frame(width: label - spacing, alignment: .leading)
-                ForEach(Array(g.cells.enumerated()), id: \.offset) { _, col in
-                    VStack(spacing: spacing) {
-                        ForEach(col) { c in square(c, level: level(c.count, thresholds: thresholds)) }
+                // 所有格子用一个 Canvas 画完：一年 371 个格子各是一个视图时，打开详情面板要多花上百毫秒
+                Canvas { ctx, _ in
+                    let radius = max(1.5, cell * 0.22)
+                    for (w, col) in g.cells.enumerated() {
+                        for (d, c) in col.enumerated() where !c.future {
+                            let rect = CGRect(x: CGFloat(w) * step, y: CGFloat(d) * step, width: cell, height: cell)
+                            ctx.fill(RoundedRectangle(cornerRadius: radius, style: .continuous).path(in: rect),
+                                     with: .color(color(level(c.count, thresholds: thresholds))))
+                            if c.key == selectedKey {
+                                ctx.stroke(RoundedRectangle(cornerRadius: radius + 1, style: .continuous).path(in: rect.insetBy(dx: -1.5, dy: -1.5)),
+                                           with: .color(.primary), lineWidth: 1.2)
+                            }
+                        }
                     }
                 }
+                .frame(width: CGFloat(weeks) * step, height: 7 * step - spacing)
+                .contentShape(Rectangle())
+                .onContinuousHover { phase in
+                    if case .active(let p) = phase { hovered = cellAt(p, in: g.cells) } else { hovered = nil }
+                }
+                .gesture(SpatialTapGesture().onEnded { e in
+                    guard let selection, let c = cellAt(e.location, in: g.cells), !c.future else { return }
+                    withAnimation(.snappy(duration: 0.2)) { selection.wrappedValue = selection.wrappedValue == c.key ? nil : c.key }
+                })
             }
         }
     }
 
-    private func square(_ c: Cell, level: Int) -> some View {
-        let selected = selection?.wrappedValue == c.key
-        return RoundedRectangle(cornerRadius: max(1.5, cell * 0.22), style: .continuous)
-            .fill(color(level))
-            .frame(width: cell, height: cell)
-            .overlay {
-                if selected {
-                    RoundedRectangle(cornerRadius: max(1.5, cell * 0.22), style: .continuous)
-                        .strokeBorder(Color.primary, lineWidth: 1.2)
-                        .padding(-1.5)
-                }
-            }
-            .opacity(c.future ? 0 : 1)
-            .help(c.count > 0 ? String(localized: "\(c.key)：\(c.count) 次活动") : c.key)
-            .contentShape(Rectangle())
-            .onTapGesture {
-                guard let selection, !c.future else { return }
-                withAnimation(.snappy(duration: 0.2)) { selection.wrappedValue = selected ? nil : c.key }
-            }
+    private func cellAt(_ p: CGPoint, in cells: [[Cell]]) -> Cell? {
+        let w = Int(p.x / step), d = Int(p.y / step)
+        guard cells.indices.contains(w), (0..<7).contains(d), cells[w].indices.contains(d) else { return nil }
+        return cells[w][d]
     }
 
     private var legend: some View {

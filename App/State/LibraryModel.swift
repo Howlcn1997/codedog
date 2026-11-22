@@ -7,13 +7,14 @@ import Observation
 /// 主窗口状态：用户数据、扫描结果、筛选与搜索。
 @MainActor @Observable
 final class LibraryModel {
-    private(set) var library = Library()
-    private(set) var projects: [DiscoveredProject] = []
+    // 这几项是派生数据（items / visible）的来源，变化时清掉缓存
+    private(set) var library = Library() { didSet { invalidateDerived() } }
+    private(set) var projects: [DiscoveredProject] = [] { didSet { invalidateDerived() } }
     private(set) var isScanning = false
     private(set) var lastScan: Date?
-    private(set) var aiIndex: [String: [ToolUsage]] = [:]
-    private(set) var running: [String: Set<AITool>] = [:]
-    private(set) var sizes: [String: SizeInfo] = SizeCache.load().sizes
+    private(set) var aiIndex: [String: [ToolUsage]] = [:] { didSet { invalidateDerived() } }
+    private(set) var running: [String: Set<AITool>] = [:] { didSet { invalidateDerived() } }
+    private(set) var sizes: [String: SizeInfo] = SizeCache.load().sizes { didSet { invalidateDerived() } }
     private(set) var isMeasuring = false
     private(set) var availableUpdate: UpdateChecker.Release?
     private(set) var isCheckingUpdate = false
@@ -60,7 +61,32 @@ final class LibraryModel {
 
     // MARK: 派生数据
 
-    var items: [ProjectItem] { library.items(from: projects, tools: aiIndex, running: running, sizes: sizes) }
+    /// items / visible 的缓存。每次读取都重新组装、过滤、排序全部项目，点一下卡片（改 selectedID、detailID）
+    /// 整个项目库视图重算时要跑好几遍，打开详情面板明显变慢。
+    @ObservationIgnored private var itemsCache: [ProjectItem]?
+    @ObservationIgnored private var visibleCache: (key: VisibleKey, value: [(item: ProjectItem, match: SearchMatch)])?
+
+    private struct VisibleKey: Equatable {
+        var selection: SidebarSelection?
+        var searchText: String
+        var timeRange: TimeRange
+        var pulse: Pulse?
+        var sortOrder: SortOrder
+    }
+
+    private func invalidateDerived() {
+        itemsCache = nil
+        visibleCache = nil
+    }
+
+    var items: [ProjectItem] {
+        // 先读一遍来源属性，保证观察关系照常建立（缓存命中时也一样）
+        let lib = library, ps = projects, ai = aiIndex, run = running, sz = sizes
+        if let itemsCache { return itemsCache }
+        let value = lib.items(from: ps, tools: ai, running: run, sizes: sz)
+        itemsCache = value
+        return value
+    }
 
     func item(_ id: String?) -> ProjectItem? {
         guard let id, let p = projects.first(where: { $0.path == id }) else { return nil }
@@ -90,8 +116,17 @@ final class LibraryModel {
         }
     }
 
-    /// 最终展示的项目与搜索命中。
+    /// 最终展示的项目与搜索命中（按来源数据和筛选条件缓存）。
     var visible: [(item: ProjectItem, match: SearchMatch)] {
+        let key = VisibleKey(selection: selection, searchText: searchText, timeRange: timeRange, pulse: pulse, sortOrder: sortOrder)
+        _ = items   // 建立对来源数据的观察
+        if let visibleCache, visibleCache.key == key { return visibleCache.value }
+        let value = computeVisible()
+        visibleCache = (key, value)
+        return value
+    }
+
+    private func computeVisible() -> [(item: ProjectItem, match: SearchMatch)] {
         var base = scopedItems
         if let pulse { base = base.filter { pulse.contains($0) } }
         if let cutoff = timeRange.cutoff {

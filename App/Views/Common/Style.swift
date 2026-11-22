@@ -146,9 +146,15 @@ struct AppIconView: View {
             .frame(width: size, height: size)
     }
 
+    @MainActor private static var iconCache: [String: NSImage] = [:]
+
+    /// 应用图标按 bundle id 缓存：NSWorkspace 每次取图标都要读磁盘，详情面板的编辑器菜单每次渲染都会取一遍。
     @MainActor static func icon(_ app: AppRef) -> NSImage {
-        if let url = Opener.appURL(app) { return NSWorkspace.shared.icon(forFile: url.path(percentEncoded: false)) }
-        return NSImage(systemSymbolName: "app.dashed", accessibilityDescription: nil) ?? NSImage()
+        if let img = iconCache[app.bundleID] { return img }
+        let img = Opener.appURL(app).map { NSWorkspace.shared.icon(forFile: $0.path(percentEncoded: false)) }
+            ?? NSImage(systemSymbolName: "app.dashed", accessibilityDescription: nil) ?? NSImage()
+        iconCache[app.bundleID] = img
+        return img
     }
 }
 
@@ -291,24 +297,31 @@ extension Text {
 }
 
 /// 简单的换行布局（标签胶囊）。
+/// 子视图尺寸缓存在布局缓存里：一次排版 SwiftUI 会调好几次 sizeThatFits，每次都重新测量子视图
+/// （尤其是里面的下拉菜单）开销很大，会拖慢详情面板的打开。
 struct FlowLayout: Layout {
     var spacing: CGFloat = 6
 
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        arrange(proposal: proposal, subviews: subviews).size
+    struct Cache { var sizes: [CGSize] }
+
+    func makeCache(subviews: Subviews) -> Cache { Cache(sizes: subviews.map { $0.sizeThatFits(.unspecified) }) }
+
+    func updateCache(_ cache: inout Cache, subviews: Subviews) { cache.sizes = subviews.map { $0.sizeThatFits(.unspecified) } }
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout Cache) -> CGSize {
+        arrange(proposal: proposal, sizes: cache.sizes).size
     }
 
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        for (i, p) in arrange(proposal: proposal, subviews: subviews).points.enumerated() {
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout Cache) {
+        for (i, p) in arrange(proposal: proposal, sizes: cache.sizes).points.enumerated() {
             subviews[i].place(at: CGPoint(x: bounds.minX + p.x, y: bounds.minY + p.y), proposal: .unspecified)
         }
     }
 
-    private func arrange(proposal: ProposedViewSize, subviews: Subviews) -> (size: CGSize, points: [CGPoint]) {
+    private func arrange(proposal: ProposedViewSize, sizes: [CGSize]) -> (size: CGSize, points: [CGPoint]) {
         let maxWidth = proposal.width ?? .infinity
         var points: [CGPoint] = [], x: CGFloat = 0, y: CGFloat = 0, rowHeight: CGFloat = 0, width: CGFloat = 0
-        for s in subviews {
-            let size = s.sizeThatFits(.unspecified)
+        for size in sizes {
             if x > 0 && x + size.width > maxWidth { x = 0; y += rowHeight + spacing; rowHeight = 0 }
             points.append(CGPoint(x: x, y: y))
             x += size.width + spacing

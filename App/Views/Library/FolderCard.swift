@@ -205,11 +205,11 @@ struct ProjectCard: View {
         .onTapGesture { open() }
     }
 
+    /// 立刻打开详情，纸张飞出的动画同时播放（不再先等动画播完）。
     private func open() {
         openingState = true
+        onOpen()
         Task {
-            try? await Task.sleep(for: .milliseconds(220))
-            onOpen()
             try? await Task.sleep(for: .milliseconds(450))
             openingState = false
         }

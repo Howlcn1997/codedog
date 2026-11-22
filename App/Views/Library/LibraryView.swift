@@ -79,7 +79,7 @@ struct LibraryView: View {
             ForEach(rows, id: \.item.id) { row in
                 ProjectCard(item: row.item, match: row.match, isSelected: model.selectedID == row.item.id) {
                     model.selectedID = row.item.id
-                    withAnimation(.spring(response: 0.38, dampingFraction: 0.86)) { model.detailID = row.item.id }
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.88)) { model.detailID = row.item.id }
                 }
                     .scaleEffect(k, anchor: .topLeading)
                     .frame(width: w, height: h, alignment: .topLeading)
