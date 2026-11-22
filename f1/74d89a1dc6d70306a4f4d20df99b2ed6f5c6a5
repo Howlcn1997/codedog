@@ -1,0 +1,19 @@
+project.yml
+  s_9a8c14b87f8bd4::t_9db2f4179721a0 11-12
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.52-trip",
+  "base_commit_sha": "f174d89a1dc6d70306a4f4d20df99b2ed6f5c6a5",
+  "prompts": {},
+  "sessions": {
+    "s_9a8c14b87f8bd4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "df6a4b82-a567-4c43-a0f0-c3e24fbd2fb1",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "w.ning <w.ning@trip.com>"
+    }
+  }
+}
