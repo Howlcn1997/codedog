@@ -11,25 +11,19 @@ struct LibraryView: View {
         Group {
             if model.library.scanRoots.isEmpty && model.library.pinnedPaths.isEmpty {
                 NoRootsView()
-            } else if model.viewMode == .list && !visible.isEmpty {
-                // 列表模式没有结果时走下面的滚动布局显示空态（不放在 Table 外的 VStack 里，否则标题会顶进工具栏）
-                VStack(spacing: 0) {
-                    header(count: visible.count).padding(.horizontal, 28).padding(.top, headerTop).padding(.bottom, 8)
-                    ProjectTable(rows: visible)
-                }
-                // 列表模式顶部没有可滚动内容垫在工具栏下，系统会给工具栏补一块实色底，和下面的背景割裂；隐藏掉让背景一直透到顶
-                .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
             } else {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 18) {
                         header(count: visible.count)
                         if model.selection == .smart(.large) {
                             CleanupBanner(items: visible.map(\.item))
-                        } else if model.searchText.isEmpty && model.viewMode == .grid {
+                        } else if model.searchText.isEmpty {
                             PulseStrip().padding(.bottom, 6)
                         }
                         if visible.isEmpty {
                             LibraryEmptyState().frame(minHeight: 340)
+                        } else if model.viewMode == .list {
+                            ProjectTable(rows: visible).padding(.horizontal, -12)   // 行底色外扩，让文字和标题左对齐
                         } else {
                             grid(visible)
                         }

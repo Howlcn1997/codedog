@@ -1,113 +1,88 @@
 import CodedogCore
 import SwiftUI
 
+/// 列表形态：不带列名的紧凑行，隔行铺一层圆角底色；行尾快捷按钮鼠标移上去才出现。
+/// 不用 Table：它画不出圆角斑马纹，也拿不到行级 hover。
 struct ProjectTable: View {
     @Environment(LibraryModel.self) private var model
     var rows: [(item: ProjectItem, match: SearchMatch)]
 
-    struct Row: Identifiable {
-        var item: ProjectItem
-        var match: SearchMatch
-        var id: String { item.id }
-    }
-
     var body: some View {
-        @Bindable var model = model
-        let data = rows.map { Row(item: $0.item, match: $0.match) }
-        Table(data, selection: $model.selectedID) {
-            TableColumn("名称") { row in
-                HStack(spacing: 10) {
-                    StackBadge(project: row.item.project, size: 24)   // 和文件夹卡片同一套类型图标
-                    VStack(alignment: .leading, spacing: 1) {
-                        HStack(spacing: 4) {
-                            Text(row.item.project.name).fontWeight(.medium).lineLimit(1)
-                            if row.item.meta.favorite { Image(systemName: "star.fill").font(.caption2).foregroundStyle(.yellow) }
-                        }
-                        // 只在搜索命中名称以外的内容时显示命中原因，平时不显示路径
-                        if let reason = row.match.reasons.first, !reason.hasPrefix("名称") {
-                            Text(reason)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .lineLimit(1)
-                        }
-                    }
+        LazyVStack(spacing: 2) {
+            ForEach(Array(rows.enumerated()), id: \.element.item.id) { index, row in
+                ProjectRow(item: row.item, match: row.match, striped: index % 2 == 1,
+                           isSelected: model.selectedID == row.item.id) {
+                    model.selectedID = row.item.id
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) { model.detailID = row.item.id }
                 }
-                .padding(.vertical, 4)
+                .contextMenu { ProjectMenu(item: row.item) }
+                .help(Formatting.shortPath(row.item.id))
             }
-            .width(min: 220, ideal: 320)
-            TableColumn("分支") { row in
-                HStack(spacing: 4) {
-                    if let dirty = row.item.project.git?.dirtyFiles, dirty > 0 {
-                        Circle().fill(.orange).frame(width: 6, height: 6)
-                    }
-                    Text(row.item.project.git?.branch ?? "—").foregroundStyle(.secondary).lineLimit(1)
-                }
-            }
-            .width(min: 80, ideal: 140)
-            TableColumn("标签") { row in Text(row.item.categoryNames.joined(separator: "、")).foregroundStyle(.secondary) }
-                .width(min: 60, ideal: 120)
-            TableColumn("最近活动") { row in Text(Formatting.activity(row.item.lastActivity)).foregroundStyle(.secondary) }
-                .width(min: 70, ideal: 90)
-            TableColumn("") { row in RowActions(item: row.item) }
-                .width(108)
         }
-        .contextMenu(forSelectionType: String.self) { ids in
-            if let id = ids.first, let row = data.first(where: { $0.id == id }) {
-                ProjectMenu(item: row.item)
-            }
-        } primaryAction: { ids in
-            if let id = ids.first { withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) { model.detailID = id } }
-        }
-        .scrollContentBackground(.hidden)
-        .alternatingRowBackgrounds(.disabled)   // 不要斑马纹：空白区域也会画条纹，和背景割裂
-        .background(TableSeparatorRemover())
     }
 }
 
-/// SwiftUI 的 Table 在关掉斑马纹后会画行分隔线，且 listRowSeparator 对 Table 无效。
-/// 行视图（SwiftUI 私有的 NSTableRowView 子类）用 drawsSeparator 决定画不画，这里在运行时把它换掉：
-/// 只对打了标记的这张表返回 false，其他表照旧。找不到类或方法时什么都不做。
-private struct TableSeparatorRemover: NSViewRepresentable {
-    static let marker = NSUserInterfaceItemIdentifier("codedog.projectTable")
+private struct ProjectRow: View {
+    var item: ProjectItem
+    var match: SearchMatch
+    var striped: Bool
+    var isSelected: Bool
+    var open: () -> Void
+    @State private var hovering = false
 
-    func makeNSView(context: Context) -> NSView { Probe() }
-    func updateNSView(_ view: NSView, context: Context) {}
-
-    final class Probe: NSView {
-        override func viewDidMoveToWindow() {
-            super.viewDidMoveToWindow()
-            DispatchQueue.main.async { [weak self] in self?.apply() }
-        }
-
-        private func apply() {
-            guard let root = window?.contentView else { return }
-            let mine = convert(bounds, to: nil)
-            // 侧栏也是 NSTableView（sourceList 样式），排除掉；剩下和自己重叠的就是这张表
-            guard let table = Self.tables(in: root).first(where: { $0.style != .sourceList && $0.convert($0.visibleRect, to: nil).intersects(mine) }) else { return }
-            table.identifier = TableSeparatorRemover.marker
-            table.enumerateAvailableRowViews { row, _ in Self.patch(type(of: row)) }
-            table.reloadData()   // 已经建好的行重新取一次 drawsSeparator
-        }
-
-        private static func tables(in view: NSView) -> [NSTableView] {
-            (view as? NSTableView).map { [$0] } ?? view.subviews.flatMap(tables)
-        }
-
-        private static var patched = Set<ObjectIdentifier>()
-
-        private static func patch(_ cls: AnyClass) {
-            guard cls != NSTableRowView.self, !patched.contains(ObjectIdentifier(cls)) else { return }
-            patched.insert(ObjectIdentifier(cls))
-            let sel = NSSelectorFromString("drawsSeparator")
-            guard let method = class_getInstanceMethod(cls, sel) else { return }
-            typealias Fn = @convention(c) (AnyObject, Selector) -> Bool
-            let original = unsafeBitCast(method_getImplementation(method), to: Fn.self)
-            let block: @convention(block) (NSTableRowView) -> Bool = { row in
-                if (row.superview as? NSTableView)?.identifier == TableSeparatorRemover.marker { return false }
-                return original(row, sel)
+    var body: some View {
+        HStack(spacing: 16) {
+            HStack(spacing: 10) {
+                StackBadge(project: item.project, size: 24)   // 和文件夹卡片同一套类型图标
+                VStack(alignment: .leading, spacing: 1) {
+                    HStack(spacing: 4) {
+                        Text(item.project.name).fontWeight(.medium).foregroundStyle(.primary).lineLimit(1)
+                        if item.meta.favorite { Image(systemName: "star.fill").font(.caption2).foregroundStyle(.yellow) }
+                    }
+                    // 只在搜索命中名称以外的内容时显示命中原因，平时不显示路径
+                    if let reason = match.reasons.first, !reason.hasPrefix("名称") {
+                        Text(reason).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                    }
+                }
             }
-            class_replaceMethod(cls, sel, imp_implementationWithBlock(block), method_getTypeEncoding(method))
+            .frame(minWidth: 180, maxWidth: .infinity, alignment: .leading)
+
+            HStack(spacing: 4) {
+                if let dirty = item.project.git?.dirtyFiles, dirty > 0 {
+                    Circle().fill(.orange).frame(width: 6, height: 6)
+                }
+                Text(item.project.git?.branch ?? "—").lineLimit(1)
+            }
+            .frame(width: 150, alignment: .leading)
+
+            Text(item.categoryNames.joined(separator: "、")).lineLimit(1)
+                .frame(width: 110, alignment: .leading)
+
+            Text(Formatting.activity(item.lastActivity)).lineLimit(1)
+                .frame(width: 80, alignment: .leading)
+
+            // 平时藏起来，鼠标移到这一行（或选中它）才出现
+            let showActions = hovering || isSelected
+            RowActions(item: item)
+                .opacity(showActions ? 1 : 0)
+                .allowsHitTesting(showActions)
         }
+        .foregroundStyle(.secondary)
+        .padding(.horizontal, 12)
+        .frame(height: 38)
+        .background(background)
+        .contentShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .onHover { hovering = $0 }
+        .animation(.easeOut(duration: 0.12), value: hovering)
+        .onTapGesture(perform: open)
+    }
+
+    private var background: some View {
+        let fill: AnyShapeStyle = isSelected ? AnyShapeStyle(Color.brand.opacity(0.16))
+            : hovering ? AnyShapeStyle(.primary.opacity(0.07))
+            : striped ? AnyShapeStyle(.primary.opacity(0.035))
+            : AnyShapeStyle(.clear)
+        return RoundedRectangle(cornerRadius: 10, style: .continuous).fill(fill)
     }
 }
 
@@ -117,7 +92,7 @@ private struct RowActions: View {
     var item: ProjectItem
 
     var body: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: 2) {
             if let tool = item.lastAgent?.tool {
                 button(help: tool == .codex && CodexDesktop.isInstalled ? "在 Codex 中打开" : "用 \(tool.displayName) 接着上次的会话") {
                     model.open(item, .resume(tool))
@@ -125,7 +100,7 @@ private struct RowActions: View {
                     ToolIcon(tool: tool, size: 16)
                 }
             } else {
-                Color.clear.frame(width: 28, height: 24)   // 没用过 AI 的项目留空，保持后两个按钮对齐
+                Color.clear.frame(width: 28, height: 26)   // 没用过 AI 的项目留空，保持后两个按钮对齐
             }
             button(help: "在终端中打开") { model.open(item, .terminal) } label: {
                 Image(systemName: "apple.terminal")
@@ -134,18 +109,40 @@ private struct RowActions: View {
                 Image(systemName: "folder")
             }
         }
-        .frame(maxWidth: .infinity, alignment: .trailing)
     }
 
     private func button(help: String, action: @escaping () -> Void, @ViewBuilder label: () -> some View) -> some View {
         Button(action: action) {
-            label()
-                .font(.system(size: 14))
-                .foregroundStyle(.secondary)
-                .frame(width: 28, height: 24)
-                .contentShape(Rectangle())
+            label().font(.system(size: 14))
         }
-        .buttonStyle(.borderless)
+        .buttonStyle(RowActionStyle())
         .help(help)
+    }
+}
+
+/// 行尾图标按钮：悬停时浮出圆角底色、图标变亮，按下时稍微缩小
+private struct RowActionStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        RowActionButton(configuration: configuration)
+    }
+}
+
+private struct RowActionButton: View {
+    let configuration: ButtonStyleConfiguration
+    @State private var hovering = false
+
+    var body: some View {
+        configuration.label
+            .foregroundStyle(hovering ? .primary : .secondary)
+            .frame(width: 28, height: 26)
+            .background(
+                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                    .fill(.primary.opacity(configuration.isPressed ? 0.18 : hovering ? 0.10 : 0))
+            )
+            .contentShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
+            .scaleEffect(configuration.isPressed ? 0.9 : 1)
+            .animation(.easeOut(duration: 0.12), value: hovering)
+            .animation(.spring(response: 0.2, dampingFraction: 0.7), value: configuration.isPressed)
+            .onHover { hovering = $0 }
     }
 }
