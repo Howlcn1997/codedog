@@ -30,6 +30,7 @@ enum CodexReader {
             case "session_meta":
                 if let id = payload["id"] as? String { s.id = id }
                 if let cwd = payload["cwd"] as? String { s.cwd = cwd }
+                if let o = payload["originator"] as? String { s.origin = o }
             case "turn_context":
                 if s.cwd == nil, let cwd = payload["cwd"] as? String { s.cwd = cwd }
                 if let m = payload["model"] as? String { model = m }

@@ -74,6 +74,8 @@ public struct SessionSummary: Codable, Sendable, Hashable {
     public var tokens: [String: TokenUsage] = [:]
     /// AI 已经答完、在等用户回复。
     public var waiting = false
+    /// 会话由谁发起。Codex 取 session_meta.originator（如 "Codex Desktop"、"codex_cli_rs"）。
+    public var origin: String?
 
     public init(tool: AITool, id: String, file: String) {
         self.tool = tool

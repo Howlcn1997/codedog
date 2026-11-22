@@ -76,7 +76,7 @@ import Testing
         let f = try Fixture()
         func l(_ o: [String: Any]) -> String { String(decoding: try! JSONSerialization.data(withJSONObject: o), as: UTF8.self) }
         let path = try f.file("rollout.jsonl", [
-            l(["timestamp": "2026-11-21T11:00:00.000Z", "type": "session_meta", "payload": ["id": "c1", "cwd": "/p/web"]]),
+            l(["timestamp": "2026-11-21T11:00:00.000Z", "type": "session_meta", "payload": ["id": "c1", "cwd": "/p/web", "originator": "codex_cli_rs"]]),
             l(["timestamp": "2026-11-21T11:00:01.000Z", "type": "event_msg", "payload": ["type": "thread_settings_applied", "thread_settings": ["model": "gpt-6.2-astra"]]]),
             l(["timestamp": "2026-11-21T11:00:02.000Z", "type": "event_msg", "payload": ["type": "task_started"]]),
             l(["timestamp": "2026-11-21T11:00:03.000Z", "type": "event_msg", "payload": ["type": "item_completed", "item": ["type": "UserMessage", "content": [["type": "text", "text": "帮我修登录页\n"]]]]]),
@@ -86,6 +86,7 @@ import Testing
         ].joined(separator: "\n"))
         let s = CodexReader.summarize(file: path)
         #expect(s.id == "c1" && s.cwd == "/p/web")
+        #expect(s.origin == "codex_cli_rs" && !CodexDesktop.isDesktopOrigin(s.origin))
         #expect(s.title == "帮我修登录页")
         #expect(s.waiting)
         let t = try #require(s.tokens["gpt-6.2-astra"])
@@ -144,5 +145,38 @@ import Testing
         var pre = ok
         pre["prerelease"] = true
         #expect(UpdateChecker.parse(pre) == nil)
+    }
+}
+
+@Suite struct AgentTerminalTests {
+    @Test func desktopOrigin() {
+        #expect(CodexDesktop.isDesktopOrigin("Codex Desktop"))
+        #expect(!CodexDesktop.isDesktopOrigin("codex_cli_rs"))
+        #expect(!CodexDesktop.isDesktopOrigin(nil))
+    }
+
+    @Test func remembersTerminalPerSession() {
+        var t = AgentTerminals()
+        let changed = t.record([
+            .init(tool: .claudeCode, cwd: "/p/web", terminal: "dev.warp.Warp-Stable"),
+            .init(tool: .codex, cwd: "/p/web/api", terminal: "com.googlecode.iterm2"),
+            .init(tool: .claudeCode, cwd: "/p/app", terminal: "com.microsoft.VSCode"),   // 编辑器内置终端，不记
+            .init(tool: .claudeCode, cwd: "/p/tmux", terminal: nil),
+        ])
+        #expect(changed)
+        #expect(t.terminal(tool: .claudeCode, cwd: "/p/web", project: "/p/web") == "dev.warp.Warp-Stable")
+        #expect(t.terminal(tool: .claudeCode, cwd: nil, project: "/p/web") == "dev.warp.Warp-Stable")
+        #expect(t.terminal(tool: .codex, cwd: nil, project: "/p/web") == "com.googlecode.iterm2")   // 子目录里的记录
+        #expect(t.terminal(tool: .codex, cwd: "/p/web", project: "/p/web/x") == nil)
+        #expect(t.terminal(tool: .claudeCode, cwd: "/p/app", project: "/p/app") == nil)
+        let again = t.record([.init(tool: .claudeCode, cwd: "/p/web", terminal: "dev.warp.Warp-Stable")])
+        #expect(!again)
+    }
+
+    @Test func shellArgsPerTerminal() {
+        let g = AgentLauncher.shellArgs("com.mitchellh.ghostty", command: "claude", directory: "/p")
+        #expect(g.first == "--working-directory=/p" && g[1] == "-e")
+        let w = AgentLauncher.shellArgs("com.github.wez.wezterm", command: "claude", directory: "/p")
+        #expect(Array(w.prefix(4)) == ["start", "--cwd", "/p", "--"])
     }
 }

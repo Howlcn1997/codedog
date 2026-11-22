@@ -11,7 +11,7 @@ public enum AIIndex {
 
     struct Cache: Codable {
         /// 解析逻辑变化时递增，旧缓存整体作废
-        static let currentVersion = 3
+        static let currentVersion = 4
         var version = Cache.currentVersion
         var files: [String: CachedFile] = [:]
     }
@@ -109,27 +109,64 @@ extension FolderScanner {
 
 /// 检测正在运行的 AI 智能体进程（claude / codex 命令行）及其工作目录。
 public enum RunningAgents {
+    /// 一个正在运行的智能体进程。
+    public struct Process: Sendable, Hashable {
+        public var tool: AITool
+        public var cwd: String
+        /// 它所在的 App（顺着父进程往上找到的第一个 .app），通常是终端；tmux 等脱离终端的进程为 nil。
+        public var terminal: String?
+    }
+
     public static func scan() -> [String: Set<AITool>] {
-        var result: [String: Set<AITool>] = [:]
+        processes().reduce(into: [:]) { $0[$1.cwd, default: []].insert($1.tool) }
+    }
+
+    public static func processes() -> [Process] {
+        var result: [Process] = []
         let count = proc_listallpids(nil, 0)
         guard count > 0 else { return result }
         var pids = [pid_t](repeating: 0, count: Int(count) * 2)
         let n = proc_listallpids(&pids, Int32(pids.count * MemoryLayout<pid_t>.size))
         for pid in pids.prefix(Int(max(0, n))) where pid > 0 {
-            var pathBuf = [CChar](repeating: 0, count: 4096)
-            guard proc_pidpath(pid, &pathBuf, UInt32(pathBuf.count)) > 0 else { continue }
-            let exe = String(cString: pathBuf)
-            let name = (exe as NSString).lastPathComponent
+            guard let exe = path(of: pid) else { continue }
             let tool: AITool?
-            switch name {
+            switch (exe as NSString).lastPathComponent {
             case "claude": tool = .claudeCode
             case "codex": tool = .codex
             default: tool = nil
             }
             guard let tool, let cwd = cwd(of: pid) else { continue }
-            result[FolderScanner.normalizeFast(cwd), default: []].insert(tool)
+            result.append(Process(tool: tool, cwd: FolderScanner.normalizeFast(cwd), terminal: hostApp(of: pid)))
         }
         return result
+    }
+
+    static func path(of pid: pid_t) -> String? {
+        var buf = [CChar](repeating: 0, count: 4096)
+        guard proc_pidpath(pid, &buf, UInt32(buf.count)) > 0 else { return nil }
+        return String(cString: buf)
+    }
+
+    static func parent(of pid: pid_t) -> pid_t? {
+        var info = proc_bsdinfo()
+        let size = Int32(MemoryLayout<proc_bsdinfo>.size)
+        guard proc_pidinfo(pid, PROC_PIDTBSDINFO, 0, &info, size) == size else { return nil }
+        let ppid = pid_t(info.pbi_ppid)
+        return ppid > 1 && ppid != pid ? ppid : nil
+    }
+
+    /// 顺着父进程往上找，返回第一个位于 .app 包内的进程所属 App 的 bundle id（取最外层的 .app）。
+    static func hostApp(of pid: pid_t) -> String? {
+        var current = parent(of: pid)
+        var depth = 0
+        while let p = current, depth < 16 {
+            if let exe = path(of: p), let range = exe.range(of: ".app/") {
+                return Bundle(path: String(exe[..<range.lowerBound]) + ".app")?.bundleIdentifier
+            }
+            current = parent(of: p)
+            depth += 1
+        }
+        return nil
     }
 
     static func cwd(of pid: pid_t) -> String? {

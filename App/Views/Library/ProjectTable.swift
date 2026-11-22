@@ -94,7 +94,7 @@ private struct RowActions: View {
     var body: some View {
         HStack(spacing: 2) {
             if let tool = item.lastAgent?.tool {
-                button(help: tool == .codex && CodexDesktop.isInstalled ? "在 Codex 中打开" : "用 \(tool.displayName) 接着上次的会话") {
+                button(help: model.resumeHelp(item, tool: tool)) {
                     model.open(item, .resume(tool))
                 } label: {
                     ToolIcon(tool: tool, size: 16)

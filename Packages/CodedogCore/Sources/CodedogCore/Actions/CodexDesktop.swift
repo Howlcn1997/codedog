@@ -11,6 +11,19 @@ public enum CodexDesktop {
     public static var appURL: URL? { NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) }
     public static var isInstalled: Bool { appURL != nil }
 
+    /// 会话是不是在 Codex 桌面版里发起的。命令行（codex_cli_rs、codex_exec）等其他来源返回 false。
+    public static func isDesktopOrigin(_ origin: String?) -> Bool {
+        origin?.localizedCaseInsensitiveContains("desktop") == true
+    }
+
+    /// 续上这个会话时该不该跳到桌面版：桌面版发起的会话回桌面版；命令行发起的回终端。
+    /// 来源未知（旧数据）或没有会话时，装了桌面版就用桌面版。
+    public static func shouldOpen(_ session: SessionSummary?) -> Bool {
+        guard isInstalled else { return false }
+        guard let origin = session?.origin else { return true }
+        return isDesktopOrigin(origin)
+    }
+
     static func deepLink(sessionID: String?, path: String) -> URL? {
         if let id = sessionID, UUID(uuidString: id) != nil {
             return URL(string: "codex://threads/\(id.lowercased())")

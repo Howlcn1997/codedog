@@ -55,6 +55,8 @@ final class LibraryModel {
     @ObservationIgnored private var aiWatcher: FSEventsWatcher?
     @ObservationIgnored private var aiTask: Task<Void, Never>?
     @ObservationIgnored private var lastAIBuild = Date.distantPast
+    /// 每个智能体会话跑在哪个终端里，续上时回到同一个终端
+    @ObservationIgnored private var agentTerminals = AgentTerminals.load()
 
     // MARK: 派生数据
 
@@ -234,16 +236,43 @@ final class LibraryModel {
     func refreshAI() async {
         lastAIBuild = .now
         aiIndex = await AIIndex.build(projects: projects.map(\.path))
-        running = await Task.detached { RunningAgents.scan() }.value
+        await updateRunning()
     }
 
     /// 每 10 秒刷新一次运行中的智能体（读取进程表，开销很小）。
     private func pollRunning() async {
         while !Task.isCancelled {
             try? await Task.sleep(for: .seconds(10))
-            let now = await Task.detached { RunningAgents.scan() }.value
-            if now != running { running = now }
+            await updateRunning()
         }
+    }
+
+    /// 读一次进程表：更新"运行中"，顺便记下每个智能体所在的终端。
+    private func updateRunning() async {
+        let procs = await Task.detached { RunningAgents.processes() }.value
+        let now = procs.reduce(into: [String: Set<AITool>]()) { $0[$1.cwd, default: []].insert($1.tool) }
+        if now != running { running = now }
+        if agentTerminals.record(procs) {
+            let snapshot = agentTerminals
+            Task.detached { snapshot.save() }
+        }
+    }
+
+    /// 续上这个会话该用的终端：记录里有就用记录的（例如上次在 Warp 里跑的就回 Warp），否则用偏好设置里的终端。
+    func terminal(for tool: AITool, session: SessionSummary?, project: String) -> AppRef? {
+        if let id = agentTerminals.terminal(tool: tool, cwd: session?.cwd, project: project),
+           let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: id) {
+            return AppRef(bundleID: id, name: KnownApps.displayName(bundleID: id, fallback: url.deletingPathExtension().lastPathComponent))
+        }
+        return library.preferences.terminal
+    }
+
+    /// 续上会话的按钮提示，例如"在 Codex 中打开"、"在 Warp 里用 Claude Code 接着上次的会话"。
+    func resumeHelp(_ item: ProjectItem, tool: AITool) -> String {
+        let session = item.tools.first { $0.tool == tool }?.lastSession
+        if tool == .codex && CodexDesktop.shouldOpen(session) { return String(localized: "在 Codex 中打开") }
+        let name = terminal(for: tool, session: session, project: item.id)?.name ?? KnownApps.defaultTerminal.name
+        return String(localized: "在\(name)里用 \(tool.displayName) 接着上次的会话")
     }
 
     /// AI 日志目录变化时重建索引（至少间隔 15 秒，按文件缓存，代价很小）。
@@ -436,24 +465,25 @@ final class LibraryModel {
         Task {
             do {
                 switch action {
-                // Codex 装了桌面版就跳到桌面版（已有会话直接打开，否则在项目里新开）；其余在终端里续上
-                case .resume(.codex) where CodexDesktop.isInstalled:
+                // Codex 桌面版发起的会话回桌面版（没有会话时在项目里新开）；命令行发起的和 Claude Code 在终端里续上，
+                // 终端优先用这个会话上次所在的那个（Warp、iTerm2…），没记录才用偏好设置里的
+                case .resume(.codex) where CodexDesktop.shouldOpen(lastSession):
                     try await CodexDesktop.open(sessionID: lastSession?.id, path: path)
-                case .resumeSession(let session) where session.tool == .codex && CodexDesktop.isInstalled:
+                case .resumeSession(let session) where session.tool == .codex && CodexDesktop.shouldOpen(session):
                     try await CodexDesktop.open(sessionID: session.id, path: path)
                 case .newSession(.codex) where CodexDesktop.isInstalled:
                     try await CodexDesktop.open(sessionID: nil, path: path)
                 case .resume(let tool):
                     if let cmd = AgentLauncher.resumeCommand(tool: tool, sessionID: lastSession?.id) {
-                        try AgentLauncher.run(cmd, in: lastSession?.cwd ?? path, terminal: prefs.terminal)
+                        try AgentLauncher.run(cmd, in: lastSession?.cwd ?? path, terminal: terminal(for: tool, session: lastSession, project: path))
                     }
                 case .resumeSession(let session):
                     if let cmd = AgentLauncher.resumeCommand(tool: session.tool, sessionID: session.id) {
-                        try AgentLauncher.run(cmd, in: session.cwd ?? path, terminal: prefs.terminal)
+                        try AgentLauncher.run(cmd, in: session.cwd ?? path, terminal: terminal(for: session.tool, session: session, project: path))
                     }
                 case .newSession(let tool):
                     if let cmd = AgentLauncher.resumeCommand(tool: tool, sessionID: nil) {
-                        try AgentLauncher.run(cmd, in: path, terminal: prefs.terminal)
+                        try AgentLauncher.run(cmd, in: path, terminal: terminal(for: tool, session: nil, project: path))
                     }
                 case .editor: try await Opener.openInEditor(path, editor: editor)
                 case .terminal: try await Opener.openInTerminal(path, terminal: prefs.terminal)
