@@ -581,7 +581,9 @@ private struct AboutSection: View {
             }
             .buttonStyle(PillStyle())
             .help(title)
-            .popover(isPresented: $showReadme, arrowEdge: .leading) { ReadmeView(title: title, text: text) }
+            .sheet(isPresented: $showReadme) {
+                ReadmeSheet(title: title, text: text, baseURL: URL(fileURLWithPath: item.project.path, isDirectory: true))
+            }
         }
     }
 
@@ -721,29 +723,6 @@ private struct LanguageBar: View {
     private func percent(_ f: Double) -> String {
         let p = f * 100
         return p < 0.1 ? "<0.1%" : String(format: "%.1f%%", p)
-    }
-}
-
-private struct ReadmeView: View {
-    var title: String
-    var text: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text(title).font(.headline)
-            ScrollView {
-                Text(Self.markdown(String(text.prefix(12000))))
-                    .font(.callout)
-                    .textSelection(.enabled)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-        }
-        .padding(16)
-        .frame(width: 460, height: 520)
-    }
-
-    static func markdown(_ s: String) -> AttributedString {
-        (try? AttributedString(markdown: s, options: .init(allowsExtendedAttributes: false, interpretedSyntax: .inlineOnlyPreservingWhitespace, failurePolicy: .returnPartiallyParsedIfPossible))) ?? AttributedString(s)
     }
 }
 
