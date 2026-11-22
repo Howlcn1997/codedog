@@ -1,0 +1,43 @@
+App/Views/Settings/SettingsView.swift
+  s_8218b9dbf06318::t_1c41ce7a782956 509-510,519-520
+  s_8218b9dbf06318::t_337ed2aa570abf 40
+  s_8218b9dbf06318::t_108bde3de4bd8b 467-473
+  s_8218b9dbf06318::t_2b0d6eda3f9add 402-405
+  s_8218b9dbf06318::t_1b0c995187fbf7 76-78,80
+  s_8218b9dbf06318::t_95e3768fa27b80 65,73,75
+  s_8218b9dbf06318::t_bcea33c29d501a 29,163-169,210,212-240,243-287
+  s_8218b9dbf06318::t_77a6fb530ea495 70
+  s_8218b9dbf06318::t_1c35ce1df4ebde 71
+  s_8218b9dbf06318::t_52dea66dd1d0e9 4-6,8-28,30-33,38-39,41-42,45-55,57-58,60-63,66,68-69,72,74,83-103,105-116,118-127,130,132-143,145-149,153-155,162,172-182,184,188-190,297,302-305,309-323,325-327,330,333,367-401,406-466,474-508,511-518,521-606
+App/Views/Settings/SettingsControls.swift
+  s_8218b9dbf06318::t_256b3c86c20f49 1-55,57-59,67-138,140-431
+  s_8218b9dbf06318::t_77a6fb530ea495 60-66
+  s_8218b9dbf06318::t_a55a20bd3893c2 56,139
+App/DebugSnapshot.swift
+  s_8218b9dbf06318::t_d3fa2314e16379 45-46,107-112
+Packages/CodedogCore/Sources/CodedogCore/Model/Library.swift
+  s_8218b9dbf06318::t_3cecb5672520bc 59-60,64,75
+App/CodedogApp.swift
+  s_8218b9dbf06318::t_5f8ec86a97f40d 45
+App/Views/Common/Style.swift
+  s_8218b9dbf06318::t_3cecb5672520bc 10-30
+  s_8218b9dbf06318::t_1b0c995187fbf7 154
+App/AppDelegate.swift
+  s_8218b9dbf06318::t_3cecb5672520bc 23
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.52-trip",
+  "base_commit_sha": "e9463c682d72df1c45cd98b6fcb35502ebf6cb0e",
+  "prompts": {},
+  "sessions": {
+    "s_8218b9dbf06318": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "55fa4456-4a22-48a9-991d-93cb0b157b0e",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "w.ning <w.ning@trip.com>"
+    }
+  }
+}
