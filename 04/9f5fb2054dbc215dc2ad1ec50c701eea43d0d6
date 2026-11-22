@@ -1,0 +1,25 @@
+App/Resources/Localizable.xcstrings
+  s_9a8c14b87f8bd4::t_56ad6721a0a5e3 6252,6257,6263,6268,6273,6279
+App/Views/Common/Style.swift
+  s_9a8c14b87f8bd4::t_56ad6721a0a5e3 31-32,34,38-39,43,52
+Packages/CodedogCore/Sources/CodedogCore/Model/Library.swift
+  s_9a8c14b87f8bd4::t_56ad6721a0a5e3 65-66,83
+App/Views/Settings/SettingsView.swift
+  s_9a8c14b87f8bd4::t_56ad6721a0a5e3 176,315,324
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.52-trip",
+  "base_commit_sha": "049f5fb2054dbc215dc2ad1ec50c701eea43d0d6",
+  "prompts": {},
+  "sessions": {
+    "s_9a8c14b87f8bd4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "df6a4b82-a567-4c43-a0f0-c3e24fbd2fb1",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "w.ning <w.ning@trip.com>"
+    }
+  }
+}
