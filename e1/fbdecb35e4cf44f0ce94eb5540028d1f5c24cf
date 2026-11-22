@@ -1,0 +1,46 @@
+Packages/CodedogCore/Sources/CodedogCore/Actions/CodexDesktop.swift
+  s_9fd824592944bd::t_0432b445cb430c 1-34
+App/State/LibraryModel.swift
+  s_9fd824592944bd::t_0432b445cb430c 431-437
+App/Views/Library/ProjectTable.swift
+  s_9fd824592944bd::t_604f76eafaeef1 87
+  s_9fd824592944bd::t_0432b445cb430c 51-52,111-149
+  s_9fd824592944bd::t_350d54c7a2b0ca 63-85,90-110
+  s_9fd824592944bd::t_53f849b1e4d829 88
+  s_ada881b8eb15e4::t_5d84e1fe613a10 20,23,26-32,35
+  s_9fd824592944bd::t_6ec1e2d617547c 62
+  s_7f015f2a9b60b0::t_38041e001c46cb 89
+  s_9fd824592944bd::t_0e2b290f7a5889 86
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.52-trip",
+  "base_commit_sha": "e1fbdecb35e4cf44f0ce94eb5540028d1f5c24cf",
+  "prompts": {},
+  "sessions": {
+    "s_7f015f2a9b60b0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "dde5408d-ec31-4db1-8316-24203e610350",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "w.ning <w.ning@trip.com>"
+    },
+    "s_9fd824592944bd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f4e679ff-acb1-4f5a-b43d-345a5ea47872",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "w.ning <w.ning@trip.com>"
+    },
+    "s_ada881b8eb15e4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "dd095483-b91e-4699-b077-defb19ed5680",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "w.ning <w.ning@trip.com>"
+    }
+  }
+}
