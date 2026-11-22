@@ -1,0 +1,19 @@
+App/Views/Library/FolderCard.swift
+  s_ad861e4cc6652d::t_9acc0740a380f9 272-275
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.52-trip",
+  "base_commit_sha": "f27deb0d11b66b3bcd5416a34cf21ecbeeedffe4",
+  "prompts": {},
+  "sessions": {
+    "s_ad861e4cc6652d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "888013f7-346b-4666-b946-a47a8cc7ca36",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "w.ning <w.ning@trip.com>"
+    }
+  }
+}
