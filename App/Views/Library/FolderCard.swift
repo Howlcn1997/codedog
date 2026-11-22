@@ -169,13 +169,23 @@ struct ProjectCard: View {
             // 后片：同色浅一些，左上角带标签
             FolderBackShape()
                 .fill(style.back)
-                .overlay(EdgeGlow(shape: FolderBackShape(), size: CGSize(width: Self.size.width - backInset * 2, height: Self.size.height - 36), strength: scheme == .dark ? 0.34 : 0.3, spread: scheme == .dark ? 0.5 : 1))
+                .overlay(EdgeGlow(shape: FolderBackShape(), size: CGSize(width: Self.size.width - backInset * 2, height: Self.size.height - 16), strength: scheme == .dark ? 0.34 : 0.3, spread: scheme == .dark ? 0.5 : 1))
                 .overlay(FolderBackShape().stroke(style.edge, lineWidth: 1))
-                .frame(width: Self.size.width - backInset * 2, height: Self.size.height - 36)
+                .frame(width: Self.size.width - backInset * 2, height: Self.size.height - 16)
                 .padding(.top, 14)
 
             papers
                 .frame(height: Self.size.height, alignment: .top)
+
+            // 悬停时浮在升起的纸上：开始创作
+            if papersMounted || forcedState != nil {
+                resumeButton
+                    .padding(.top, 16)
+                    .offset(y: hovering ? 0 : 30)
+                    .scaleEffect(hovering && !opening ? 1 : 0.85)
+                    .opacity(hovering && !opening ? 1 : 0)
+                    .allowsHitTesting(hovering && !opening)
+            }
 
             front(style)
                 .frame(height: frontHeight)
@@ -288,6 +298,55 @@ struct ProjectCard: View {
         return (index == 0 ? 0 : 1.5, i * 3, i * -4)
     }
 
+    // MARK: 开始创作
+
+    /// 黑色胶囊"开始创作"：用这个项目最近用过的 AI 工具接着上次的会话；没用过 AI 就用编辑器打开。
+    /// 右键可以挑 AI 工具或编辑器。
+    private var resumeButton: some View {
+        let tool = item.lastAgent?.tool
+        return Button {
+            model.open(item, tool.map { .resume($0) } ?? .editor(nil))
+        } label: {
+            HStack(spacing: 6) {
+                // 左边放会被打开的那个工具的标志：Claude Code / Codex；没用过 AI 就是编辑器的图标
+                if let tool {
+                    ToolIcon(tool: tool, size: 14 * labelBoost)
+                } else if let editor = model.editor(for: item) {
+                    Image(nsImage: AppIconView.icon(editor)).resizable().frame(width: 16 * labelBoost, height: 16 * labelBoost)
+                } else {
+                    Image(systemName: "play.fill").font(.system(size: 10 * labelBoost))
+                }
+                Text("开始创作")
+            }
+            .font(.system(size: 13 * labelBoost, weight: .semibold))
+        }
+        .buttonStyle(ResumePillStyle())
+        .help(tool.map { model.resumeHelp(item, tool: $0) } ?? String(localized: "在编辑器中打开"))
+        .contextMenu { resumeMenu }
+    }
+
+    @ViewBuilder private var resumeMenu: some View {
+        Section("AI 工具") {
+            ForEach(AITool.allCases.filter(\.isAgent), id: \.self) { tool in
+                Button {
+                    model.open(item, .resume(tool))
+                } label: {
+                    Label { Text("用 \(tool.displayName) 开始创作") } icon: { ToolIcon(tool: tool, size: 14) }
+                }
+            }
+        }
+        Section("编辑器") {
+            ForEach(Opener.installedEditors, id: \.self) { app in
+                Button {
+                    model.open(item, .editor(app))
+                } label: {
+                    Label { Text(app.name) } icon: { Image(nsImage: AppIconView.icon(app)) }
+                }
+            }
+            Button("在终端中打开", systemImage: "apple.terminal") { model.open(item, .terminal) }
+        }
+    }
+
     // MARK: 前片口袋
 
     private func front(_ style: FolderPalette.Style) -> some View {
@@ -316,18 +375,15 @@ struct ProjectCard: View {
         .padding(.bottom, 16)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background {
+            // 透明度来自设置（默认 0 不透明）；调高后口袋里的纸能透出轮廓。
+            // 不用系统毛玻璃：它模糊太重，会把纸糊成一片，看不出形状
             shape.fill(LinearGradient(colors: [style.front.mix(with: .white, by: 0.08), style.front], startPoint: .top, endPoint: .bottom))
+                .opacity(1 - min(model.library.preferences.folderTransparency, 0.3))
+                // 投影直接挂在半透明的前片上（垫一块实心色块投影会从半透明的前片里透出来）
+                .shadow(color: style.shadow, radius: hovering ? 12 : 8, y: hovering ? 8 : 5)
                 // 边缘一圈向内泛白，像鼓起来的软垫
                 .overlay(EdgeGlow(shape: shape, size: CGSize(width: Self.size.width, height: frontHeight), strength: scheme == .dark ? 0.28 : 0.25, spread: scheme == .dark ? 0.5 : 1))
                 .overlay(shape.stroke(style.edge, lineWidth: 1))
-        }
-        .overlay {
-            if isSelected { shape.stroke(style.text.opacity(0.6), lineWidth: 2.5).padding(1) }
-        }
-        // 阴影只投在一个简单轮廓上，不对整张卡离屏合成
-        .background {
-            shape.fill(style.front).padding(.horizontal, 8).padding(.top, 24)
-                .shadow(color: style.shadow, radius: hovering ? 12 : 8, y: hovering ? 8 : 5)
         }
     }
 
@@ -341,18 +397,17 @@ struct ProjectCard: View {
         }
     }
 
-    /// 固定格式：最近活跃 · 分支 · 未提交数。main / master 不显示，只在非默认分支时提示。
+    /// 固定格式：最近活跃 · 未提交数。
     private var meta: some View {
         let dirty = item.project.git?.dirtyFiles ?? 0
         var parts: [String] = []
         if let at = item.project.lastActivity { parts.append(Formatting.relative(at)) }
-        if let branch = item.project.git?.branch, !["main", "master"].contains(branch) { parts.append(branch) }
         if dirty > 0 { parts.append(String(localized: "\(dirty) 未提交")) }
         return Text(parts.joined(separator: " · "))
             .font(.system(size: 11.5 * labelBoost).monospacedDigit())
             .opacity(0.7)
             .lineLimit(1)
-            .truncationMode(.middle)
+            .truncationMode(.tail)
     }
 
     /// 左下角：运行中 / 等你回复；没有状态时写项目类型。
@@ -383,6 +438,35 @@ struct ProjectCard: View {
                 .help(icon.label)
         } else {
             Image(systemName: item.project.kind.symbol).font(.system(size: size * 0.8, weight: .semibold))
+        }
+    }
+}
+
+// MARK: - 开始创作按钮样式
+
+/// 黑色胶囊按钮：悬停时放大、提亮、投影加深，并显示手形指针；按下时缩一下。
+private struct ResumePillStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        Pill(configuration: configuration)
+    }
+
+    private struct Pill: View {
+        let configuration: Configuration
+        @State private var hovering = false
+
+        var body: some View {
+            configuration.label
+                .foregroundStyle(.white)
+                .padding(.horizontal, 14).padding(.vertical, 7)
+                .background(Capsule().fill(hovering ? Color(white: 0.2) : Color.black.opacity(0.9)))
+                .overlay(Capsule().strokeBorder(.white.opacity(hovering ? 0.22 : 0), lineWidth: 0.8))
+                .shadow(color: .black.opacity(hovering ? 0.38 : 0.25), radius: hovering ? 9 : 5, y: hovering ? 4 : 2)
+                .contentShape(Capsule())
+                .scaleEffect(configuration.isPressed ? 0.96 : hovering ? 1.06 : 1)
+                .animation(.spring(response: 0.22, dampingFraction: 0.7), value: hovering)
+                .animation(.spring(response: 0.16, dampingFraction: 0.75), value: configuration.isPressed)
+                .onHover { hovering = $0 }
+                .pointerStyle(.link)
         }
     }
 }

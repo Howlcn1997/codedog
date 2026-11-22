@@ -60,10 +60,12 @@ public struct Preferences: Codable, Sendable, Hashable {
     public var lastUpdateCheck: Date?
     /// 外观："system" 跟随系统、"light" 亮色、"dark" 暗色。
     public var appearance = "system"
+    /// 文件夹卡片前片的透明度（0–0.3）。0 为完全不透明。
+    public var folderTransparency: Double = 0
 
     public init() {}
 
-    enum CodingKeys: String, CodingKey { case editor, terminal, launcherShortcut, menuBarResident, checkForUpdates, lastUpdateCheck, appearance }
+    enum CodingKeys: String, CodingKey { case editor, terminal, launcherShortcut, menuBarResident, checkForUpdates, lastUpdateCheck, appearance, folderTransparency }
 
     // 新增字段对旧 library.json 缺省兼容
     public init(from decoder: Decoder) throws {
@@ -75,6 +77,7 @@ public struct Preferences: Codable, Sendable, Hashable {
         checkForUpdates = try c.decodeIfPresent(Bool.self, forKey: .checkForUpdates) ?? true
         lastUpdateCheck = try c.decodeIfPresent(Date.self, forKey: .lastUpdateCheck)
         appearance = try c.decodeIfPresent(String.self, forKey: .appearance) ?? "system"
+        folderTransparency = min(max(try c.decodeIfPresent(Double.self, forKey: .folderTransparency) ?? 0, 0), 0.3)
     }
 }
 

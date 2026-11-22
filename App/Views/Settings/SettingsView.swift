@@ -170,6 +170,7 @@ private struct GeneralSettingsPage: View {
                         AppearanceMode.apply(mode.rawValue)
                         model.setPreferences { $0.appearance = mode.rawValue }
                     }))
+                folderTransparencyRow
             }
 
             SettingsSection("语言") {
@@ -205,6 +206,25 @@ private struct GeneralSettingsPage: View {
     }
 
     /// 界面语言：选好后需要重启 App 才能生效，提供"立即重启"。
+    /// 文件夹透明度：0% 不透明；调高后能透过文件夹前片看到里面的文件。
+    private var folderTransparencyRow: some View {
+        let value = model.library.preferences.folderTransparency
+        return SettingsRow("文件夹透明度", subtitle: value == 0 ? "不透明" : "能透过文件夹看到里面的文件") {
+            Slider(value: Binding(
+                get: { value },
+                set: { v in
+                    let snapped = (v * 20).rounded() / 20   // 每档 5%
+                    model.setPreferences { $0.folderTransparency = snapped }
+                }), in: 0...0.3)
+                .frame(width: 140)
+                .controlSize(.small)
+            Text(verbatim: "\(Int((value * 100).rounded()))%")
+                .font(.callout.monospacedDigit())
+                .foregroundStyle(.secondary)
+                .frame(width: 38, alignment: .trailing)
+        }
+    }
+
     private var languageRow: some View {
         let _ = language // 选择变化时刷新
         let pending = AppLanguage.needsRelaunch
