@@ -340,24 +340,16 @@ private struct NextUpCard: View {
 
 // MARK: - 活动
 
-/// 热力图（可切换提交 / AI 来源）+ 最近提交。AI 会话已在"接着干"里，这里只列提交。
+/// 热力图（提交与 AI 回复合并）+ 最近提交。AI 会话已在"接着干"里，这里只列提交。
 private struct ActivitySection: View {
     var item: ProjectItem
-    @State private var source: Source = .all
     @State private var day: String?
     @State private var expanded = false
 
-    enum Source: String, CaseIterable { case all = "全部", commits = "提交", ai = "AI" }
-
     var body: some View {
-        let commitDays = item.commitDays, ai = item.aiDays
-        let days: [String: Int] = switch source {
-        case .all: commitDays.merging(ai, uniquingKeysWith: +)
-        case .commits: commitDays
-        case .ai: ai
-        }
-        let unit = source == .commits ? "次提交" : source == .ai ? "条 AI 回复" : "次活动"
-        let active = Set(commitDays.filter { $0.value > 0 }.keys).union(ai.filter { $0.value > 0 }.keys).count
+        let days = item.commitDays.merging(item.aiDays, uniquingKeysWith: +)
+        let unit = "次活动"
+        let active = days.filter { $0.value > 0 }.count
         let commits = (item.project.git?.recentCommits ?? []).filter { day == nil || HeatmapView.key($0.date) == day }
         let limit = 5
         VStack(alignment: .leading, spacing: 10) {
@@ -365,13 +357,6 @@ private struct ActivitySection: View {
                 Text("活动").font(.system(size: 13, weight: .semibold))
                 Text("近一年活跃 \(active) 天").font(.caption).foregroundStyle(.secondary)
                 Spacer()
-                Picker("来源", selection: $source) {
-                    ForEach(Source.allCases, id: \.self) { Text($0.rawValue).tag($0) }
-                }
-                .pickerStyle(.segmented)
-                .labelsHidden()
-                .fixedSize()
-                .controlSize(.small)
             }
             HeatmapView(days: days, unit: unit, selection: $day)
             if let day {
