@@ -46,11 +46,15 @@ mkdir -p release
 NAME="codedog-$VERSION-mac-universal"
 ditto -c -k --keepParent "$APP" "release/$NAME.zip"
 
-STAGE=$(mktemp -d)
-cp -R "$APP" "$STAGE/"
-ln -s /Applications "$STAGE/Applications"
-hdiutil create -quiet -volname "codedog $VERSION" -srcfolder "$STAGE" -ov -format UDZO "release/$NAME.dmg"
-rm -rf "$STAGE"
+# dmg 安装窗口（背景图、图标位置、隐藏工具栏）用 dmgbuild 直接写 .DS_Store，不依赖 Finder，CI 上也稳定
+DMGENV=build/dmgenv
+if [[ ! -x "$DMGENV/bin/dmgbuild" ]]; then
+  python3 -m venv "$DMGENV"
+  "$DMGENV/bin/pip" install --quiet --disable-pip-version-check dmgbuild==1.6.1
+fi
+"$DMGENV/bin/dmgbuild" -s scripts/dmg/settings.py -D app="$APP" -D background=scripts/dmg/background.tiff \
+  "codedog $VERSION" "release/$NAME.dmg" 2>&1 | grep -v "deprecated" || true
+[[ -f "release/$NAME.dmg" ]] || { echo "dmg 打包失败" >&2; exit 1; }
 
 (cd release && shasum -a 256 *.dmg *.zip > SHA256SUMS.txt)
 ls -lh release
