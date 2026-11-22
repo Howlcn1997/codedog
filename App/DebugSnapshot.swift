@@ -89,6 +89,7 @@ enum DebugSnapshot {
                         }
                     }
                 case "zoom": model.zoomCards(Int(arg) ?? 0)
+                case "bench": await ScrollBench.run(label: arg)
                 case "windows":
                     for w in NSApp.windows { print("[window]", String(describing: type(of: w)), w.isVisible, w.frame) }
                 case "quit":
@@ -121,6 +122,76 @@ enum DebugSnapshot {
         try? rep.representation(using: .png, properties: [:])?.write(to: URL(filePath: path))
     }
 }
+/// 调试：匀速滚动项目网格（下→上各一遍），统计主线程帧间隔，找滚动掉帧原因。
+@MainActor
+final class ScrollBench: NSObject {
+    static var current: ScrollBench?
+    var scroll: NSScrollView!
+    var start: CFTimeInterval = 0
+    var last: CFTimeInterval = 0
+    var intervals: [Double] = []
+    var link: CADisplayLink?
+    var done: CheckedContinuation<Void, Never>?
+    let speed: CGFloat = 1800 // pt/s
+    var busy: CFTimeInterval = 0
+    var wokeAt: CFTimeInterval = 0
+
+    static func run(label: String) async {
+        guard let window = NSApp.windows.first(where: { $0.isVisible && $0.title == "codedog" }),
+              let content = window.contentView,
+              let sv = allScrollViews(content).max(by: { ($0.documentView?.frame.height ?? 0) < ($1.documentView?.frame.height ?? 0) })
+        else { log("[bench] no scroll view, windows=\(NSApp.windows.map { "\($0.title):\($0.isVisible)" })"); return }
+        let b = ScrollBench()
+        b.scroll = sv
+        current = b
+        sv.contentView.scroll(to: .zero); sv.reflectScrolledClipView(sv.contentView)
+        try? await Task.sleep(for: .milliseconds(500))
+        // 主线程忙碌时间：runloop 醒来到再次休眠之间
+        let obs = CFRunLoopObserverCreateWithHandler(nil, CFRunLoopActivity.afterWaiting.rawValue | CFRunLoopActivity.beforeWaiting.rawValue, true, 0) { _, act in
+            let now = CACurrentMediaTime()
+            if act == .afterWaiting { b.wokeAt = now } else if b.wokeAt > 0, b.start > 0 { b.busy += now - b.wokeAt }
+        }
+        CFRunLoopAddObserver(CFRunLoopGetMain(), obs, .commonModes)
+        defer { CFRunLoopRemoveObserver(CFRunLoopGetMain(), obs, .commonModes) }
+        await withCheckedContinuation { c in
+            b.done = c
+            b.link = sv.displayLink(target: b, selector: #selector(tick(_:)))
+            b.link?.add(to: .main, forMode: .common)
+        }
+        let s = b.intervals.sorted()
+        let total = b.intervals.reduce(0, +)
+        let refresh = 1.0 / Double(NSScreen.main?.maximumFramesPerSecond ?? 60)
+        let slow = b.intervals.filter { $0 > refresh * 1.5 }.count
+        log(String(format: "[bench] %-14@ busy/frame=%5.2fms fps=%5.1f median=%5.1fms p95=%5.1fms max=%5.1fms slowFrames=%d/%d",
+                   label as NSString, b.busy / Double(s.count) * 1000, Double(s.count) / total, s[s.count / 2] * 1000, s[s.count * 95 / 100] * 1000, s.last! * 1000, slow, s.count))
+        current = nil
+    }
+
+    static func log(_ line: String) {
+        let url = URL(filePath: "/tmp/codedog-bench.log")
+        let data = Data((line + "\n").utf8)
+        if let h = try? FileHandle(forWritingTo: url) { h.seekToEndOfFile(); h.write(data); try? h.close() } else { try? data.write(to: url) }
+    }
+
+    static func allScrollViews(_ v: NSView) -> [NSScrollView] {
+        (v as? NSScrollView).map { [$0] } ?? [] + v.subviews.flatMap(allScrollViews)
+    }
+
+    @objc func tick(_ link: CADisplayLink) {
+        let now = CACurrentMediaTime()
+        if start == 0 { start = now; last = now; return }
+        intervals.append(now - last); last = now
+        let maxY = max(0, (scroll.documentView?.frame.height ?? 0) - scroll.contentView.bounds.height)
+        let travel = CGFloat(now - start) * speed
+        guard travel < maxY * 2, maxY > 0 else {
+            link.invalidate(); done?.resume(); done = nil; return
+        }
+        let y = travel < maxY ? travel : maxY * 2 - travel
+        scroll.contentView.scroll(to: NSPoint(x: 0, y: y))
+        scroll.reflectScrolledClipView(scroll.contentView)
+    }
+}
+
 /// 调试：卡片三种状态（静止 / 悬停 / 打开）。
 struct CardStates: View {
     var items: [ProjectItem]
