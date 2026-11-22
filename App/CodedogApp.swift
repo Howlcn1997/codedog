@@ -12,7 +12,8 @@ struct CodedogApp: App {
                 .environment(model)
                 .frame(minWidth: 960, minHeight: 620)
         }
-        .defaultSize(width: 1240, height: 820)
+        // 第一次打开用允许的最小尺寸；用户调整过的大小由 SwiftUI 自动记住（UserDefaults 里的 "NSWindow Frame main"），下次沿用
+        .defaultSize(width: 960, height: 620)
         .windowToolbarStyle(.unified(showsTitle: false))
         .commands {
             CommandGroup(after: .appInfo) {
