@@ -82,7 +82,7 @@ private struct OpenSettings: View {
         if let current, !list.contains(current) { list.append(current) }
         return LabeledContent(title) {
             HStack {
-                Picker(title, selection: Binding(get: { current }, set: set)) {
+                Picker(title, selection: Binding(get: { current }, set: { set($0) })) {
                     Text("自动（\(fallback)）").tag(AppRef?.none)
                     Divider()
                     ForEach(list, id: \.self) { app in
@@ -115,7 +115,7 @@ private struct GeneralSettings: View {
                 Text("关闭主窗口后 codedog 继续在菜单栏运行，随时用快捷键呼出启动器；Dock 图标会一起隐藏。")
                     .font(.caption).foregroundStyle(.secondary)
 
-                Toggle("登录时启动", isOn: Binding(get: { loginEnabled }, set: setLogin))
+                Toggle("登录时启动", isOn: Binding(get: { loginEnabled }, set: { setLogin($0) }))
                 if loginNeedsApproval {
                     HStack {
                         Text("需要在系统设置里允许 codedog 登录时启动。").font(.caption).foregroundStyle(.orange)
