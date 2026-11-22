@@ -487,17 +487,19 @@ private struct AboutSection: View {
                 if let wts = git?.worktrees, !wts.isEmpty {
                     worktrees(wts)
                 }
-            }
-            // 能点的入口收成底部一排：仓库、README、编辑器
-            VStack(alignment: .leading, spacing: 12) {
-                Divider()
-                FlowLayout(spacing: 6) {
-                    if let git { repo(git) }
-                    readme
-                    editorPicker
+                // 能点的入口收成底部一排：仓库、README、编辑器
+                VStack(alignment: .leading, spacing: 12) {
+                    Rectangle().fill(Color.primary.opacity(0.1)).frame(height: 1)
+                    FlowLayout(spacing: 6) {
+                        if let git { repo(git) }
+                        readme
+                        editorPicker
+                    }
                 }
+                .padding(.top, -4)
             }
-            .padding(.top, 4)
+            .padding(14)
+            .background(groupFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
         .fileImporter(isPresented: $pickingApp, allowedContentTypes: [.application]) { r in
             if case .success(let url) = r, let ref = Opener.appRef(at: url) { model.setEditor(item.id, ref) }
@@ -533,18 +535,22 @@ private struct AboutSection: View {
         }
     }
 
-    /// 仓库：托管平台图标 + 名称，点击跳转，完整地址放在悬停提示里；没有网页地址时点击复制 remote。
+    /// 仓库：托管平台图标 + 仓库路径（owner/repo），点击跳转，完整地址放在悬停提示里；没有网页地址时点击复制 remote。
     @ViewBuilder
     private func repo(_ git: GitInfo) -> some View {
         if let url = git.webURL {
-            let github = (url.host()?.lowercased() ?? "").contains("github")
-            // 品牌色：GitHub 跟随文字色，GitLab 橙
-            let brand: Color = github ? .primary : Color(hex: 0xFC6D26)
+            let host = url.host()?.lowercased() ?? ""
+            // 平台图标：GitHub 跟随文字色、GitLab 橙，其他托管用 Git 图标
+            let (icon, brand): (String, Color) = host.contains("github") ? ("Repo/github", .primary)
+                : host.contains("gitlab") ? ("Repo/gitlab", Color(hex: 0xFC6D26))
+                : ("Repo/git", Color(hex: 0xF05032))
+            let path = url.path(percentEncoded: false).trimmingCharacters(in: CharacterSet(charactersIn: "/"))
             Button { NSWorkspace.shared.open(url) } label: {
                 HStack(spacing: 6) {
-                    Image(github ? "Repo/github" : "Repo/gitlab").resizable().renderingMode(.template)
+                    Image(icon).resizable().renderingMode(.template)
                         .frame(width: 14, height: 14).foregroundStyle(brand)
-                    Text(verbatim: github ? "GitHub" : "GitLab")
+                    Text(verbatim: path.isEmpty ? host : path)
+                        .lineLimit(1).truncationMode(.middle)
                 }
             }
             .buttonStyle(PillStyle())
