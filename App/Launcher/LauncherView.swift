@@ -44,8 +44,11 @@ struct LauncherView: View {
             searchField
             Divider().opacity(0.4)
             if rows.isEmpty {
-                ContentUnavailableView(state.query.isEmpty ? "还没有项目" : "没有匹配的项目", systemImage: "magnifyingglass")
-                    .frame(maxHeight: .infinity)
+                if state.query.isEmpty {
+                    EmptyStateView("还没有项目", symbol: "tray", message: "在主窗口里添加放代码的文件夹。", compact: true)
+                } else {
+                    EmptyStateView("没有找到“\(state.query)”", symbol: "magnifyingglass", message: "可以搜项目名、README 里的内容或依赖名。", compact: true)
+                }
             } else {
                 list(rows)
             }

@@ -379,7 +379,7 @@ private struct ActivitySection: View {
                 .padding(.top, 2)
                 .help("当前检出的分支（HEAD）上的提交记录")
                 if commits.isEmpty {
-                    Text(day == nil ? "还没有提交" : "最近的提交里没有这一天的")
+                    Label(day == nil ? "还没有提交" : "最近的提交里没有这一天的", systemImage: day == nil ? "tray" : "calendar.badge.exclamationmark")
                         .font(.callout).foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(12)
