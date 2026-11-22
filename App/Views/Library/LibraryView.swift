@@ -9,8 +9,16 @@ struct LibraryView: View {
     var body: some View {
         let visible = model.visible
         Group {
-            if model.library.scanRoots.isEmpty && model.library.pinnedPaths.isEmpty {
-                NoRootsView()
+            if !model.isLoaded {
+                // 设置还没读完：先只显示背景，免得闪一下首次启动的引导页
+                Color.clear
+            } else if showNoRoots {
+                // 放进 ScrollView：详情区没有滚动视图时，系统会把侧栏列表当成窗口的主滚动视图，
+                // 给它套上工具栏的顶部偏移，侧栏内容就被推到标题栏下面、底部按钮也看不到了。
+                ScrollView {
+                    NoRootsView().containerRelativeFrame(.vertical)
+                }
+                .scrollBounceBehavior(.basedOnSize)
             } else {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 18) {
@@ -38,6 +46,13 @@ struct LibraryView: View {
         .background { BackdropView() }
     }
 
+    private var showNoRoots: Bool {
+        #if DEBUG
+        if model.debugNoRoots { return true }
+        #endif
+        return model.library.scanRoots.isEmpty && model.library.pinnedPaths.isEmpty
+    }
+
     private func header(count: Int) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 10) {
             Text(model.title)
@@ -51,7 +66,7 @@ struct LibraryView: View {
     }
 
     private func subtitle(_ count: Int) -> String {
-        var parts = ["\(count) 个项目"]
+        var parts = [String(localized: "\(count) 个项目")]
         if model.timeRange != .all { parts.append(model.timeRange.title) }
         if let p = model.pulse { parts.append(p.title) }
         return parts.joined(separator: " · ")
@@ -106,6 +121,8 @@ struct NoRootsView: View {
                 feature("arrow.triangle.2.circlepath", "实时更新", "文件变化时自动刷新状态")
                 feature("lock.shield", "只读", "不会移动或修改任何文件")
             }
+            // 卡片等高但只按内容的高度，否则会被拉满整个窗口
+            .fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: 620)
         }
         .padding(.horizontal, 40)
@@ -119,7 +136,7 @@ struct NoRootsView: View {
     }
 
     /// 和"今日脉搏"同款的玻璃小卡片
-    private func feature(_ symbol: String, _ title: String, _ detail: String) -> some View {
+    private func feature(_ symbol: String, _ title: LocalizedStringKey, _ detail: LocalizedStringKey) -> some View {
         HStack(alignment: .top, spacing: 10) {
             Image(systemName: symbol)
                 .font(.system(size: 13, weight: .semibold))
@@ -172,7 +189,7 @@ struct LibraryEmptyState: View {
     }
 
     /// 侧栏分组本身为空时的文案（只在不限时间时才说"一个都没有"，否则交给时间范围提示）
-    private var selectionEmpty: (title: String, symbol: String, message: String, tint: Color)? {
+    private var selectionEmpty: (title: LocalizedStringKey, symbol: String, message: LocalizedStringKey, tint: Color)? {
         let ranged = model.timeRange != .all
         switch model.selection {
         case .smart(.favorites):
@@ -205,7 +222,7 @@ extension Pulse {
         }
     }
 
-    var emptyMessage: String {
+    var emptyMessage: LocalizedStringKey {
         switch self {
         case .running: "现在没有 AI 助手在工作。"
         case .waiting: "没有 AI 助手在等你回复。"
@@ -250,7 +267,7 @@ struct PulseStrip: View {
                 .buttonStyle(.plain)
                 .glassEffect(on ? .regular.tint(color(p).opacity(0.25)) : .regular, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                 .opacity(n == 0 && !on ? 0.6 : 1)
-                .help(on ? "取消筛选" : "只看\(p.title)的项目")
+                .help(on ? Text("取消筛选") : Text("只看\(p.title)的项目"))
             }
         }
     }
@@ -276,7 +293,7 @@ struct CleanupBanner: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text("共占用 \(Formatting.bytes(total))，其中 \(Formatting.bytes(reclaimable)) 是依赖与构建缓存")
                     .font(.system(size: 14, weight: .semibold))
-                Text(model.isMeasuring ? "正在统计…" : "这里只列出 500 MB 以上的项目，按占用从大到小排列。")
+                (model.isMeasuring ? Text("正在统计…") : Text("这里只列出 500 MB 以上的项目，按占用从大到小排列。"))
                     .font(.caption).foregroundStyle(.secondary)
             }
             Spacer()

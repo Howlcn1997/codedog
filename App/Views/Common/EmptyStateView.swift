@@ -4,15 +4,15 @@ import SwiftUI
 /// 主窗口、列表、启动器共用，替代系统默认的 ContentUnavailableView。
 struct EmptyStateView<Actions: View>: View {
     var symbol: String
-    var title: String
-    var message: String?
+    var title: LocalizedStringKey
+    var message: LocalizedStringKey?
     var tint: Color = .brand
     var compact = false
     /// 图标轻微呼吸，用于"正在扫描"这类进行中的状态
     var animating = false
     @ViewBuilder var actions: () -> Actions
 
-    init(_ title: String, symbol: String, message: String? = nil, tint: Color = .brand,
+    init(_ title: LocalizedStringKey, symbol: String, message: LocalizedStringKey? = nil, tint: Color = .brand,
          compact: Bool = false, animating: Bool = false, @ViewBuilder actions: @escaping () -> Actions = { EmptyView() }) {
         self.title = title
         self.symbol = symbol

@@ -58,12 +58,12 @@ public enum ProjectKind: String, Codable, Sendable, CaseIterable, Hashable {
 
     public var displayName: String {
         switch self {
-        case .web: "网页"
+        case .web: String(localized: "网页")
         case .app: "App"
-        case .service: "后端服务"
-        case .tool: "工具脚本"
-        case .library: "库"
-        case .other: "其他"
+        case .service: String(localized: "后端服务")
+        case .tool: String(localized: "工具脚本")
+        case .library: String(localized: "库")
+        case .other: String(localized: "其他")
         }
     }
 }

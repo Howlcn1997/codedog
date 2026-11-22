@@ -9,7 +9,7 @@ struct SidebarView: View {
     var body: some View {
         @Bindable var model = model
         List(selection: $model.selection) {
-            row(.all, "全部项目", "square.grid.2x2")
+            row(.all, String(localized: "全部项目"), "square.grid.2x2")
 
             Section("快速筛选") {
                 ForEach(SmartFolder.allCases, id: \.self) { f in

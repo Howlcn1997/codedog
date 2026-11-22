@@ -34,7 +34,7 @@ struct ProjectDetailView: View {
     }
 }
 
-private func sectionTitle(_ title: String, _ symbol: String) -> some View {
+private func sectionTitle(_ title: LocalizedStringKey, _ symbol: String) -> some View {
     Label(title, systemImage: symbol)
         .font(.system(size: 13, weight: .semibold))
         .foregroundStyle(.secondary)
@@ -93,7 +93,7 @@ private struct PanelHeader: View {
         }
     }
 
-    private func pill(_ text: String, _ color: Color) -> some View {
+    private func pill(_ text: LocalizedStringKey, _ color: Color) -> some View {
         HStack(spacing: 4) {
             Circle().fill(color).frame(width: 6, height: 6)
             Text(text)
@@ -142,12 +142,12 @@ private struct PanelHeader: View {
 
     private var divider: some View { Text("|").foregroundStyle(.quaternary) }
 
-    private func stat(_ value: String, _ label: String) -> some View {
-        (Text(value).fontWeight(.semibold).foregroundStyle(.primary) + Text(" \(label)").foregroundStyle(.secondary))
+    private func stat(_ value: String, _ label: LocalizedStringKey) -> some View {
+        (Text(value).fontWeight(.semibold).foregroundStyle(.primary) + Text(verbatim: " ") + Text(label).foregroundStyle(.secondary))
             .monospacedDigit()
     }
 
-    private func linkStat(_ value: String, _ label: String) -> some View {
+    private func linkStat(_ value: String, _ label: LocalizedStringKey) -> some View {
         HStack(spacing: 2) {
             stat(value, label)
             Image(systemName: "chevron.down").font(.system(size: 8, weight: .bold)).foregroundStyle(.secondary)
@@ -180,7 +180,7 @@ private struct NextUpCard: View {
         return row {
             ToolIcon(tool: tool, size: 20)
         } title: {
-            Text(Formatting.plain(session.title ?? session.lastPrompt ?? "未命名会话"))
+            Text(Formatting.plain(session.title ?? session.lastPrompt ?? String(localized: "未命名会话")))
         } subtitle: {
             HStack(spacing: 4) {
                 Text(tool.displayName)
@@ -225,7 +225,7 @@ private struct NextUpCard: View {
         let editor = model.editor(for: item)
         return HStack(spacing: 6) {
             let open = Button { model.open(item) } label: {
-                Label { Text(editor.map { hasSessionRow ? $0.name : "用 \($0.name) 打开" } ?? "打开") } icon: {
+                Label { Text(editor.map { hasSessionRow ? $0.name : String(localized: "用 \($0.name) 打开") } ?? String(localized: "打开")) } icon: {
                     if let editor { AppIconView(app: editor, size: 15) }
                 }
             }
@@ -264,7 +264,7 @@ private struct NextUpCard: View {
         }
     }
 
-    private func iconButton(_ symbol: String, _ help: String, action: @escaping () -> Void) -> some View {
+    private func iconButton(_ symbol: String, _ help: LocalizedStringKey, action: @escaping () -> Void) -> some View {
         Button(action: action) { Image(systemName: symbol) }
             .buttonStyle(.glass)
             .help(help)
@@ -283,7 +283,6 @@ private struct ActivitySection: View {
 
     var body: some View {
         let days = item.commitDays.merging(item.aiDays, uniquingKeysWith: +)
-        let unit = "次活动"
         let active = days.filter { $0.value > 0 }.count
         let commits = (item.project.git?.recentCommits ?? []).filter { day == nil || HeatmapView.key($0.date) == day }
         let limit = 5
@@ -295,11 +294,11 @@ private struct ActivitySection: View {
                 Text("近一年活跃 \(active) 天").font(.caption).foregroundStyle(.secondary)
                 Spacer()
             }
-            HeatmapView(days: days, unit: unit, selection: $day)
+            HeatmapView(days: days, selection: $day)
             if let day {
                 HStack(spacing: 6) {
                     Text(dayLabel(day)).fontWeight(.semibold)
-                    Text("\(days[day] ?? 0) \(unit)").foregroundStyle(.secondary)
+                    Text("\(days[day] ?? 0) 次活动").foregroundStyle(.secondary)
                     Spacer()
                     Button("显示全部") { withAnimation(.snappy) { self.day = nil } }.buttonStyle(.borderless)
                 }
@@ -440,7 +439,7 @@ private struct ActivitySection: View {
             .frame(maxHeight: .infinity)
             HStack(spacing: 10) {
                 Text(c.subject).lineLimit(1).foregroundStyle(c.mine ? .primary : .secondary)
-                    .help(c.mine ? c.subject : "\(c.subject)（其他人的提交）")
+                    .help(c.mine ? c.subject : String(localized: "\(c.subject)（其他人的提交）"))
                     .textSelection(.enabled)
                 Spacer(minLength: 6)
                 Text(Formatting.relative(c.date)).font(.caption).foregroundStyle(.secondary).monospacedDigit()
@@ -454,9 +453,8 @@ private struct ActivitySection: View {
 
     private func dayLabel(_ key: String) -> String {
         let p = key.split(separator: "-").compactMap { Int($0) }
-        guard p.count == 3 else { return key }
-        let thisYear = Calendar.current.component(.year, from: .now)
-        return p[0] == thisYear ? "\(p[1])月\(p[2])日" : "\(p[0])年\(p[1])月\(p[2])日"
+        guard p.count == 3, let date = Calendar.current.date(from: DateComponents(year: p[0], month: p[1], day: p[2])) else { return key }
+        return Formatting.day(date, withYear: p[0] != Calendar.current.component(.year, from: .now))
     }
 }
 
@@ -513,7 +511,7 @@ private struct AboutSection: View {
         return rows
     }
 
-    private func prop<V: View>(_ label: String, @ViewBuilder _ value: () -> V) -> some View {
+    private func prop<V: View>(_ label: LocalizedStringKey, @ViewBuilder _ value: () -> V) -> some View {
         HStack(alignment: .top, spacing: 12) {
             Text(label).font(.caption).foregroundStyle(.secondary).frame(width: 56, alignment: .leading)
                 .padding(.top, 2)
@@ -570,7 +568,7 @@ private struct AboutSection: View {
     private var editorPicker: some View {
         HStack(spacing: 6) {
             Picker("编辑器", selection: Binding(get: { item.meta.editor }, set: { model.setEditor(item.id, $0) })) {
-                Text("跟随全局（\(model.library.preferences.editor?.name ?? Opener.installedEditors.first?.name ?? "未设置")）").tag(AppRef?.none)
+                Text("跟随全局（\(model.library.preferences.editor?.name ?? Opener.installedEditors.first?.name ?? String(localized: "未设置"))）").tag(AppRef?.none)
                 Divider()
                 ForEach(editorChoices, id: \.self) { app in
                     Label { Text(app.name) } icon: { Image(nsImage: AppIconView.icon(app)) }.tag(AppRef?.some(app))
@@ -597,7 +595,7 @@ private struct LanguageBar: View {
         guard total > 0 else { return [] }
         let top = languages.prefix(5).map { (name: $0.name, fraction: Double($0.bytes) / total, color: Color(hex: $0.color)) }
         let rest = languages.dropFirst(5).reduce(0) { $0 + $1.bytes }
-        return rest > 0 ? top + [(name: "其他", fraction: Double(rest) / total, color: Color.secondary.opacity(0.5))] : top
+        return rest > 0 ? top + [(name: String(localized: "其他"), fraction: Double(rest) / total, color: Color.secondary.opacity(0.5))] : top
     }
 
     var body: some View {
@@ -694,7 +692,7 @@ private struct PanelFooter: View {
                 .buttonStyle(.borderless)
             Spacer()
             if let created = item.project.createdAt {
-                Text("创建于 \(created.formatted(.dateTime.year().month()))").foregroundStyle(.secondary)
+                Text("创建于 \(created.formatted(.dateTime.year().month().locale(AppLanguage.locale)))").foregroundStyle(.secondary)
             }
         }
         .font(.caption)
@@ -726,10 +724,10 @@ private struct ModelUsageDetail: View {
                         VStack(alignment: .leading, spacing: 5) {
                             UsageBar(name: Pricing.displayName(r.model), cost: r.cost, tokens: r.usage.total, fraction: Double(r.usage.total) / Double(max(total, 1)))
                             Text([
-                                "输入 \(Formatting.tokens(r.usage.input))",
-                                "输出 \(Formatting.tokens(r.usage.output))",
-                                r.usage.cacheRead > 0 ? "缓存读 \(Formatting.tokens(r.usage.cacheRead))" : "",
-                                r.usage.cacheWrite5m + r.usage.cacheWrite1h > 0 ? "缓存写 \(Formatting.tokens(r.usage.cacheWrite5m + r.usage.cacheWrite1h))" : "",
+                                String(localized: "输入 \(Formatting.tokens(r.usage.input))"),
+                                String(localized: "输出 \(Formatting.tokens(r.usage.output))"),
+                                r.usage.cacheRead > 0 ? String(localized: "缓存读 \(Formatting.tokens(r.usage.cacheRead))") : "",
+                                r.usage.cacheWrite5m + r.usage.cacheWrite1h > 0 ? String(localized: "缓存写 \(Formatting.tokens(r.usage.cacheWrite5m + r.usage.cacheWrite1h))") : "",
                             ])
                             .font(.caption).foregroundStyle(.secondary).monospacedDigit()
                         }

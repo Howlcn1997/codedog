@@ -39,6 +39,13 @@ final class LibraryModel {
     }
     /// 正在查看详情的项目
     var detailID: String?
+    /// 设置已从磁盘读入（含首次启动的自动配置）。之前 `library` 只是默认值，不能据此判断"没有扫描目录"。
+    private(set) var isLoaded = false
+    #if DEBUG
+    /// 调试：主窗口按"没有扫描目录"显示引导页，只影响界面，不改设置文件。
+    /// 启动时设 CODEDOG_DEBUG_NOROOTS=1，或在 CODEDOG_SNAPSHOT_ACTIONS 里用 noroots / noroots:off。
+    var debugNoRoots = ProcessInfo.processInfo.environment["CODEDOG_DEBUG_NOROOTS"] == "1"
+    #endif
 
     @ObservationIgnored private let store = LibraryStore()
     @ObservationIgnored private var watcher: FSEventsWatcher?
@@ -93,9 +100,9 @@ final class LibraryModel {
 
     var title: String {
         switch selection ?? .all {
-        case .all: "全部项目"
+        case .all: String(localized: "全部项目")
         case .smart(let f): f.title
-        case .category(let id): library.categories.first { $0.id == id }?.name ?? "分类"
+        case .category(let id): library.categories.first { $0.id == id }?.name ?? String(localized: "分类")
         case .kind(let k): k.displayName
         case .tool(let t): t.displayName
         }
@@ -127,7 +134,7 @@ final class LibraryModel {
         let clamped = (min(max(next, Self.cardScaleRange.lowerBound), Self.cardScaleRange.upperBound) * 10).rounded() / 10
         guard clamped != cardScale || step == 0 else { return }
         withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) { cardScale = clamped }
-        toast = "卡片大小 \(Int((clamped * 100).rounded()))%"
+        toast = String(localized: "卡片大小 \(Int((clamped * 100).rounded()))%")
     }
 
     // MARK: 启动
@@ -143,6 +150,7 @@ final class LibraryModel {
         if !library.migratedLegacy && library.scanRoots.isEmpty {
             await firstRunSetup()
         }
+        isLoaded = true
         startWatching()
         startAIWatching()
         await rescan()
@@ -173,9 +181,9 @@ final class LibraryModel {
         await measureSizes(only: projects)
         let freed = ByteCountFormatter.string(fromByteCount: result.freed, countStyle: .file)
         if result.failures.isEmpty {
-            toast = "已移到废纸篓，释放 \(freed)"
+            toast = String(localized: "已移到废纸篓，释放 \(freed)")
         } else {
-            errorMessage = "释放了 \(freed)，但有 \(result.failures.count) 个目录没有清理：\n" + result.failures.prefix(5).map { "· \($0.1)" }.joined(separator: "\n")
+            errorMessage = String(localized: "释放了 \(freed)，但有 \(result.failures.count) 个目录没有清理：\n") + result.failures.prefix(5).map { "· \($0.1)" }.joined(separator: "\n")
         }
     }
 
@@ -194,9 +202,9 @@ final class LibraryModel {
         setPreferences { $0.lastUpdateCheck = .now }
         if let release, UpdateChecker.isNewer(release.version, than: Codedog.version) {
             availableUpdate = release
-            if manual { toast = "发现新版本 \(release.version)" }
+            if manual { toast = String(localized: "发现新版本 \(release.version)") }
         } else if manual {
-            toast = release == nil ? "暂时无法连接 GitHub，请稍后再试" : "已经是最新版本（\(Codedog.version)）"
+            toast = release == nil ? String(localized: "暂时无法连接 GitHub，请稍后再试") : String(localized: "已经是最新版本（\(Codedog.version)）")
         }
     }
 
@@ -213,7 +221,7 @@ final class LibraryModel {
                 saveCache()
             }
             withAnimation { detailID = path }
-            toast = "已创建 \(name)"
+            toast = String(localized: "已创建 \(name)")
             return true
         } catch {
             errorMessage = error.localizedDescription
@@ -266,9 +274,9 @@ final class LibraryModel {
                 if lib.scanRoots.isEmpty { lib.scanRoots = suggested }
                 lib.migratedLegacy = true
             }
-            if legacy != nil { toast = "已从旧版 codedog 导入收藏、分类和备注" }
+            if legacy != nil { toast = String(localized: "已从旧版 codedog 导入收藏、分类和备注") }
         } catch {
-            errorMessage = "保存设置失败：\(error.localizedDescription)"
+            errorMessage = String(localized: "保存设置失败：\(error.localizedDescription)")
         }
     }
 
@@ -348,7 +356,7 @@ final class LibraryModel {
         guard next != library else { return }
         library = next
         Task {
-            do { library = try await store.mutate(body) } catch { errorMessage = "保存失败：\(error.localizedDescription)" }
+            do { library = try await store.mutate(body) } catch { errorMessage = String(localized: "保存失败：\(error.localizedDescription)") }
         }
     }
 
@@ -474,6 +482,6 @@ final class LibraryModel {
     func copyPath(_ item: ProjectItem) {
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(item.id, forType: .string)
-        toast = "已复制路径"
+        toast = String(localized: "已复制路径")
     }
 }

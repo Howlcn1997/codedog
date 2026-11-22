@@ -77,15 +77,15 @@ public enum ProjectSearch {
 
     private static func fields(_ d: SearchDocument) -> [Field] {
         [
-            Field(label: "名称", rank: 0, values: [d.name], fuzzy: true),
-            Field(label: "分类", rank: 0, values: d.categories),
-            Field(label: "描述", rank: 1, values: [d.description].compactMap { $0 }),
-            Field(label: "备注", rank: 1, values: [d.notes].compactMap { $0 }),
-            Field(label: "路径", rank: 1, values: [d.path]),
-            Field(label: "远程地址", rank: 1, values: [d.remote].compactMap { $0 }),
-            Field(label: "技术栈", rank: 1, values: d.stacks),
-            Field(label: "类型", rank: 1, values: [d.kind].compactMap { $0 }),
-            Field(label: "依赖", rank: 2, values: d.dependencies),
+            Field(label: String(localized: "名称"), rank: 0, values: [d.name], fuzzy: true),
+            Field(label: String(localized: "分类"), rank: 0, values: d.categories),
+            Field(label: String(localized: "描述"), rank: 1, values: [d.description].compactMap { $0 }),
+            Field(label: String(localized: "备注"), rank: 1, values: [d.notes].compactMap { $0 }),
+            Field(label: String(localized: "路径"), rank: 1, values: [d.path]),
+            Field(label: String(localized: "远程地址"), rank: 1, values: [d.remote].compactMap { $0 }),
+            Field(label: String(localized: "技术栈"), rank: 1, values: d.stacks),
+            Field(label: String(localized: "类型"), rank: 1, values: [d.kind].compactMap { $0 }),
+            Field(label: String(localized: "依赖"), rank: 2, values: d.dependencies),
             Field(label: "README", rank: 2, values: [d.readme].compactMap { $0 }, isReadme: true),
         ].map { var f = $0; f.values = f.values.filter { !$0.isEmpty }; return f }
     }
@@ -104,9 +104,9 @@ public enum ProjectSearch {
 
         let matched = fields.filter { f in terms.contains { f.hits($0) } }
         let reasons = matched.prefix(2).map { f -> String in
-            if f.isReadme { return "README：" + readmeSnippet(f.values[0], terms: terms) }
+            if f.isReadme { return String(localized: "README：\(readmeSnippet(f.values[0], terms: terms))") }
             let value = f.values.first { v in terms.contains { normalize(v).contains($0) || (f.fuzzy && fuzzy(v, $0)) } } ?? f.values[0]
-            return "\(f.label)：\(value)"
+            return String(localized: "\(f.label)：\(value)")
         }
         return SearchMatch(rank: worst, reasons: reasons)
     }

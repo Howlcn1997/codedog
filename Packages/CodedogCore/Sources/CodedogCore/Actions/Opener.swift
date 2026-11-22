@@ -9,10 +9,10 @@ public enum OpenError: LocalizedError, Sendable {
 
     public var errorDescription: String? {
         switch self {
-        case .appNotInstalled(let name): "没有找到 \(name)，它可能已被卸载。"
-        case .noEditor: "还没有可用的编辑器，请在设置里选择一个。"
-        case .noRepository: "这个项目没有远程仓库地址。"
-        case .missingPath(let p): "项目目录不存在：\(p)"
+        case .appNotInstalled(let name): String(localized: "没有找到 \(name)，它可能已被卸载。")
+        case .noEditor: String(localized: "还没有可用的编辑器，请在设置里选择一个。")
+        case .noRepository: String(localized: "这个项目没有远程仓库地址。")
+        case .missingPath(let p): String(localized: "项目目录不存在：\(p)")
         }
     }
 }

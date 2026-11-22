@@ -86,7 +86,7 @@ struct StatusPill: View {
         }
     }
 
-    private func pill(_ text: String, _ color: Color, pulse: Bool = false) -> some View {
+    private func pill(_ text: LocalizedStringKey, _ color: Color, pulse: Bool = false) -> some View {
         HStack(spacing: 4) {
             Circle().fill(color).frame(width: 6, height: 6)
                 .symbolEffect(.pulse, isActive: pulse)

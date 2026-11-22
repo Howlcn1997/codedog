@@ -6,12 +6,12 @@ enum SmartFolder: String, CaseIterable, Hashable, Codable {
 
     var title: String {
         switch self {
-        case .favorites: "收藏"
-        case .waiting: "等你回复"
-        case .recent: "最近打开"
-        case .dirty: "未提交"
-        case .large: "占空间"
-        case .hidden: "已隐藏"
+        case .favorites: String(localized: "收藏")
+        case .waiting: String(localized: "等你回复")
+        case .recent: String(localized: "最近打开")
+        case .dirty: String(localized: "未提交")
+        case .large: String(localized: "占空间")
+        case .hidden: String(localized: "已隐藏")
         }
     }
 
@@ -57,21 +57,21 @@ enum TimeRange: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .week: "近一周"
-        case .month: "近1月"
-        case .quarter: "近3月"
-        case .halfYear: "近半年"
-        case .all: "全部"
+        case .week: String(localized: "近一周")
+        case .month: String(localized: "近1月")
+        case .quarter: String(localized: "近3月")
+        case .halfYear: String(localized: "近半年")
+        case .all: String(localized: "全部")
         }
     }
 
     var menuTitle: String {
         switch self {
-        case .week: "7 天内活跃"
-        case .month: "30 天内活跃"
-        case .quarter: "3 个月内活跃"
-        case .halfYear: "半年内活跃"
-        case .all: "不限时间"
+        case .week: String(localized: "7 天内活跃")
+        case .month: String(localized: "30 天内活跃")
+        case .quarter: String(localized: "3 个月内活跃")
+        case .halfYear: String(localized: "半年内活跃")
+        case .all: String(localized: "不限时间")
         }
     }
 
@@ -94,11 +94,11 @@ enum SortOrder: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .activity: "最近活动"
-        case .frecency: "最常打开"
-        case .name: "名称"
-        case .created: "创建时间"
-        case .size: "占用空间"
+        case .activity: String(localized: "最近活动")
+        case .frecency: String(localized: "最常打开")
+        case .name: String(localized: "名称")
+        case .created: String(localized: "创建时间")
+        case .size: String(localized: "占用空间")
         }
     }
 
@@ -130,10 +130,10 @@ enum Pulse: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .running: "运行中"
-        case .waiting: "等你回复"
-        case .dirty: "未提交"
-        case .activeWeek: "本周活跃"
+        case .running: String(localized: "运行中")
+        case .waiting: String(localized: "等你回复")
+        case .dirty: String(localized: "未提交")
+        case .activeWeek: String(localized: "本周活跃")
         }
     }
 

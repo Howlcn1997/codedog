@@ -6,7 +6,6 @@ import SwiftUI
 struct HeatmapView: View {
     /// yyyy-MM-dd → 次数
     var days: [String: Int]
-    var unit: String
     var selection: Binding<String?>? = nil
     var weeks = 53
 
@@ -46,7 +45,7 @@ struct HeatmapView: View {
                     lastMonth = month
                     // 相邻月份标签太近会重叠：保留后一个
                     if let last = months.last, w - last.0 < 3 { months.removeLast() }
-                    if w < weeks - 2 { months.append((w, "\(month)月")) }
+                    if w < weeks - 2 { months.append((w, date.formatted(.dateTime.month(.abbreviated).locale(AppLanguage.locale)))) }
                 }
             }
             columns.append(col)
@@ -122,7 +121,7 @@ struct HeatmapView: View {
                 }
             }
             .opacity(c.future ? 0 : 1)
-            .help(c.count > 0 ? "\(c.key)：\(c.count) \(unit)" : c.key)
+            .help(c.count > 0 ? String(localized: "\(c.key)：\(c.count) 次活动") : c.key)
             .contentShape(Rectangle())
             .onTapGesture {
                 guard let selection, !c.future else { return }
@@ -144,7 +143,9 @@ struct HeatmapView: View {
 
     private func weekdayLabel(_ row: Int) -> String {
         let weekday = (Calendar.current.firstWeekday - 1 + row) % 7  // 0 = 周日
-        return [1, 3, 5].contains(weekday) ? ["日", "一", "二", "三", "四", "五", "六"][weekday] : ""
+        var cal = Calendar.current
+        cal.locale = AppLanguage.locale
+        return [1, 3, 5].contains(weekday) ? cal.veryShortStandaloneWeekdaySymbols[weekday] : ""
     }
 
     private func color(_ level: Int) -> Color {

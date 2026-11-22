@@ -35,7 +35,7 @@ public enum AgentLauncher {
         var error: NSDictionary?
         NSAppleScript(source: script)?.executeAndReturnError(&error)
         if let error {
-            throw NSError(domain: "codedog", code: 1, userInfo: [NSLocalizedDescriptionKey: (error[NSAppleScript.errorMessage] as? String) ?? "无法控制终端，请在系统设置 › 隐私与安全性 › 自动化 中允许 codedog。"])
+            throw NSError(domain: "codedog", code: 1, userInfo: [NSLocalizedDescriptionKey: (error[NSAppleScript.errorMessage] as? String) ?? String(localized: "无法控制终端，请在系统设置 › 隐私与安全性 › 自动化 中允许 codedog。")])
         }
     }
 

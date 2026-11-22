@@ -276,7 +276,7 @@ struct ProjectCard: View {
             } else if item.waiting {
                 Circle().fill(.orange).frame(width: 6, height: 6)
                 Text("等你回复")
-            } else if let reason = match.reasons.first, !reason.hasPrefix("名称") {
+            } else if let reason = match.reasons.first, !reason.hasPrefix(String(localized: "名称")) {
                 Text(reason)
             } else {
                 Text([item.size.map { Formatting.bytes($0.total) }, item.project.git?.branch].compactMap { $0 }.joined(separator: " · "))
@@ -331,12 +331,12 @@ struct PaperView: View {
         switch kind {
         case .session(let s):
             VStack(alignment: .leading, spacing: 5) {
-                header(title: Formatting.plain(s.title ?? s.lastPrompt ?? "会话"), trailing: s.lastAt.map { Formatting.relative($0) } ?? "")
+                header(title: Formatting.plain(s.title ?? s.lastPrompt ?? String(localized: "会话")), trailing: s.lastAt.map { Formatting.relative($0) } ?? "")
                 HStack(spacing: 4) {
                     Circle().fill(.orange).frame(width: 5, height: 5)
                     Text("等你回复").font(.system(size: 8.5, weight: .semibold)).foregroundStyle(.orange)
                 }
-                Text(Formatting.plain(s.lastReply ?? "AI 已经答完，等你回复。"))
+                Text(Formatting.plain(s.lastReply ?? String(localized: "AI 已经答完，等你回复。")))
                     .font(.system(size: 9.5))
                     .foregroundStyle(.secondary)
                     .lineLimit(4)
@@ -423,11 +423,11 @@ struct PaperView: View {
 
     private func statusText(_ f: FileRef) -> String {
         switch f.status {
-        case .modified: "已修改"
-        case .added: "新增"
-        case .untracked: "新文件"
-        case .renamed: "已重命名"
-        case .deleted: "已删除"
+        case .modified: String(localized: "已修改")
+        case .added: String(localized: "新增")
+        case .untracked: String(localized: "新文件")
+        case .renamed: String(localized: "已重命名")
+        case .deleted: String(localized: "已删除")
         case .committed, .recent: f.modifiedAt.map { Formatting.relative($0) } ?? ""
         }
     }

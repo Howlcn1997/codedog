@@ -18,6 +18,7 @@ enum DebugSnapshot {
                 case "wait": try? await Task.sleep(for: .seconds(Double(arg) ?? 1))
                 case "shot": capture(to: "\(prefix)-\(arg).png")
                 case "select": model.selectedID = model.visible.dropFirst(Int(arg) ?? 0).first?.item.id
+                case "noroots": model.debugNoRoots = arg != "off"
                 case "list": model.viewMode = .list
                 case "grid": model.viewMode = .grid
                 case "search": model.searchText = arg

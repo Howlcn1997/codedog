@@ -45,7 +45,7 @@ enum CLIInstaller {
     static func install() throws {
         let fm = FileManager.default
         if status == .conflict {
-            throw NSError(domain: "codedog", code: 2, userInfo: [NSLocalizedDescriptionKey: "\(link.path(percentEncoded: false)) 已存在且不是 codedog 安装的，为了安全不会覆盖。"])
+            throw NSError(domain: "codedog", code: 2, userInfo: [NSLocalizedDescriptionKey: String(localized: "\(link.path(percentEncoded: false)) 已存在且不是 codedog 安装的，为了安全不会覆盖。")])
         }
         try fm.createDirectory(at: link.deletingLastPathComponent(), withIntermediateDirectories: true)
         if status == .installed { try fm.removeItem(at: link) }

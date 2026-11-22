@@ -8,11 +8,11 @@ enum SettingsPage: String, CaseIterable, Identifiable {
     var id: Self { self }
     var title: String {
         switch self {
-        case .general: "通用"
-        case .scan: "扫描"
-        case .open: "打开方式"
-        case .cli: "命令行"
-        case .about: "关于"
+        case .general: String(localized: "通用")
+        case .scan: String(localized: "扫描")
+        case .open: String(localized: "打开方式")
+        case .cli: String(localized: "命令行")
+        case .about: String(localized: "关于")
         }
     }
     var symbol: String {
@@ -26,11 +26,11 @@ enum SettingsPage: String, CaseIterable, Identifiable {
     }
     var summary: String {
         switch self {
-        case .general: "外观、启动方式与全局快捷键"
-        case .scan: "codedog 去哪里寻找你的项目"
-        case .open: "打开项目时使用的编辑器与终端"
-        case .cli: "在终端里快速找到项目"
-        case .about: "版本与更新"
+        case .general: String(localized: "外观、启动方式与全局快捷键")
+        case .scan: String(localized: "codedog 去哪里寻找你的项目")
+        case .open: String(localized: "打开项目时使用的编辑器与终端")
+        case .cli: String(localized: "在终端里快速找到项目")
+        case .about: String(localized: "版本与更新")
         }
     }
 }
@@ -38,7 +38,7 @@ enum SettingsPage: String, CaseIterable, Identifiable {
 /// 系统设置风格的窗口：悬浮毛玻璃侧栏 + 大标题 + 白色分组卡片。
 struct SettingsView: View {
     static let size = CGSize(width: 760, height: 500)
-    static let sidebarWidth: CGFloat = 168
+    static let sidebarWidth: CGFloat = 176
     @State private var page: SettingsPage = .general
 
     var body: some View {
@@ -88,6 +88,8 @@ struct SettingsView: View {
                     HStack(spacing: 8) {
                         SettingsGlyph(symbol: item.symbol, size: 15, filled: selected)
                         Text(item.title).font(.system(size: 14))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)  // 英文等较长的名称不折行
                         Spacer(minLength: 0)
                     }
                     .padding(.horizontal, 6)
@@ -157,6 +159,7 @@ private struct GeneralSettingsPage: View {
     @State private var loginEnabled = LoginItem.isEnabled
     @State private var loginNeedsApproval = LoginItem.needsApproval
     @State private var loginError: String?
+    @State private var language = AppLanguage.selected
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -169,6 +172,10 @@ private struct GeneralSettingsPage: View {
                     }))
             }
 
+            SettingsSection("语言") {
+                languageRow
+            }
+
             SettingsSection("启动") {
                 SettingsRow("常驻菜单栏", subtitle: "关闭主窗口后继续在菜单栏运行，Dock 图标一起隐藏") {
                     SettingsSwitch("常驻菜单栏", isOn: Binding(
@@ -176,7 +183,7 @@ private struct GeneralSettingsPage: View {
                         set: { v in model.setPreferences { $0.menuBarResident = v } }))
                 }
                 SettingsRow("登录时启动",
-                            subtitle: loginError ?? (loginNeedsApproval ? "需要在系统设置的登录项中允许 codedog" : "登录 Mac 后自动运行 codedog"),
+                            subtitle: loginError.map { .verbatim($0) } ?? (loginNeedsApproval ? "需要在系统设置的登录项中允许 codedog" : "登录 Mac 后自动运行 codedog"),
                             subtitleTone: loginError != nil ? .red : (loginNeedsApproval ? .orange : .secondary)) {
                     if loginNeedsApproval {
                         SettingsButton("打开登录项") { LoginItem.openSystemSettings() }
@@ -197,12 +204,35 @@ private struct GeneralSettingsPage: View {
         }
     }
 
+    /// 界面语言：选好后需要重启 App 才能生效，提供"立即重启"。
+    private var languageRow: some View {
+        let _ = language // 选择变化时刷新
+        let pending = AppLanguage.needsRelaunch
+        return SettingsRow("界面语言",
+                           subtitle: pending ? "重新启动 codedog 后生效" : "菜单、按钮与提示使用的语言",
+                           subtitleTone: pending ? .orange : .secondary) {
+            if pending {
+                SettingsButton("立即重启", kind: .prominent) { AppLanguage.relaunch() }
+            }
+            SettingsChoice(title: "界面语言",
+                           options: AppLanguage.allCases.map { .init(value: $0, title: $0.title, icon: nil) },
+                           selection: Binding(get: { language }, set: { v in
+                               AppLanguage.selected = v
+                               language = v
+                           })) {
+                Text(language.title).font(.system(size: 12))
+            }
+        } icon: {
+            SettingsGlyph(symbol: "globe", size: 17)
+        }
+    }
+
     private func setLogin(_ on: Bool) {
         do {
             try LoginItem.set(on)
             loginError = nil
         } catch {
-            loginError = "设置失败：\(error.localizedDescription)"
+            loginError = String(localized: "设置失败：\(error.localizedDescription)")
         }
         loginEnabled = LoginItem.isEnabled
         loginNeedsApproval = LoginItem.needsApproval
@@ -324,7 +354,7 @@ private struct ShortcutRecorder: View {
                 }
                 .buttonStyle(SettingsPressStyle())
                 .onHover { hovered = $0 }
-                .accessibilityLabel(recording ? "正在录制快捷键" : "快捷键 \(current.display)")
+                .accessibilityLabel(recording ? Text("正在录制快捷键") : Text("快捷键 \(current.display)"))
             }
             if let error = error ?? AppDelegate.shared.hotKeyError {
                 Text(error).font(.system(size: 11)).foregroundStyle(.red)
@@ -343,7 +373,7 @@ private struct ShortcutRecorder: View {
                 apply(s)
                 stop()
             } else {
-                error = "需要包含 ⌘、⌥ 或 ⌃，并配合字母、数字、空格或 F 键"
+                error = String(localized: "需要包含 ⌘、⌥ 或 ⌃，并配合字母、数字、空格或 F 键")
             }
             return nil
         }
@@ -395,7 +425,7 @@ private struct ScanSettingsPage: View {
                     }
                 } else {
                     ForEach(model.library.scanRoots, id: \.self) { root in
-                        SettingsRow((root as NSString).lastPathComponent, subtitle: Formatting.shortPath(root)) {
+                        SettingsRow(.verbatim((root as NSString).lastPathComponent), subtitle: .verbatim(Formatting.shortPath(root))) {
                             SettingsIconButton(symbol: "minus", help: "移除", destructive: true) {
                                 model.setScanRoots(model.library.scanRoots.filter { $0 != root })
                             }
@@ -455,19 +485,20 @@ private struct OpenSettingsPage: View {
         }
     }
 
-    private func appRow(_ title: String, subtitle: String, current: AppRef?, choices: [AppRef], fallback: AppRef?,
+    private func appRow(_ title: LocalizedStringKey, subtitle: LocalizedStringKey, current: AppRef?, choices: [AppRef], fallback: AppRef?,
                         set: @escaping (AppRef?) -> Void, pick: @escaping () -> Void) -> some View {
         var list = choices
         if let current, !list.contains(current) { list.append(current) }
         let shown = current ?? fallback
+        let auto = String(localized: "自动（\(fallback?.name ?? String(localized: "未找到"))）")
         let options: [SettingsChoice<AppRef?, AnyView>.Option] =
-            [.init(value: nil, title: "自动（\(fallback?.name ?? "未找到")）", icon: nil)]
+            [.init(value: nil, title: auto, icon: nil)]
             + list.map { .init(value: $0, title: $0.name, icon: AppIconView.icon($0)) }
         return SettingsRow(title, subtitle: subtitle) {
             SettingsChoice(title: title, options: options,
                            selection: Binding(get: { current }, set: { v in set(v) }),
-                           extra: ("其他应用…", pick)) {
-                AnyView(Text(current == nil ? "自动（\(fallback?.name ?? "未找到")）" : current!.name)
+                           extra: (String(localized: "其他应用…"), pick)) {
+                AnyView(Text(current?.name ?? auto)
                     .font(.system(size: 12)))
             }
         } icon: {
@@ -493,7 +524,7 @@ private struct CLISettingsPage: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             SettingsSection("命令行工具") {
-                SettingsRow("codedog", subtitle: message ?? subtitle, subtitleTone: message != nil ? .red : .secondary) {
+                SettingsRow("codedog", subtitle: message.map { .verbatim($0) } ?? subtitle, subtitleTone: message != nil ? .red : .secondary) {
                     switch status {
                     case .installed:
                         SettingsStatus(text: CLIInstaller.pointsToThisApp ? "已安装" : "指向旧位置",
@@ -531,14 +562,14 @@ private struct CLISettingsPage: View {
         .task { pathOK = await CLIInstaller.pathContainsLocalBin() }
     }
 
-    private var subtitle: String {
+    private var subtitle: LocalizedStringKey {
         switch status {
         case .installed, .notInstalled: "安装到 ~/.local/bin/codedog"
         case .conflict: "~/.local/bin/codedog 已被其他程序占用"
         }
     }
 
-    private func command(_ cmd: String, _ desc: String) -> some View {
+    private func command(_ cmd: String, _ desc: LocalizedStringKey) -> some View {
         HStack(spacing: 12) {
             Text(cmd)
                 .font(.system(size: 12, design: .monospaced))
@@ -600,7 +631,7 @@ private struct AboutSettingsPage: View {
         }
     }
 
-    private var updateSubtitle: String {
+    private var updateSubtitle: LocalizedStringKey {
         if model.isCheckingUpdate { return "正在检查…" }
         if let u = model.availableUpdate { return "有新版本 \(u.version) 可用" }
         return "当前版本 \(Codedog.version)"

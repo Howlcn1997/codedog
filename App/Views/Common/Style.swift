@@ -13,9 +13,9 @@ enum AppearanceMode: String, CaseIterable {
 
     var title: String {
         switch self {
-        case .system: "跟随系统"
-        case .light: "亮色"
-        case .dark: "暗色"
+        case .system: String(localized: "跟随系统")
+        case .light: String(localized: "亮色")
+        case .dark: String(localized: "暗色")
         }
     }
 
@@ -44,9 +44,10 @@ extension ProjectKind {
 /// 标签可选颜色（名称 → 颜色）。
 enum CategoryPalette {
     static let all: [(id: String, name: String, color: Color)] = [
-        ("red", "红色", .red), ("orange", "橙色", .orange), ("yellow", "黄色", .yellow),
-        ("green", "绿色", .green), ("teal", "青色", .teal), ("blue", "蓝色", .blue),
-        ("purple", "紫色", .purple), ("pink", "粉色", .pink), ("brown", "棕色", .brown), ("gray", "灰色", .gray),
+        ("red", String(localized: "红色"), .red), ("orange", String(localized: "橙色"), .orange), ("yellow", String(localized: "黄色"), .yellow),
+        ("green", String(localized: "绿色"), .green), ("teal", String(localized: "青色"), .teal), ("blue", String(localized: "蓝色"), .blue),
+        ("purple", String(localized: "紫色"), .purple), ("pink", String(localized: "粉色"), .pink), ("brown", String(localized: "棕色"), .brown),
+        ("gray", String(localized: "灰色"), .gray),
     ]
 
     static func color(_ id: String?) -> Color? {
@@ -58,15 +59,15 @@ enum CategoryPalette {
 enum Formatting {
     /// 口语化的活动时间："今天活跃""昨天活跃""3 天前""2 周前""5 个月前""2024 年"
     static func activity(_ date: Date?, now: Date = .now) -> String {
-        guard let date else { return "很久没动" }
+        guard let date else { return String(localized: "很久没动") }
         let cal = Calendar.current
-        if date > now || cal.isDateInToday(date) { return "今天活跃" }
-        if cal.isDateInYesterday(date) { return "昨天活跃" }
+        if date > now || cal.isDateInToday(date) { return String(localized: "今天活跃") }
+        if cal.isDateInYesterday(date) { return String(localized: "昨天活跃") }
         let days = cal.dateComponents([.day], from: cal.startOfDay(for: date), to: cal.startOfDay(for: now)).day ?? 0
-        if days < 7 { return "\(days) 天前" }
-        if days < 30 { return "\(days / 7) 周前" }
-        if days < 365 { return "\(max(1, days / 30)) 个月前" }
-        return "\(cal.component(.year, from: date)) 年"
+        if days < 7 { return String(localized: "\(days) 天前") }
+        if days < 30 { return String(localized: "\(days / 7) 周前") }
+        if days < 365 { return String(localized: "\(max(1, days / 30)) 个月前") }
+        return date.formatted(.dateTime.year().locale(AppLanguage.locale))
     }
 
     /// 去掉 Markdown 标记，压成一行。
@@ -155,12 +156,9 @@ extension Notification.Name {
 }
 
 extension Formatting {
-    /// 15亿、5755万、7.6万、980
+    /// 按界面语言缩写：15亿、7.6万、980；英文为 1.5B、76K。
     static func tokens(_ n: Int) -> String {
-        func trim(_ v: Double) -> String { v < 10 ? String(format: "%.1f", v).replacingOccurrences(of: ".0", with: "") : String(Int(v.rounded())) }
-        if n >= 100_000_000 { return trim(Double(n) / 100_000_000) + "亿" }
-        if n >= 10_000 { return trim(Double(n) / 10_000) + "万" }
-        return "\(n)"
+        n.formatted(.number.notation(.compactName).locale(AppLanguage.locale))
     }
 
     static func bytes(_ n: Int64) -> String {
@@ -178,20 +176,23 @@ extension Formatting {
         guard let a, let b else { return "" }
         let cal = Calendar.current
         let sameYear = cal.component(.year, from: a) == cal.component(.year, from: b) && cal.component(.year, from: b) == cal.component(.year, from: .now)
-        func f(_ d: Date) -> String {
-            let c = cal.dateComponents([.year, .month, .day], from: d)
-            return sameYear ? "\(c.month!)月\(c.day!)日" : "\(c.year!)年\(c.month!)月\(c.day!)日"
-        }
+        let f = { (d: Date) in day(d, withYear: !sameYear) }
         return cal.isDate(a, inSameDayAs: b) ? f(a) : "\(f(a)) – \(f(b))"
+    }
+
+    /// 按界面语言格式化日期：11月22日 / Nov 22，需要时带年份。
+    static func day(_ d: Date, withYear: Bool) -> String {
+        let style = Date.FormatStyle(locale: AppLanguage.locale).month(.abbreviated).day()
+        return d.formatted(withYear ? style.year() : style)
     }
 
     /// 4 分钟前、5 小时前、昨天、3 天前
     static func relative(_ date: Date, now: Date = .now) -> String {
         let s = now.timeIntervalSince(date)
-        if s < 60 { return "刚刚" }
-        if s < 3600 { return "\(Int(s / 60)) 分钟前" }
-        if Calendar.current.isDateInToday(date) { return "\(Int(s / 3600)) 小时前" }
-        if Calendar.current.isDateInYesterday(date) { return "昨天" }
+        if s < 60 { return String(localized: "刚刚") }
+        if s < 3600 { return String(localized: "\(Int(s / 60)) 分钟前") }
+        if Calendar.current.isDateInToday(date) { return String(localized: "\(Int(s / 3600)) 小时前") }
+        if Calendar.current.isDateInYesterday(date) { return String(localized: "昨天") }
         return activity(date, now: now)
     }
 }

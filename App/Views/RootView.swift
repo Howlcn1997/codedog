@@ -103,7 +103,7 @@ struct RootView: View {
                     .symbolEffect(.rotate, isActive: model.isScanning)
             }
             .disabled(model.isScanning)
-            .help(model.lastScan.map { "上次扫描：\($0.formatted(.relative(presentation: .named)))" } ?? "重新扫描")
+            .help(model.lastScan.map { "上次扫描：\($0.formatted(.relative(presentation: .named).locale(AppLanguage.locale)))" } ?? "重新扫描")
         }
     }
 

@@ -17,7 +17,7 @@ public enum KnownApps {
     ]
 
     public static let terminals: [AppRef] = [
-        AppRef(bundleID: "com.apple.Terminal", name: "终端"),
+        AppRef(bundleID: "com.apple.Terminal", name: String(localized: "终端")),
         AppRef(bundleID: "com.googlecode.iterm2", name: "iTerm2"),
         AppRef(bundleID: "dev.warp.Warp-Stable", name: "Warp"),
         AppRef(bundleID: "com.mitchellh.ghostty", name: "Ghostty"),

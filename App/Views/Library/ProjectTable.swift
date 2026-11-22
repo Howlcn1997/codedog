@@ -40,7 +40,7 @@ private struct ProjectRow: View {
                         if item.meta.favorite { Image(systemName: "star.fill").font(.caption2).foregroundStyle(.yellow) }
                     }
                     // 只在搜索命中名称以外的内容时显示命中原因，平时不显示路径
-                    if let reason = match.reasons.first, !reason.hasPrefix("名称") {
+                    if let reason = match.reasons.first, !reason.hasPrefix(String(localized: "名称")) {
                         Text(reason).font(.caption).foregroundStyle(.secondary).lineLimit(1)
                     }
                 }
@@ -102,10 +102,10 @@ private struct RowActions: View {
             } else {
                 Color.clear.frame(width: 28, height: 26)   // 没用过 AI 的项目留空，保持后两个按钮对齐
             }
-            button(help: "在终端中打开") { model.open(item, .terminal) } label: {
+            button(help: String(localized: "在终端中打开")) { model.open(item, .terminal) } label: {
                 Image(systemName: "apple.terminal")
             }
-            button(help: "在访达中显示") { model.open(item, .finder) } label: {
+            button(help: String(localized: "在访达中显示")) { model.open(item, .finder) } label: {
                 Image(systemName: "folder")
             }
         }

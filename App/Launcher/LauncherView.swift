@@ -24,14 +24,14 @@ struct LauncherView: View {
 
     private func actions(for item: ProjectItem) -> [Action] {
         let editor = model.editor(for: item)
-        var list = [Action(id: "editor", title: editor?.name ?? "编辑器", symbol: "chevron.left.forwardslash.chevron.right", run: .editor(nil))]
+        var list = [Action(id: "editor", title: editor?.name ?? String(localized: "编辑器"), symbol: "chevron.left.forwardslash.chevron.right", run: .editor(nil))]
         if let agent = item.lastAgent?.tool, !item.running.contains(agent) {
-            list.append(Action(id: "resume", title: "续上 \(agent.displayName)", symbol: "arrow.uturn.forward", tool: agent, run: .resume(agent)))
+            list.append(Action(id: "resume", title: String(localized: "续上 \(agent.displayName)"), symbol: "arrow.uturn.forward", tool: agent, run: .resume(agent)))
         }
-        list.append(Action(id: "terminal", title: "终端", symbol: "apple.terminal", run: .terminal))
-        list.append(Action(id: "finder", title: "访达", symbol: "folder", run: .finder))
+        list.append(Action(id: "terminal", title: String(localized: "终端"), symbol: "apple.terminal", run: .terminal))
+        list.append(Action(id: "finder", title: String(localized: "访达"), symbol: "folder", run: .finder))
         if item.project.git?.webURL != nil {
-            list.append(Action(id: "repo", title: "仓库", symbol: "globe", run: .repository))
+            list.append(Action(id: "repo", title: String(localized: "仓库"), symbol: "globe", run: .repository))
         }
         return list
     }
@@ -209,7 +209,7 @@ private struct LauncherRow: View {
     }
 
     private var detail: String {
-        if let r = match.reasons.first, !r.hasPrefix("名称") { return r }
+        if let r = match.reasons.first, !r.hasPrefix(String(localized: "名称")) { return r }
         return Formatting.shortPath(item.id)
     }
 }

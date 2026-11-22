@@ -61,7 +61,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @discardableResult
     func registerHotKey(_ string: String) -> String? {
         guard let shortcut = Shortcut(string: string) else {
-            hotKeyError = "快捷键格式无效"
+            hotKeyError = String(localized: "快捷键格式无效")
             return hotKeyError
         }
         let old = hotKey
@@ -75,7 +75,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if let previous = Shortcut(string: model.library.preferences.launcherShortcut), previous != shortcut {
             hotKey = HotKey(previous) { [weak self] in self?.launcher.toggle() }
         }
-        hotKeyError = "\(shortcut.display) 已被其他 App 占用"
+        hotKeyError = String(localized: "\(shortcut.display) 已被其他 App 占用")
         return hotKeyError
     }
 

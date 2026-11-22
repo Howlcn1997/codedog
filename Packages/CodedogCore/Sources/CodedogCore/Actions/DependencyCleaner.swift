@@ -34,14 +34,14 @@ public enum DependencyCleaner {
     public static func validate(_ item: CleanupItem) throws {
         let fm = FileManager.default
         let dir = item.directory
-        guard let attrs = try? fm.attributesOfItem(atPath: dir) else { throw CleanupError.unsafe("目录不存在：\(dir)") }
-        guard attrs[.type] as? FileAttributeType == .typeDirectory else { throw CleanupError.unsafe("不是普通目录（可能是符号链接）：\(dir)") }
+        guard let attrs = try? fm.attributesOfItem(atPath: dir) else { throw CleanupError.unsafe(String(localized: "目录不存在：\(dir)")) }
+        guard attrs[.type] as? FileAttributeType == .typeDirectory else { throw CleanupError.unsafe(String(localized: "不是普通目录（可能是符号链接）：\(dir)")) }
         let realProject = FolderScanner.normalize(item.project)
         let realDir = FolderScanner.normalize(dir)
-        guard realDir.hasPrefix(realProject + "/"), realDir != realProject else { throw CleanupError.unsafe("目录不在项目内：\(dir)") }
+        guard realDir.hasPrefix(realProject + "/"), realDir != realProject else { throw CleanupError.unsafe(String(localized: "目录不在项目内：\(dir)")) }
         let name = (realDir as NSString).lastPathComponent
         guard DiskUsage.isReclaimable(name: name, parent: (realDir as NSString).deletingLastPathComponent) else {
-            throw CleanupError.unsafe("不是可清理的目录：\(dir)")
+            throw CleanupError.unsafe(String(localized: "不是可清理的目录：\(dir)"))
         }
     }
 
@@ -68,9 +68,9 @@ public enum ProjectCreator {
         case invalidName, exists(String), parentMissing(String)
         public var errorDescription: String? {
             switch self {
-            case .invalidName: "项目名只能包含字母、数字、中文、点、横线和下划线，且不能以点开头。"
-            case .exists(let p): "已经存在同名文件夹：\(p)"
-            case .parentMissing(let p): "位置不存在：\(p)"
+            case .invalidName: String(localized: "项目名只能包含字母、数字、中文、点、横线和下划线，且不能以点开头。")
+            case .exists(let p): String(localized: "已经存在同名文件夹：\(p)")
+            case .parentMissing(let p): String(localized: "位置不存在：\(p)")
             }
         }
     }

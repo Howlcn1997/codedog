@@ -72,12 +72,12 @@ struct SettingsWindowStyler: NSViewRepresentable {
 
 /// 一组设置：小号灰色标题、白色卡片、可选脚注。
 struct SettingsSection<Content: View, Accessory: View>: View {
-    var title: String?
-    var footer: String?
+    var title: LocalizedStringKey?
+    var footer: LocalizedStringKey?
     @ViewBuilder var accessory: Accessory
     @ViewBuilder var content: Content
 
-    init(_ title: String? = nil, footer: String? = nil,
+    init(_ title: LocalizedStringKey? = nil, footer: LocalizedStringKey? = nil,
          @ViewBuilder accessory: () -> Accessory = { EmptyView() }, @ViewBuilder content: () -> Content) {
         self.title = title
         self.footer = footer
@@ -129,13 +129,13 @@ private struct SeparatedRows: _VariadicView_MultiViewRoot {
 
 /// 一行：可选图标、标题与副标题、右侧控件。
 struct SettingsRow<Icon: View, Trailing: View>: View {
-    let title: String
-    var subtitle: String?
+    let title: LocalizedStringKey
+    var subtitle: LocalizedStringKey?
     var subtitleTone: Color = .secondary
     @ViewBuilder var icon: Icon
     @ViewBuilder var trailing: Trailing
 
-    init(_ title: String, subtitle: String? = nil, subtitleTone: Color = .secondary,
+    init(_ title: LocalizedStringKey, subtitle: LocalizedStringKey? = nil, subtitleTone: Color = .secondary,
          @ViewBuilder trailing: () -> Trailing = { EmptyView() }, @ViewBuilder icon: () -> Icon = { EmptyView() }) {
         self.title = title
         self.subtitle = subtitle
@@ -188,7 +188,7 @@ struct SettingsGlyph: View {
 /// 圆点 + 简短状态，例如 已安装 / 未安装。
 struct SettingsStatus: View {
     enum Tone { case good, attention, neutral }
-    let text: String
+    let text: LocalizedStringKey
     let tone: Tone
 
     var body: some View {
@@ -213,12 +213,12 @@ struct SettingsStatus: View {
 
 /// 胶囊开关：按住时滑块拉长，松手弹到另一侧。
 struct SettingsSwitch: View {
-    let label: String
+    let label: LocalizedStringKey
     @Binding var isOn: Bool
     @Environment(\.isEnabled) private var enabled
     @State private var pressed = false
 
-    init(_ label: String, isOn: Binding<Bool>) {
+    init(_ label: LocalizedStringKey, isOn: Binding<Bool>) {
         self.label = label
         _isOn = isOn
     }
@@ -245,7 +245,7 @@ struct SettingsSwitch: View {
             })
         .accessibilityElement()
         .accessibilityLabel(label)
-        .accessibilityValue(isOn ? "开" : "关")
+        .accessibilityValue(isOn ? Text("开") : Text("关"))
         .accessibilityAddTraits(.isButton)
         .accessibilityAction { if enabled { withAnimation(controlSpring) { isOn.toggle() } } }
     }
@@ -259,7 +259,7 @@ struct SettingsChoice<Value: Hashable, Label: View>: View {
         var icon: NSImage?
     }
 
-    let title: String
+    let title: LocalizedStringKey
     let options: [Option]
     @Binding var selection: Value
     /// 列表底部的附加动作，例如「其他…」。
@@ -362,13 +362,13 @@ struct SettingsKeycaps: View {
 /// 胶囊按钮：一行只有一个主要动作时用 prominent，其余用 quiet。
 struct SettingsButton: View {
     enum Kind { case prominent, quiet, destructive }
-    let title: String
+    let title: LocalizedStringKey
     var kind: Kind = .quiet
     var action: () -> Void
     @State private var hovered = false
     @Environment(\.isEnabled) private var enabled
 
-    init(_ title: String, kind: Kind = .quiet, action: @escaping () -> Void) {
+    init(_ title: LocalizedStringKey, kind: Kind = .quiet, action: @escaping () -> Void) {
         self.title = title
         self.kind = kind
         self.action = action
@@ -401,7 +401,7 @@ struct SettingsButton: View {
 /// 只有图标的小圆按钮，例如移除一行。
 struct SettingsIconButton: View {
     let symbol: String
-    let help: String
+    let help: LocalizedStringKey
     var destructive = false
     var action: () -> Void
     @State private var hovered = false
