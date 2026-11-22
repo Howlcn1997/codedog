@@ -6150,22 +6150,6 @@
         }
       }
     },
-    "用 %@ 开始创作": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Start with %@"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "用 %@ 開始創作"
-          }
-        }
-      }
-    },
     "AI 工具": {
       "localizations": {
         "en": {

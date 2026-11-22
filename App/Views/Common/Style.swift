@@ -221,7 +221,7 @@ struct OpenWithSections: View {
                 Button {
                     model.open(item, .resume(tool))
                 } label: {
-                    Label { Text("用 \(tool.displayName) 开始创作") } icon: { Image(nsImage: ToolIcon.menuImage(tool)) }
+                    Label { Text(tool.displayName) } icon: { Image(nsImage: ToolIcon.menuImage(tool)) }
                 }
             }
         }
