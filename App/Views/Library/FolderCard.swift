@@ -3,45 +3,20 @@ import SwiftUI
 
 // MARK: - 文件夹轮廓
 
-/// 后层：右上角凸起的标签页。
+/// 后片：左上角凸起一截标签，右侧低一级。
 struct FolderBackShape: Shape {
-    var radius: CGFloat = 18
-    var tab: CGFloat = 26
-    var tabStart: CGFloat = 0.52
-
-    func path(in rect: CGRect) -> Path {
-        let w = rect.width, h = rect.height, r = radius, t = tab
-        let x0 = w * tabStart, slope: CGFloat = 22
-        var p = Path()
-        p.move(to: CGPoint(x: 0, y: t + r))
-        p.addQuadCurve(to: CGPoint(x: r, y: t), control: CGPoint(x: 0, y: t))
-        p.addLine(to: CGPoint(x: x0 - slope, y: t))
-        p.addCurve(to: CGPoint(x: x0, y: 0), control1: CGPoint(x: x0 - slope * 0.45, y: t), control2: CGPoint(x: x0 - slope * 0.55, y: 0))
-        p.addLine(to: CGPoint(x: w - r, y: 0))
-        p.addQuadCurve(to: CGPoint(x: w, y: r), control: CGPoint(x: w, y: 0))
-        p.addLine(to: CGPoint(x: w, y: h - r))
-        p.addQuadCurve(to: CGPoint(x: w - r, y: h), control: CGPoint(x: w, y: h))
-        p.addLine(to: CGPoint(x: r, y: h))
-        p.addQuadCurve(to: CGPoint(x: 0, y: h - r), control: CGPoint(x: 0, y: h))
-        p.closeSubpath()
-        return p.offsetBy(dx: rect.minX, dy: rect.minY)
-    }
-}
-
-/// 前层：左上角凸起的标签页。
-struct FolderFrontShape: Shape {
-    var radius: CGFloat = 18
-    var tab: CGFloat = 22
+    var tab: CGFloat = 24
     var tabEnd: CGFloat = 0.40
+    var radius: CGFloat = 18
 
     func path(in rect: CGRect) -> Path {
-        let w = rect.width, h = rect.height, r = radius, t = tab
-        let x1 = w * tabEnd, slope: CGFloat = 22
+        let w = rect.width, h = rect.height, t = tab, r = radius
+        let x1 = w * tabEnd, slope: CGFloat = 24
         var p = Path()
         p.move(to: CGPoint(x: 0, y: r))
         p.addQuadCurve(to: CGPoint(x: r, y: 0), control: .zero)
         p.addLine(to: CGPoint(x: x1, y: 0))
-        p.addCurve(to: CGPoint(x: x1 + slope, y: t), control1: CGPoint(x: x1 + slope * 0.55, y: 0), control2: CGPoint(x: x1 + slope * 0.45, y: t))
+        p.addCurve(to: CGPoint(x: x1 + slope, y: t), control1: CGPoint(x: x1 + slope * 0.5, y: 0), control2: CGPoint(x: x1 + slope * 0.5, y: t))
         p.addLine(to: CGPoint(x: w - r, y: t))
         p.addQuadCurve(to: CGPoint(x: w, y: t + r), control: CGPoint(x: w, y: t))
         p.addLine(to: CGPoint(x: w, y: h - r))
@@ -52,6 +27,65 @@ struct FolderFrontShape: Shape {
         return p.offsetBy(dx: rect.minX, dy: rect.minY)
     }
 }
+
+/// 前片口袋：圆角梯形，上沿略宽于底边，像一只微微张口的口袋。
+struct FolderPocketShape: Shape {
+    var topRadius: CGFloat = 22
+    var bottomRadius: CGFloat = 26
+    /// 底边每侧比上沿收进去多少
+    var taper: CGFloat = 6
+
+    func path(in rect: CGRect) -> Path {
+        let w = rect.width, h = rect.height, r = topRadius, R = bottomRadius, k = taper
+        func x(_ y: CGFloat) -> CGFloat { k * y / h }   // 左边在 y 处的横坐标
+        var p = Path()
+        p.move(to: CGPoint(x: x(r), y: r))
+        p.addQuadCurve(to: CGPoint(x: r, y: 0), control: .zero)
+        p.addLine(to: CGPoint(x: w - r, y: 0))
+        p.addQuadCurve(to: CGPoint(x: w - x(r), y: r), control: CGPoint(x: w, y: 0))
+        p.addLine(to: CGPoint(x: w - x(h - R), y: h - R))
+        p.addQuadCurve(to: CGPoint(x: w - k - R, y: h), control: CGPoint(x: w - k, y: h))
+        p.addLine(to: CGPoint(x: k + R, y: h))
+        p.addQuadCurve(to: CGPoint(x: x(h - R), y: h - R), control: CGPoint(x: k, y: h))
+        p.closeSubpath()
+        return p.offsetBy(dx: rect.minX, dy: rect.minY)
+    }
+}
+
+/// 边缘向内泛白的弧面感：模糊过的白色内描边。所有卡片的形状和尺寸都一样，只渲染一次成位图共用，滚动时直接贴图。
+struct EdgeGlow<S: Shape>: View {
+    var shape: S
+    var size: CGSize
+    var strength: Double = 1
+
+    @MainActor private static var cache: [String: NSImage] { get { glowCache } set { glowCache = newValue } }
+
+    var body: some View {
+        Image(nsImage: Self.image(shape, size))
+            .resizable()
+            .frame(width: size.width, height: size.height)
+            .opacity(strength)
+            .allowsHitTesting(false)
+    }
+
+    @MainActor static func image(_ shape: S, _ size: CGSize) -> NSImage {
+        let key = "\(S.self)|\(size.width)x\(size.height)"
+        if let img = cache[key] { return img }
+        let r = ImageRenderer(content:
+            ZStack {
+                shape.stroke(.white.opacity(0.6), lineWidth: 11).blur(radius: 5)
+                shape.stroke(.white.opacity(0.35), lineWidth: 3).blur(radius: 1.2)
+            }
+            .frame(width: size.width, height: size.height)
+            .clipShape(shape))
+        r.scale = 2
+        let img = r.nsImage ?? NSImage()
+        cache[key] = img
+        return img
+    }
+}
+
+@MainActor private var glowCache: [String: NSImage] = [:]
 
 // MARK: - 每个项目专属的抽象渐变
 
@@ -97,8 +131,8 @@ struct ProjectArt: View {
 
 // MARK: - 项目卡片
 
-/// 玻璃拟态文件夹：后层渐变图 + 磨砂玻璃前层，左下名称与信息，右下项目类型徽章。
-/// 悬停时前层后仰、露出里面的"纸张"（最近会话 / 提交）；点击时纸张扇形展开后打开项目面板。
+/// 彩色文件夹：浅色后片（带标签）+ 口袋里几张白纸 + 饱和色前片口袋。前片上白字写名称和信息，右下角是技术栈图标。
+/// 悬停时纸张从口袋里升起散开，前片以底边为轴向前倒下；点击时纸张再飞高一些，然后打开项目面板。
 struct ProjectCard: View {
     @Environment(LibraryModel.self) private var model
     @Environment(\.colorScheme) private var scheme
@@ -111,42 +145,69 @@ struct ProjectCard: View {
 
     @State private var hoveringState = false
     @State private var openingState = false
+    @State private var papersMounted = false
+    @State private var lastHover = false
     private var hovering: Bool { forcedState.map { $0 >= 1 } ?? hoveringState }
     private var opening: Bool { forcedState.map { $0 == 2 } ?? openingState }
 
-    static let size = CGSize(width: 264, height: 214)
-    private let frontHeight: CGFloat = 150
+    static let size = CGSize(width: 240, height: 226)
+    private let frontHeight: CGFloat = 166
+    private let backInset: CGFloat = 12
+    private let paperSize = CGSize(width: 184, height: 140)
 
     /// 整张卡是按 cardScale 等比缩放的，缩小后名称和徽章会显得太小；这里给前层文字和图标反向补一点（只补缩小的部分，开方让补偿温和些）
     private var labelBoost: CGFloat { model.cardScale < 1 ? 1 / sqrt(model.cardScale) : 1 }
 
+    /// 文件夹主色：保留技术栈品牌色的色相，饱和度和亮度统一到"鲜亮、能衬白字"的区间；
+    /// 黄色系往橙色偏一点（白字在黄色上看不清），黑白灰品牌色用石板灰。
+    private var tint: Color { Self.folderTint(StackIcon.of(item.project)?.brand ?? .brand, dark: scheme == .dark) }
+
+    /// 暗色模式下整体压暗、略降饱和，免得在深色背景上太刺眼。
+    static func folderTint(_ brand: Color, dark: Bool = false) -> Color {
+        let c = NSColor(brand).usingColorSpace(.sRGB) ?? .gray
+        var h: CGFloat = 0, sat: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        c.getHue(&h, saturation: &sat, brightness: &b, alpha: &a)
+        if sat < 0.15 { return dark ? Color(hex: 0x30363F) : Color(hex: 0x4A5263) }
+        var hue = h * 360
+        if (40...75).contains(hue) { hue = 32 + (hue - 40) * 0.2 }   // 黄 → 琥珀橙
+        let s2 = min(max(sat, 0.62), 0.85)
+        // 绿、青这类本身很亮的色相亮度压低一些
+        let b2: CGFloat = (75...200).contains(hue) ? 0.72 : 0.86
+        return Color(hue: hue / 360, saturation: dark ? s2 * 0.88 : s2, brightness: dark ? b2 * 0.66 : b2)
+    }
+
     var body: some View {
-        ZStack(alignment: .bottom) {
-            ProjectArt(project: item.project)
-                .clipShape(FolderBackShape())
-                .overlay(FolderBackShape().stroke(.white.opacity(0.18), lineWidth: 0.5))
-                .frame(height: Self.size.height)
+        let color = tint
+        ZStack(alignment: .top) {
+            // 后片：同色浅一些，左上角带标签
+            FolderBackShape()
+                .fill(color.mix(with: .white, by: scheme == .dark ? 0.16 : 0.36))
+                .overlay(EdgeGlow(shape: FolderBackShape(), size: CGSize(width: Self.size.width - backInset * 2, height: Self.size.height - 36), strength: scheme == .dark ? 0.34 : 0.7))
+                .frame(width: Self.size.width - backInset * 2, height: Self.size.height - 36)
+                .padding(.top, 14)
 
             papers
                 .frame(height: Self.size.height, alignment: .top)
 
-            front
+            front(color)
                 .frame(height: frontHeight)
-                .rotation3DEffect(.degrees(opening ? -20 : hovering ? -14 : 0), axis: (x: 1, y: 0, z: 0), anchor: .bottom, perspective: 0.55)
+                .frame(maxHeight: .infinity, alignment: .bottom)
+                // 以底边为轴向前倒下：底边不动，上沿靠近、透视变宽并下移
+                .rotation3DEffect(.degrees(opening ? -30 : hovering ? -26 : 0), axis: (x: 1, y: 0, z: 0), anchor: .bottom, perspective: 0.5)
         }
         .frame(width: Self.size.width, height: Self.size.height)
-        // 阴影只投在一个简单的轮廓上（略内缩、藏在渐变图后面），不再 compositingGroup 整张卡离屏合成后再算阴影。
-        // 静止时用小半径，悬停才加大，减轻 WindowServer / GPU 负担。
-        .background {
-            FolderBackShape()
-                .fill(.black)
-                .padding(1)
-                .shadow(color: .black.opacity(hovering ? 0.22 : 0.14), radius: hovering ? 14 : 5, y: hovering ? 10 : 4)
+        .animation(.spring(response: 0.34, dampingFraction: 0.74), value: hovering)
+        .animation(.spring(response: 0.3, dampingFraction: 0.72), value: opening)
+        .onHover { h in
+            lastHover = h
+            if h && !papersMounted {
+                // 先把带内容的纸以静止状态换进来，下一帧再进入悬停，才有升起的动画
+                papersMounted = true
+                DispatchQueue.main.async { hoveringState = lastHover }
+            } else {
+                hoveringState = h
+            }
         }
-        .scaleEffect(hovering ? 1.015 : 1)
-        .animation(.spring(response: 0.38, dampingFraction: 0.72), value: hovering)
-        .animation(.spring(response: 0.32, dampingFraction: 0.7), value: opening)
-        .onHover { hoveringState = $0 }
         .task(id: item.project.htmlEntry) {
             if let entry = item.project.htmlEntry, Self.isHTMLProject(item.project), forcedState == nil {
                 _ = await HTMLThumbnailer.shared.thumbnail(project: item.project.path, entry: entry)
@@ -175,6 +236,8 @@ struct ProjectCard: View {
         case note(String)
         case file(FileRef)
         case readme(String)
+        /// 什么内容都没有时的空白纸，写上项目简介
+        case blank(String?)
     }
 
     /// 纯 HTML 项目：主技术栈是 HTML（没有 package.json 等构建工具，index.html 本身就是页面）。
@@ -199,89 +262,83 @@ struct ProjectCard: View {
         if !note.isEmpty { kinds.append(.note(note)) }
         for f in item.project.recentFiles where kinds.count < 3 { kinds.append(.file(f)) }
         if kinds.isEmpty, let readme = item.project.readmeFile { kinds.append(.readme(readme)) }
+        if kinds.isEmpty { kinds.append(.blank(item.project.description)) }
         return kinds.prefix(3).enumerated().map { Paper(id: $0.offset, kind: $0.element) }
     }
 
+    /// 静止时是两张空白纸，只露出上沿一小截；第一次悬停时才换成带内容的纸（几十张卡都画内容，滚动会卡）。
     private var papers: some View {
-        let items = paperItems
+        let items: [Paper] = papersMounted || forcedState != nil
+            ? paperItems
+            : [Paper(id: 0, kind: .blank(nil)), Paper(id: 1, kind: .blank(nil))]
+        let count = max(items.count, 2)
         return ZStack(alignment: .top) {
             ForEach(items.reversed()) { p in
-                let t = paperTransform(index: p.id, count: items.count)
-                paperView(p)
-                    .frame(width: Self.size.width - 44 - CGFloat(p.id) * 8, height: 110)
-                    .rotationEffect(.degrees(t.angle), anchor: .bottom)
-                    .offset(x: t.x, y: t.y)
-                    .opacity(hovering || opening ? 1 : 0)
-            }
-        }
-        .padding(.top, 36)
-    }
-
-    /// 静止：纸张藏在前层后面；悬停：上探一截并微微散开；打开：扇形飞出。
-    private func paperTransform(index: Int, count: Int) -> (angle: Double, x: CGFloat, y: CGFloat) {
-        let i = Double(index)
-        let fan = i - Double(count - 1) / 2
-        if opening { return (fan * 7, CGFloat(fan) * 18, -62 + CGFloat(i) * 8) }
-        if hovering { return (fan * 2.5, 0, -14 + CGFloat(i) * 6) }
-        return (0, 0, 60 + CGFloat(i) * 4)   // 完全藏在前层后面
-    }
-
-    private func paperView(_ p: Paper) -> some View {
-        PaperView(kind: p.kind, project: item.project.path, active: hovering || opening)
-    }
-
-    // MARK: 前层玻璃
-
-    private var front: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            blurb
-            Spacer(minLength: 4)
-            // 活跃度（提交记录）与状态胶囊同一行：左边柱状图，右边胶囊；在上半部空白里垂直居中。
-            HStack(alignment: .center, spacing: 8) {
-                ActivitySpark(item: item, days: 30, color: StackIcon.of(item.project)?.brand ?? .brand)
-                    .scaleEffect(x: 1, y: 0.7, anchor: .center)
-                    .frame(height: 14)
-                    .layoutPriority(-1)
-                Spacer(minLength: 0)
-                StatusPill(item: item, showsDirty: false).scaleEffect(0.9 * labelBoost, anchor: .trailing)
-            }
-            .frame(height: 20)
-            Spacer(minLength: 4)
-            HStack(alignment: .bottom, spacing: 10) {
-                VStack(alignment: .leading, spacing: 5) {
-                    HStack(spacing: 6) {
-                        Text(item.project.name)
-                            .font(.system(size: 15 * labelBoost, weight: .semibold))
-                            .lineLimit(1)
-                        if item.meta.favorite {
-                            Image(systemName: "star.fill").font(.system(size: 10 * labelBoost)).foregroundStyle(.yellow)
-                        }
+                let t = paperTransform(index: p.id, count: count)
+                Group {
+                    if case .blank(nil) = p.kind, !(papersMounted || forcedState != nil) {
+                        RoundedRectangle(cornerRadius: 10, style: .continuous).fill(PaperView.paperColor(scheme))
+                            .shadow(color: .black.opacity(0.10), radius: 2, y: 1)
+                    } else {
+                        PaperView(kind: p.kind, project: item.project.path, active: true)
                     }
-                    meta
                 }
-                .layoutPriority(1)
-                Spacer(minLength: 0)
-                StackBadge(project: item.project, size: 36 * labelBoost)   // 项目类型放在右下角
+                .frame(width: paperSize.width - CGFloat(p.id) * 6, height: paperSize.height)
+                .opacity(p.id == 0 ? 1 : 0.92)
+                .rotationEffect(.degrees(t.angle), anchor: .bottom)
+                .offset(x: t.x, y: t.y)
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.bottom, 14)
-        .padding(.top, 32)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+        .padding(.top, 44)
+    }
+
+    /// 静止：叠在口袋里，只露出上沿；悬停：升起，前面一张略向左歪、后面的向右散开；打开：再飞高一些。
+    private func paperTransform(index: Int, count: Int) -> (angle: Double, x: CGFloat, y: CGFloat) {
+        let i = CGFloat(index)
+        if opening { return ([-6, 12, -16][min(index, 2)], [0, 22, -20][min(index, 2)], -64 - i * 2) }
+        if hovering { return ([-4, 9, -12][min(index, 2)], [0, 16, -14][min(index, 2)], -48 - i * 4) }
+        return (index == 0 ? 0 : 1.5, i * 3, i * -4)
+    }
+
+    // MARK: 前片口袋
+
+    private func front(_ color: Color) -> some View {
+        let shape = FolderPocketShape()
+        return VStack(alignment: .leading, spacing: 0) {
+            blurb.padding(.bottom, 4)
+            HStack(spacing: 6) {
+                Text(item.project.name)
+                    .font(.system(size: 18 * labelBoost, weight: .semibold))
+                    .lineLimit(1)
+                if item.meta.favorite {
+                    Image(systemName: "star.fill").font(.system(size: 11 * labelBoost)).foregroundStyle(.yellow)
+                }
+            }
+            meta.padding(.top, 3)
+            Spacer(minLength: 6)
+            HStack(alignment: .bottom) {
+                status
+                Spacer(minLength: 6)
+                stackGlyph
+            }
+        }
+        .foregroundStyle(.white)
+        .padding(.horizontal, 20)
+        .padding(.top, 22)
+        .padding(.bottom, 16)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background {
-            // 毛玻璃前片：透出后面的纸张与渐变。
-            FolderFrontShape()
-                .fill(.ultraThinMaterial)
-                .overlay(FolderFrontShape().fill(scheme == .dark ? Color.black.opacity(0.28) : Color.white.opacity(0.42)))
+            shape.fill(LinearGradient(colors: [color.mix(with: .white, by: 0.05), color], startPoint: .top, endPoint: .bottom))
+                // 边缘一圈向内泛白，像鼓起来的软垫
+                .overlay(EdgeGlow(shape: shape, size: CGSize(width: Self.size.width, height: frontHeight), strength: scheme == .dark ? 0.28 : 0.55))
         }
         .overlay {
-            FolderFrontShape()
-                .stroke(
-                    LinearGradient(colors: [.white.opacity(scheme == .dark ? 0.35 : 0.9), .white.opacity(0.08)], startPoint: .top, endPoint: .bottom),
-                    lineWidth: 0.8)
+            if isSelected { shape.stroke(.white, lineWidth: 2.5).padding(1) }
         }
-        .overlay {
-            if isSelected { FolderFrontShape().stroke(Color.brand, lineWidth: 2) }
+        // 阴影只投在一个简单轮廓上，不对整张卡离屏合成
+        .background {
+            shape.fill(color).padding(.horizontal, 8).padding(.top, 24)
+                .shadow(color: color.opacity(0.45), radius: hovering ? 16 : 12, y: hovering ? 10 : 8)
         }
     }
 
@@ -290,7 +347,7 @@ struct ProjectCard: View {
         if let reason = match.reasons.first, !reason.hasPrefix(String(localized: "名称")) {
             Label(reason, systemImage: "magnifyingglass")
                 .font(.system(size: 11 * labelBoost, weight: .medium))
-                .foregroundStyle(Color.brand)
+                .foregroundStyle(.white.opacity(0.95))
                 .lineLimit(2)
         }
     }
@@ -298,21 +355,45 @@ struct ProjectCard: View {
     /// 固定格式：最近活跃 · 分支 · 未提交数。main / master 不显示，只在非默认分支时提示。
     private var meta: some View {
         let dirty = item.project.git?.dirtyFiles ?? 0
-        return HStack(spacing: 0) {
-            if let at = item.project.lastActivity {
-                Text(Formatting.relative(at)).fixedSize()
-            }
-            if let branch = item.project.git?.branch, !["main", "master"].contains(branch) {
-                if item.project.lastActivity != nil { Text(" · ").fixedSize() }
-                Text(branch).lineLimit(1).truncationMode(.tail)
-            }
-            if dirty > 0 {
-                Text(" · ").fixedSize()
-                Text("\(dirty) 未提交").foregroundStyle(.pink).fixedSize()
+        var parts: [String] = []
+        if let at = item.project.lastActivity { parts.append(Formatting.relative(at)) }
+        if let branch = item.project.git?.branch, !["main", "master"].contains(branch) { parts.append(branch) }
+        if dirty > 0 { parts.append(String(localized: "\(dirty) 未提交")) }
+        return Text(parts.joined(separator: " · "))
+            .font(.system(size: 11.5 * labelBoost).monospacedDigit())
+            .foregroundStyle(.white.opacity(0.8))
+            .lineLimit(1)
+            .truncationMode(.middle)
+    }
+
+    /// 左下角：运行中 / 等你回复；没有状态时写项目类型。
+    @ViewBuilder private var status: some View {
+        HStack(spacing: 5) {
+            if !item.running.isEmpty {
+                Circle().fill(Color(hex: 0x5BFF8F)).frame(width: 6, height: 6)
+                Text("运行中")
+            } else if item.waiting {
+                Circle().fill(Color(hex: 0xFFD45B)).frame(width: 6, height: 6)
+                Text("等你回复")
+            } else {
+                Text(item.project.kind.displayName).foregroundStyle(.white.opacity(0.85))
             }
         }
-        .font(.system(size: 10.5 * labelBoost).monospacedDigit())
-        .foregroundStyle(.secondary)
+        .font(.system(size: 12 * labelBoost, weight: .medium))
+        .lineLimit(1)
+    }
+
+    /// 右下角：白色技术栈图标。
+    @ViewBuilder private var stackGlyph: some View {
+        let size = 20 * labelBoost
+        if let icon = StackIcon.of(item.project) {
+            Image(icon.asset).renderingMode(.template).resizable().scaledToFit()
+                .frame(width: size, height: size)
+                .opacity(0.8)
+                .help(icon.label)
+        } else {
+            Image(systemName: item.project.kind.symbol).font(.system(size: size * 0.8, weight: .semibold))
+        }
     }
 }
 
@@ -327,7 +408,9 @@ struct PaperView: View {
     @State private var lines: [String]?
     @State private var thumbnail: NSImage?
 
-    private var paperColor: Color { scheme == .dark ? Color(white: 0.2) : .white }
+    /// 纸张底色：占位纸和带内容的纸共用，暗色下是深灰
+    static func paperColor(_ scheme: ColorScheme) -> Color { scheme == .dark ? Color(white: 0.2) : .white }
+    private var paperColor: Color { Self.paperColor(scheme) }
 
     var body: some View {
         content
@@ -415,6 +498,17 @@ struct PaperView: View {
             VStack(alignment: .leading, spacing: 4) {
                 header(title: name, trailing: "")
                 codeLines
+                Spacer(minLength: 0)
+            }
+            .padding(10)
+
+        case .blank(let text):
+            VStack(alignment: .leading, spacing: 4) {
+                if let text, !text.isEmpty {
+                    Text(Formatting.plain(text)).font(.system(size: 9.5)).foregroundStyle(.secondary).lineLimit(5)
+                } else {
+                    codeLines
+                }
                 Spacer(minLength: 0)
             }
             .padding(10)

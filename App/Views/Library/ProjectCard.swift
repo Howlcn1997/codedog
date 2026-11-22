@@ -38,39 +38,6 @@ struct StackBadge: View {
     }
 }
 
-/// 近 N 天活跃度迷你柱（提交 + AI 回复）。
-struct ActivitySpark: View {
-    var item: ProjectItem
-    var days = 28
-    var color: Color = .brand
-
-    var body: some View {
-        let values = Self.series(item, days: days)
-        let maxV = max(values.max() ?? 1, 1)
-        HStack(alignment: .bottom, spacing: 2) {
-            ForEach(Array(values.enumerated()), id: \.offset) { _, v in
-                Capsule()
-                    .fill(v == 0 ? Color.primary.opacity(0.10) : color.opacity(0.45 + 0.55 * Double(v) / Double(maxV)))
-                    .frame(width: 3, height: v == 0 ? 3 : 4 + 16 * CGFloat(v) / CGFloat(maxV))
-            }
-        }
-        .frame(height: 20, alignment: .bottom)
-        .accessibilityLabel("近 \(days) 天活跃度")
-    }
-
-    static func series(_ item: ProjectItem, days: Int) -> [Int] {
-        let cal = Calendar.current
-        let commits = item.commitDays, ai = item.aiDays
-        let today = cal.startOfDay(for: .now)
-        return (0..<days).reversed().map { back in
-            let d = cal.date(byAdding: .day, value: -back, to: today)!
-            let c = cal.dateComponents([.year, .month, .day], from: d)
-            let key = String(format: "%04d-%02d-%02d", c.year!, c.month!, c.day!)
-            return (commits[key] ?? 0) + (ai[key] ?? 0)
-        }
-    }
-}
-
 /// 状态胶囊：运行中 / 等你回复 / N 个未提交。
 struct StatusPill: View {
     var item: ProjectItem
