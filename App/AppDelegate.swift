@@ -21,6 +21,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Task {
             await model.start()
             AppearanceMode.apply(model.library.preferences.appearance)
+            AppIconStyle.apply(model.library.preferences.appIcon)
             registerHotKey(model.library.preferences.launcherShortcut)
             await model.checkForUpdates()
         }

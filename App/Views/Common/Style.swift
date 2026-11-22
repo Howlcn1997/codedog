@@ -28,6 +28,54 @@ enum AppearanceMode: String, CaseIterable {
     }
 }
 
+/// App 图标偏好：跟随系统 / 白底黑狗 / 黑底白狗。
+/// 跟随系统时用 bundle 里的 AppIcon.icon（系统按外观自动切换）；指定款式时替换运行中的 Dock 图标与关于窗口图标。
+/// Finder 和未运行时的 Dock 仍显示系统图标（改 bundle 会破坏签名）。
+enum AppIconStyle: String, CaseIterable {
+    case system, light, dark
+
+    var title: String {
+        switch self {
+        case .system: String(localized: "跟随系统")
+        case .light: String(localized: "白底黑狗")
+        case .dark: String(localized: "黑底白狗")
+        }
+    }
+
+    /// 带 macOS 图标网格圆角和阴影的成品图标；system 返回 nil。
+    @MainActor var image: NSImage? {
+        switch self {
+        case .system: nil
+        case .light: Self.rendered(named: "AppIconLight")
+        case .dark: Self.rendered(named: "AppIconDark")
+        }
+    }
+
+    @MainActor static func apply(_ raw: String) {
+        NSApp.applicationIconImage = (AppIconStyle(rawValue: raw) ?? .system).image
+    }
+
+    @MainActor private static var cache: [String: NSImage] = [:]
+
+    /// 原图是满版方图，按 macOS 图标网格（1024 画布、824 主体、圆角约 185）裁成圆角并加阴影。
+    @MainActor private static func rendered(named name: String) -> NSImage? {
+        if let hit = cache[name] { return hit }
+        guard let source = NSImage(named: name) else { return nil }
+        let view = Image(nsImage: source)
+            .resizable()
+            .frame(width: 824, height: 824)
+            .clipShape(RoundedRectangle(cornerRadius: 185, style: .continuous))
+            .shadow(color: .black.opacity(0.3), radius: 10, y: 8)
+            .frame(width: 1024, height: 1024)
+        let renderer = ImageRenderer(content: view)
+        renderer.scale = 1
+        guard let cg = renderer.cgImage else { return nil }
+        let image = NSImage(cgImage: cg, size: NSSize(width: 1024, height: 1024))
+        cache[name] = image
+        return image
+    }
+}
+
 extension ProjectKind {
     var symbol: String {
         switch self {

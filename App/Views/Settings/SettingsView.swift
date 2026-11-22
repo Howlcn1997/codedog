@@ -171,6 +171,14 @@ private struct GeneralSettingsPage: View {
                         model.setPreferences { $0.appearance = mode.rawValue }
                     }))
                 folderTransparencyRow
+                SettingsRow("App 图标", subtitle: "运行时 Dock 与关于窗口中显示的图标") {
+                    AppIconPicker(selection: Binding(
+                        get: { AppIconStyle(rawValue: model.library.preferences.appIcon) ?? .system },
+                        set: { style in
+                            AppIconStyle.apply(style.rawValue)
+                            model.setPreferences { $0.appIcon = style.rawValue }
+                        }))
+                }
             }
 
             SettingsSection("语言") {
@@ -301,6 +309,46 @@ private struct AppearancePicker: View {
                 MiniWindow(dark: true).mask(DiagonalHalf())
             }
         }
+    }
+}
+
+/// App 图标款式：三个小图标，跟随系统为白底与黑底斜切拼合；选中时描品牌色圆角边框。
+private struct AppIconPicker: View {
+    @Binding var selection: AppIconStyle
+
+    var body: some View {
+        HStack(spacing: 6) {
+            ForEach(AppIconStyle.allCases, id: \.self) { style in
+                let selected = style == selection
+                Button { selection = style } label: {
+                    thumbnail(style)
+                        .frame(width: 38, height: 38)
+                        .padding(3)
+                        .overlay(RoundedRectangle(cornerRadius: 11, style: .continuous)
+                            .strokeBorder(selected ? Color.brand : Color.clear, lineWidth: 2))
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(SettingsPressStyle())
+                .help(style.title)
+                .accessibilityLabel(style.title)
+                .accessibilityAddTraits(selected ? .isSelected : [])
+            }
+        }
+    }
+
+    @ViewBuilder private func thumbnail(_ style: AppIconStyle) -> some View {
+        switch style {
+        case .system:
+            ZStack {
+                icon(.light)
+                icon(.dark).mask(DiagonalHalf())
+            }
+        default: icon(style)
+        }
+    }
+
+    @ViewBuilder private func icon(_ style: AppIconStyle) -> some View {
+        if let image = style.image { Image(nsImage: image).resizable().interpolation(.high) }
     }
 }
 

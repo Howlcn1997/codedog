@@ -6216,6 +6216,70 @@
           }
         }
       }
+    },
+    "App 图标": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "App Icon"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "App 圖示"
+          }
+        }
+      }
+    },
+    "运行时 Dock 与关于窗口中显示的图标": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Icon shown in the Dock and About window while running"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "執行時 Dock 與關於視窗中顯示的圖示"
+          }
+        }
+      }
+    },
+    "白底黑狗": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Black Dog on White"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "白底黑狗"
+          }
+        }
+      }
+    },
+    "黑底白狗": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "White Dog on Black"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "黑底白狗"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
