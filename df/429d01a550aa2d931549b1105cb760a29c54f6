@@ -1,0 +1,23 @@
+App/Views/Library/ProjectCard.swift
+  s_1a17c0067763f7::t_157f0f209902e2 77-78,86
+App/Views/Library/FolderCard.swift
+  s_1a17c0067763f7::t_4182a328b344b2 262,301-303,305-306,309
+  s_1a17c0067763f7::t_42e403e05c3720 297,304,313
+  s_1a17c0067763f7::t_157f0f209902e2 245,247-249,260,269,288-296,298-300,308,310
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.52-trip",
+  "base_commit_sha": "df429d01a550aa2d931549b1105cb760a29c54f6",
+  "prompts": {},
+  "sessions": {
+    "s_1a17c0067763f7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "87b8e021-f1f5-409d-84c1-972f7b0ad85d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "w.ning <w.ning@trip.com>"
+    }
+  }
+}
