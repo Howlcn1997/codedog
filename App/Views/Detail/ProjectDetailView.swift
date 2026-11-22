@@ -2,7 +2,7 @@ import CodedogCore
 import SwiftUI
 
 /// 项目面板：从右侧滑出。
-/// 头部（名称、路径、一行数字）→ 接着干（续上会话、未提交改动、打开方式）→ 活动（热力图 + 最近提交）→ 关于（属性表）→ 备注。
+/// 头部（名称、路径、一行数字）→ 接着干（续上会话、打开方式）→ 活动（热力图 + 未提交改动 + 最近提交）→ 关于（属性表）→ 备注。
 struct ProjectDetailView: View {
     @Environment(LibraryModel.self) private var model
     var item: ProjectItem
@@ -84,7 +84,7 @@ private struct PanelHeader: View {
         }
     }
 
-    /// 只显示需要注意的实时状态；未提交改动放在"接着干"里。
+    /// 只显示需要注意的实时状态；未提交改动放在"活动"的提交列表里。
     @ViewBuilder private var livePill: some View {
         if !item.running.isEmpty {
             pill("运行中", .green)
@@ -161,18 +161,13 @@ private struct PanelHeader: View {
 private struct NextUpCard: View {
     @Environment(LibraryModel.self) private var model
     var item: ProjectItem
-    @State private var showFiles = false
 
     var body: some View {
         let agent = item.lastAgent
-        let git = item.project.git
         VStack(alignment: .leading, spacing: 8) {
             Text("接着干").font(.system(size: 12, weight: .semibold)).foregroundStyle(.secondary)
             if let agent, let session = agent.lastSession {
                 sessionRow(agent.tool, session)
-            }
-            if let git, git.dirtyFiles > 0 {
-                changesRow(git)
             }
             actions(hasSessionRow: agent != nil)
         }
@@ -205,68 +200,6 @@ private struct NextUpCard: View {
                     .tint(.brand)
                     .controlSize(.small)
             }
-        }
-    }
-
-    private func changesRow(_ git: GitInfo) -> some View {
-        let names = git.changedFiles.prefix(3).map(\.name).joined(separator: "、")
-        return VStack(alignment: .leading, spacing: 0) {
-            row {
-                Image(systemName: "plusminus.circle.fill").font(.system(size: 17)).foregroundStyle(.pink)
-                    .frame(width: 20)
-            } title: {
-                Text("\(git.dirtyFiles) 个文件未提交") + Text(git.branch.map { " · \($0)" } ?? "").foregroundStyle(.secondary)
-            } subtitle: {
-                Text(git.changedFiles.count > 3 ? names + "…" : names)
-            } trailing: {
-                Button(showFiles ? "收起" : "查看") { withAnimation(.snappy) { showFiles.toggle() } }
-                    .buttonStyle(.glass)
-                    .controlSize(.small)
-            }
-            if showFiles {
-                VStack(alignment: .leading, spacing: 2) {
-                    ForEach(git.changedFiles.prefix(15), id: \.path) { f in
-                        Button { NSWorkspace.shared.open(URL(filePath: item.id + "/" + f.path)) } label: {
-                            HStack(spacing: 8) {
-                                Text(statusLetter(f.status)).font(.system(size: 10, weight: .bold, design: .monospaced))
-                                    .foregroundStyle(statusColor(f.status)).frame(width: 12)
-                                Text(f.path).font(.system(size: 11.5, design: .monospaced)).lineLimit(1).truncationMode(.head)
-                                Spacer(minLength: 0)
-                            }
-                            .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                        .disabled(f.status == .deleted)
-                        .help(f.status == .deleted ? "已删除" : "打开文件")
-                    }
-                    if git.changedFiles.count > 15 {
-                        Text("还有 \(git.changedFiles.count - 15) 个文件").font(.caption).foregroundStyle(.secondary)
-                    }
-                }
-                .padding(.horizontal, 10)
-                .padding(.bottom, 8)
-                .padding(.top, 2)
-                .transition(.opacity)
-            }
-        }
-        .background(.background.opacity(0.6), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-    }
-
-    private func statusLetter(_ s: FileRef.Status) -> String {
-        switch s {
-        case .added: "A"
-        case .deleted: "D"
-        case .renamed: "R"
-        case .untracked: "U"
-        default: "M"
-        }
-    }
-
-    private func statusColor(_ s: FileRef.Status) -> Color {
-        switch s {
-        case .added, .untracked: .green
-        case .deleted: .red
-        default: .orange
         }
     }
 
@@ -340,11 +273,13 @@ private struct NextUpCard: View {
 
 // MARK: - 活动
 
-/// 热力图（提交与 AI 回复合并）+ 最近提交。AI 会话已在"接着干"里，这里只列提交。
+/// 热力图（提交与 AI 回复合并）+ 最近提交。AI 会话已在"接着干"里，这里只列提交；
+/// 未提交的改动作为时间线最上面的一个节点。
 private struct ActivitySection: View {
     var item: ProjectItem
     @State private var day: String?
     @State private var expanded = false
+    @State private var showFiles = false
 
     var body: some View {
         let days = item.commitDays.merging(item.aiDays, uniquingKeysWith: +)
@@ -352,6 +287,8 @@ private struct ActivitySection: View {
         let active = days.filter { $0.value > 0 }.count
         let commits = (item.project.git?.recentCommits ?? []).filter { day == nil || HeatmapView.key($0.date) == day }
         let limit = 5
+        // 选中某一天时只看那天的提交，不显示未提交改动。
+        let dirty = item.project.git.flatMap { day == nil && $0.dirtyFiles > 0 ? $0 : nil }
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
                 Text("活动").font(.system(size: 13, weight: .semibold))
@@ -378,7 +315,7 @@ private struct ActivitySection: View {
                 .foregroundStyle(.secondary)
                 .padding(.top, 2)
                 .help("当前检出的分支（HEAD）上的提交记录")
-                if commits.isEmpty {
+                if commits.isEmpty && dirty == nil {
                     Label(day == nil ? "还没有提交" : "最近的提交里没有这一天的", systemImage: day == nil ? "tray" : "calendar.badge.exclamationmark")
                         .font(.callout).foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -386,10 +323,14 @@ private struct ActivitySection: View {
                         .background(groupFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                 } else {
                     VStack(spacing: 0) {
+                        if let dirty {
+                            uncommittedRow(dirty, last: commits.isEmpty)
+                            if !commits.isEmpty { Divider().padding(.leading, 34) }
+                        }
                         let shown = expanded ? commits : Array(commits.prefix(limit))
                         ForEach(Array(shown.enumerated()), id: \.offset) { i, c in
                             if i > 0 { Divider().padding(.leading, 34) }
-                            commitRow(c, first: i == 0, last: i == shown.count - 1)
+                            commitRow(c, first: i == 0 && dirty == nil, last: i == shown.count - 1)
                         }
                         if commits.count > limit {
                             Divider()
@@ -406,6 +347,82 @@ private struct ActivitySection: View {
             }
         }
         .onChange(of: day) { expanded = false }
+    }
+
+    /// 时间线顶端的"未提交"节点：空心粉色圆点，可展开文件列表。
+    private func uncommittedRow(_ git: GitInfo, last: Bool) -> some View {
+        let line = Color.brand.opacity(0.3)
+        let names = git.changedFiles.prefix(3).map(\.name).joined(separator: "、")
+        return HStack(alignment: .top, spacing: 10) {
+            ZStack(alignment: .top) {
+                VStack(spacing: 0) {
+                    Rectangle().fill(.clear).frame(width: 1.5, height: 17)
+                    Rectangle().fill(last ? .clear : line).frame(width: 1.5)
+                }
+                Circle().strokeBorder(Color.pink, lineWidth: 1.5).frame(width: 9, height: 9).padding(.top, 13)
+            }
+            .frame(width: 14)
+            .frame(maxHeight: .infinity)
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 10) {
+                    VStack(alignment: .leading, spacing: 1) {
+                        (Text("\(git.dirtyFiles) 个文件未提交").foregroundStyle(.pink))
+                        Text(git.changedFiles.count > 3 ? names + "…" : names)
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                    .lineLimit(1)
+                    Spacer(minLength: 6)
+                    Button(showFiles ? "收起" : "查看") { withAnimation(.snappy) { showFiles.toggle() } }
+                        .buttonStyle(.glass)
+                        .controlSize(.small)
+                }
+                if showFiles {
+                    VStack(alignment: .leading, spacing: 2) {
+                        ForEach(git.changedFiles.prefix(15), id: \.path) { f in
+                            Button { NSWorkspace.shared.open(URL(filePath: item.id + "/" + f.path)) } label: {
+                                HStack(spacing: 8) {
+                                    Text(statusLetter(f.status)).font(.system(size: 10, weight: .bold, design: .monospaced))
+                                        .foregroundStyle(statusColor(f.status)).frame(width: 12)
+                                    Text(f.path).font(.system(size: 11.5, design: .monospaced)).lineLimit(1).truncationMode(.head)
+                                    Spacer(minLength: 0)
+                                }
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                            .disabled(f.status == .deleted)
+                            .help(f.status == .deleted ? "已删除" : "打开文件")
+                        }
+                        if git.changedFiles.count > 15 {
+                            Text("还有 \(git.changedFiles.count - 15) 个文件").font(.caption).foregroundStyle(.secondary)
+                        }
+                    }
+                    .padding(.top, 2)
+                    .transition(.opacity)
+                }
+            }
+            .padding(.vertical, 7)
+        }
+        .font(.callout)
+        .fixedSize(horizontal: false, vertical: true)
+        .padding(.horizontal, 12)
+    }
+
+    private func statusLetter(_ s: FileRef.Status) -> String {
+        switch s {
+        case .added: "A"
+        case .deleted: "D"
+        case .renamed: "R"
+        case .untracked: "U"
+        default: "M"
+        }
+    }
+
+    private func statusColor(_ s: FileRef.Status) -> Color {
+        switch s {
+        case .added, .untracked: .green
+        case .deleted: .red
+        default: .orange
+        }
     }
 
     /// 时间线：圆点用品牌色（别人的提交用浅色），相邻提交之间用竖线连起来。
