@@ -128,23 +128,31 @@ struct SidebarView: View {
         }
     }
 
+    /// 悬浮的玻璃按钮（和标题栏的侧栏按钮一个样式）；列表从底下滚过，safeAreaInset 保证滚到底时最后一行停在按钮上方。
     private var footerRow: some View {
         HStack(spacing: 8) {
             SettingsLink {
                 Image(systemName: "gearshape")
-                    .font(.system(size: 15))
-                    .frame(width: 28, height: 28)
+                    .font(.system(size: 15, weight: .medium))
+                    .frame(width: 22, height: 22)
             }
-            .buttonStyle(.plain)
-            .foregroundStyle(.secondary)
+            .buttonStyle(.glass)
+            .buttonBorderShape(.circle)
+            .controlSize(.large)
             .help("设置")
-            Spacer()
             if model.isScanning {
-                ProgressView().controlSize(.small)
-                Text("正在扫描…").font(.caption).foregroundStyle(.secondary)
+                HStack(spacing: 6) {
+                    ProgressView().controlSize(.small)
+                    Text("正在扫描…").font(.caption).foregroundStyle(.secondary)
+                }
+                .padding(.horizontal, 12)
+                .frame(height: 34)
+                .glassEffect(.regular, in: .capsule)
             }
+            Spacer()
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
+        .padding(.horizontal, 12)
+        .padding(.bottom, 12)
+        .padding(.top, 6)
     }
 }
