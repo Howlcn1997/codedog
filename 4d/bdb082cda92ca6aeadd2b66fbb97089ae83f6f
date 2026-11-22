@@ -1,0 +1,30 @@
+App/State/Navigation.swift
+  s_c1515fa023be70::t_8fd39f6be05c09 52-53
+App/Views/Sidebar/SidebarView.swift
+  s_c1515fa023be70::t_dd8c43e57d87ef 36-43
+App/Views/Library/FolderCard.swift
+  s_c1515fa023be70::t_f4c81ca98e45be 136,155,158,163-164,167,171,362,365,368
+App/State/LibraryModel.swift
+  s_c1515fa023be70::t_8fd39f6be05c09 124
+App/Views/Common/Style.swift
+  s_c1515fa023be70::t_9fdab97e428553 91
+  s_c1515fa023be70::t_dd8c43e57d87ef 59-77,80-86,88-89,92-109,186-190
+Packages/CodedogCore/Sources/CodedogCore/Model/Library.swift
+  s_c1515fa023be70::t_8fd39f6be05c09 46-47
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.52-trip",
+  "base_commit_sha": "4dbdb082cda92ca6aeadd2b66fbb97089ae83f6f",
+  "prompts": {},
+  "sessions": {
+    "s_c1515fa023be70": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6e689295-be02-4a34-b720-1e74fc03237e",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "w.ning <w.ning@trip.com>"
+    }
+  }
+}
