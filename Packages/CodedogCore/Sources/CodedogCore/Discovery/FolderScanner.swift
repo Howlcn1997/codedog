@@ -43,6 +43,8 @@ public enum FolderScanner {
             let (dir, depth) = queue[index]
             index += 1
             guard seen.insert(dir).inserted else { continue }
+            // git worktree 是主仓库的附属检出，不单独算项目，也不往下钻。
+            if isGitWorktree(dir) { continue }
 
             if !markers(at: dir).isEmpty {
                 found.append(dir)
@@ -62,6 +64,18 @@ public enum FolderScanner {
             }
         }
         return found
+    }
+
+    /// `.git` 为文件且指向 `<主仓库>/.git/worktrees/<名字>` 时为 worktree（子模块指向 `.git/modules/`，不算）。
+    public static func isGitWorktree(_ path: String) -> Bool {
+        let gitPath = path + "/.git"
+        var isDir: ObjCBool = false
+        guard FileManager.default.fileExists(atPath: gitPath, isDirectory: &isDir), !isDir.boolValue,
+              let content = try? String(contentsOfFile: gitPath, encoding: .utf8),
+              let line = content.split(whereSeparator: \.isNewline).first(where: { $0.hasPrefix("gitdir:") })
+        else { return false }
+        let gitdir = line.dropFirst("gitdir:".count).trimmingCharacters(in: .whitespaces)
+        return gitdir.contains("/.git/worktrees/")
     }
 
     public static func normalize(_ path: String) -> String {

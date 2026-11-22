@@ -17,6 +17,17 @@ import Testing
         #expect(Set(found) == ["company/api", "personal/site", "personal/repo"])
     }
 
+    @Test func skipsGitWorktreesButKeepsSubmoduleStyleRepos() throws {
+        let f = try Fixture()
+        try f.dir("main/.git/worktrees/feature")
+        try f.file("main-feature/.git", "gitdir: \(f.root)/main/.git/worktrees/feature\n")
+        try f.file("main-feature/package.json", "{}")
+        try f.file("main-feature/nested/package.json", "{}")       // worktree 内部也不钻
+        try f.file("other/.git", "gitdir: ../main/.git/modules/other\n")
+        let found = FolderScanner.findProjects(in: [f.root]).map { String($0.dropFirst(f.root.count + 1)) }
+        #expect(Set(found) == ["main", "other"])
+    }
+
     @Test func legacyWorkspaceIsOneProject() throws {
         let f = try Fixture()
         try f.file("workspaces/ws-1/.codedog-workspace.json", "{}")
