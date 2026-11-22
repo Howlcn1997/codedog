@@ -535,22 +535,23 @@ private struct AboutSection: View {
         }
     }
 
-    /// 仓库：托管平台图标 + 仓库路径（owner/repo），点击跳转，完整地址放在悬停提示里；没有网页地址时点击复制 remote。
+    /// 仓库：托管平台图标 + 平台名（GitHub / GitLab / Gitee，其他托管显示域名），点击跳转，完整地址放在悬停提示里；
+    /// 没有网页地址时点击复制 remote。
     @ViewBuilder
     private func repo(_ git: GitInfo) -> some View {
         if let url = git.webURL {
             let host = url.host()?.lowercased() ?? ""
-            // 平台图标：GitHub 跟随文字色、GitLab 橙，其他托管用 Git 图标
-            let (icon, brand): (String, Color) = host.contains("github") ? ("Repo/github", .primary)
-                : host.contains("gitlab") ? ("Repo/gitlab", Color(hex: 0xFC6D26))
-                : ("Repo/git", Color(hex: 0xF05032))
-            let path = url.path(percentEncoded: false).trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+            // 平台图标：GitHub 跟随文字色、GitLab 橙、Gitee 红，其他托管用 Git 图标
+            let (icon, brand, name): (String, Color, String) =
+                host.contains("github") ? ("Repo/github", .primary, "GitHub")
+                : host.contains("gitlab") ? ("Repo/gitlab", Color(hex: 0xFC6D26), "GitLab")
+                : host.contains("gitee") ? ("Repo/git", Color(hex: 0xC71D23), "Gitee")
+                : ("Repo/git", Color(hex: 0xF05032), host)
             Button { NSWorkspace.shared.open(url) } label: {
                 HStack(spacing: 6) {
                     Image(icon).resizable().renderingMode(.template)
                         .frame(width: 14, height: 14).foregroundStyle(brand)
-                    Text(verbatim: path.isEmpty ? host : path)
-                        .lineLimit(1).truncationMode(.middle)
+                    Text(verbatim: name).lineLimit(1).truncationMode(.middle)
                 }
             }
             .buttonStyle(PillStyle())
