@@ -117,6 +117,9 @@ struct ProjectCard: View {
     static let size = CGSize(width: 264, height: 214)
     private let frontHeight: CGFloat = 150
 
+    /// 整张卡是按 cardScale 等比缩放的，缩小后名称和徽章会显得太小；这里给前层文字和图标反向补一点（只补缩小的部分，开方让补偿温和些）
+    private var labelBoost: CGFloat { model.cardScale < 1 ? 1 / sqrt(model.cardScale) : 1 }
+
     var body: some View {
         ZStack(alignment: .bottom) {
             ProjectArt(project: item.project)
@@ -236,16 +239,16 @@ struct ProjectCard: View {
                 VStack(alignment: .leading, spacing: 5) {
                     HStack(spacing: 6) {
                         Text(item.project.name)
-                            .font(.system(size: 15, weight: .semibold))
+                            .font(.system(size: 15 * labelBoost, weight: .semibold))
                             .lineLimit(1)
                         if item.meta.favorite {
-                            Image(systemName: "star.fill").font(.system(size: 10)).foregroundStyle(.yellow)
+                            Image(systemName: "star.fill").font(.system(size: 10 * labelBoost)).foregroundStyle(.yellow)
                         }
                     }
                     subtitle
                 }
                 Spacer(minLength: 0)
-                StackBadge(project: item.project, size: 36)   // 项目类型放在右下角
+                StackBadge(project: item.project, size: 36 * labelBoost)   // 项目类型放在右下角
             }
         }
         .padding(.horizontal, 16)
@@ -271,10 +274,10 @@ struct ProjectCard: View {
     @ViewBuilder private var subtitle: some View {
         HStack(spacing: 5) {
             if !item.running.isEmpty {
-                Circle().fill(.green).frame(width: 6, height: 6)
+                Circle().fill(.green).frame(width: 6 * labelBoost, height: 6 * labelBoost)
                 Text("运行中")
             } else if item.waiting {
-                Circle().fill(.orange).frame(width: 6, height: 6)
+                Circle().fill(.orange).frame(width: 6 * labelBoost, height: 6 * labelBoost)
                 Text("等你回复")
             } else if let reason = match.reasons.first, !reason.hasPrefix(String(localized: "名称")) {
                 Text(reason)
@@ -285,7 +288,7 @@ struct ProjectCard: View {
                 Text("· \(dirty) 未提交").foregroundStyle(.pink)
             }
         }
-        .font(.system(size: 10.5, design: .monospaced))
+        .font(.system(size: 10.5 * labelBoost, design: .monospaced))
         .foregroundStyle(.secondary)
         .lineLimit(1)
     }
