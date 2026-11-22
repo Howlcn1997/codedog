@@ -1,0 +1,21 @@
+Packages/CodedogCore/Tests/CodedogCoreTests/ScannerTests.swift
+  s_ad861e4cc6652d::t_83b66bd619516d 20-30
+Packages/CodedogCore/Sources/CodedogCore/Discovery/FolderScanner.swift
+  s_ad861e4cc6652d::t_83b66bd619516d 46-47,69-78
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.52-trip",
+  "base_commit_sha": "1bda58963c5a21791063bd591b017108946a30ec",
+  "prompts": {},
+  "sessions": {
+    "s_ad861e4cc6652d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "888013f7-346b-4666-b946-a47a8cc7ca36",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "w.ning <w.ning@trip.com>"
+    }
+  }
+}
