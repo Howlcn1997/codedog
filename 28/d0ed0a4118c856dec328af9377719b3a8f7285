@@ -1,0 +1,22 @@
+App/Views/Library/LibraryView.swift
+  s_b3caf81009260f::t_3998ff8bebf93b 25
+App/Views/Library/ProjectTable.swift
+  s_b3caf81009260f::t_01162736d141df 78,118,122,124,126,130
+  s_b3caf81009260f::t_3998ff8bebf93b 4-5,11-16,18-19,25-31,33-38,40-48,50-56,58-59,61-62,64-68,70-71,73-77,80-85,95,123,125,127-129,131-143
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.52-trip",
+  "base_commit_sha": "28d0ed0a4118c856dec328af9377719b3a8f7285",
+  "prompts": {},
+  "sessions": {
+    "s_b3caf81009260f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "427a237b-cd8d-42ff-a074-abbb4993bebb",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "w.ning <w.ning@trip.com>"
+    }
+  }
+}
