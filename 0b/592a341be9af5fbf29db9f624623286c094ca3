@@ -1,0 +1,26 @@
+scripts/dmg/settings.py
+  s_9a8c14b87f8bd4::t_2435b1e670c1b0 1,13
+  s_9a8c14b87f8bd4::t_bfc2c5be8a4048 23-24
+  s_9a8c14b87f8bd4::t_5cf48c90c1db37 2-12,14-22,25-31
+scripts/dmg/make-background.swift
+  s_9a8c14b87f8bd4::t_23393de0436117 1-21,23,26-30,32-40,42-43,45-51,53-72,74-84,87-98
+  s_9a8c14b87f8bd4::t_bfc2c5be8a4048 22,24-25,31,41,44,52,73,85-86
+scripts/release.sh
+  s_9a8c14b87f8bd4::t_f91c9667f91c3a 49-57
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.52-trip",
+  "base_commit_sha": "0b592a341be9af5fbf29db9f624623286c094ca3",
+  "prompts": {},
+  "sessions": {
+    "s_9a8c14b87f8bd4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "df6a4b82-a567-4c43-a0f0-c3e24fbd2fb1",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "w.ning <w.ning@trip.com>"
+    }
+  }
+}
