@@ -468,62 +468,40 @@ private struct AboutSection: View {
     @State private var copiedPath: String?
 
     var body: some View {
+        let git = item.project.git
         VStack(alignment: .leading, spacing: 10) {
             Text("关于").font(.system(size: 13, weight: .semibold))
-            VStack(spacing: 0) {
-                let rows = rowViews
-                ForEach(Array(rows.enumerated()), id: \.offset) { i, r in
-                    if i > 0 { Divider().padding(.leading, 12) }
-                    r
+            // 不写「简介」「语言」这类标签：内容本身看得出是什么
+            VStack(alignment: .leading, spacing: 16) {
+                if let d = item.project.description, !d.isEmpty {
+                    Text(Formatting.plain(d))
+                        .font(.callout)
+                        .lineSpacing(2)
+                        .textSelection(.enabled)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                if !item.project.languages.isEmpty {
+                    LanguageBar(languages: item.project.languages)
+                }
+                tags
+                if let wts = git?.worktrees, !wts.isEmpty {
+                    worktrees(wts)
                 }
             }
-            .background(groupFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            // 能点的入口收成底部一排：仓库、README、编辑器
+            VStack(alignment: .leading, spacing: 12) {
+                Divider()
+                FlowLayout(spacing: 6) {
+                    if let git { repo(git) }
+                    readme
+                    editorPicker
+                }
+            }
+            .padding(.top, 4)
         }
         .fileImporter(isPresented: $pickingApp, allowedContentTypes: [.application]) { r in
             if case .success(let url) = r, let ref = Opener.appRef(at: url) { model.setEditor(item.id, ref) }
         }
-    }
-
-    private var rowViews: [AnyView] {
-        var rows: [AnyView] = []
-        if let d = item.project.description, !d.isEmpty {
-            rows.append(AnyView(prop("简介") { Text(Formatting.plain(d)).textSelection(.enabled).fixedSize(horizontal: false, vertical: true) }))
-        }
-        if !item.project.languages.isEmpty {
-            rows.append(AnyView(prop("语言") { LanguageBar(languages: item.project.languages) }))
-        }
-        rows.append(AnyView(prop("标签") { tags }))
-        if let git = item.project.git {
-            rows.append(AnyView(prop("仓库") { repo(git) }))
-            if let wts = git.worktrees, !wts.isEmpty {
-                rows.append(AnyView(prop("Worktree") { worktrees(wts) }))
-            }
-        }
-        rows.append(AnyView(prop("打开方式") { editorPicker }))
-        if let readme = item.project.readmeText, !readme.isEmpty {
-            rows.append(AnyView(prop("README") {
-                Button { showReadme = true } label: {
-                    HStack(spacing: 3) {
-                        Text(item.project.readmeFile ?? "README")
-                        Image(systemName: "chevron.right").font(.system(size: 9, weight: .bold))
-                    }
-                }
-                .buttonStyle(.borderless)
-                .popover(isPresented: $showReadme, arrowEdge: .leading) { ReadmeView(title: item.project.readmeFile ?? "README", text: readme) }
-            }))
-        }
-        return rows
-    }
-
-    private func prop<V: View>(_ label: LocalizedStringKey, @ViewBuilder _ value: () -> V) -> some View {
-        HStack(alignment: .top, spacing: 12) {
-            Text(label).font(.caption).foregroundStyle(.secondary).frame(width: 56, alignment: .leading)
-                .padding(.top, 2)
-            value().frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .font(.callout)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 9)
     }
 
     private var tags: some View {
@@ -538,8 +516,8 @@ private struct AboutSection: View {
                         .help("移除标签")
                 }
                 .font(.caption)
-                .padding(.horizontal, 8).padding(.vertical, 2)
-                .background(Color.primary.opacity(0.06), in: Capsule())
+                .padding(.horizontal, 8).padding(.vertical, 3)
+                .background(Color.primary.opacity(0.07), in: Capsule())
             }
             Menu {
                 ForEach(model.library.categories.filter { !item.meta.categories.contains($0.id) }) { c in
@@ -547,41 +525,76 @@ private struct AboutSection: View {
                 }
                 Divider()
                 Button("新建标签…") { NotificationCenter.default.post(name: .newCategory, object: item.id) }
-            } label: { Text("+ 添加").font(.caption) }
+            } label: { Text("+ 标签").font(.caption) }
             .menuStyle(.button).buttonStyle(.borderless).menuIndicator(.hidden).fixedSize()
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 8).padding(.vertical, 3)
+            .overlay(Capsule().strokeBorder(Color.primary.opacity(0.15), style: StrokeStyle(lineWidth: 1, dash: [3, 2])))
         }
     }
 
-    /// 仓库只显示托管平台图标 + 名称，点击跳转；完整地址放在悬停提示里。
+    /// 仓库：托管平台图标 + 名称，点击跳转，完整地址放在悬停提示里；没有网页地址时点击复制 remote。
     @ViewBuilder
     private func repo(_ git: GitInfo) -> some View {
         if let url = git.webURL {
-            let host = url.host()?.lowercased() ?? ""
-            let github = host.contains("github")
-            // 品牌色：GitHub 黑（深色模式跟随文字色变白），GitLab 橙
+            let github = (url.host()?.lowercased() ?? "").contains("github")
+            // 品牌色：GitHub 跟随文字色，GitLab 橙
             let brand: Color = github ? .primary : Color(hex: 0xFC6D26)
-            Link(destination: url) {
-                HStack(spacing: 5) {
+            Button { NSWorkspace.shared.open(url) } label: {
+                HStack(spacing: 6) {
                     Image(github ? "Repo/github" : "Repo/gitlab").resizable().renderingMode(.template)
                         .frame(width: 14, height: 14).foregroundStyle(brand)
-                    Text(verbatim: github ? "GitHub" : "GitLab").foregroundStyle(.primary)
+                    Text(verbatim: github ? "GitHub" : "GitLab")
                 }
             }
-            .buttonStyle(.borderless)
+            .buttonStyle(PillStyle())
             .help(url.absoluteString)
         } else if let remote = git.remote {
             Button { copy(remote) } label: {
-                HStack(spacing: 5) {
+                HStack(spacing: 6) {
                     Image("Repo/git").resizable().renderingMode(.template).frame(width: 14, height: 14)
                         .foregroundStyle(Color(hex: 0xF05032))
                     Image(systemName: copiedPath == remote ? "checkmark" : "doc.on.doc").font(.system(size: 10))
+                        .foregroundStyle(.secondary)
                 }
             }
-            .buttonStyle(.borderless).foregroundStyle(.secondary)
+            .buttonStyle(PillStyle())
             .help(remote)
-        } else {
-            Text("—").foregroundStyle(.secondary)
         }
+    }
+
+    @ViewBuilder private var readme: some View {
+        if let text = item.project.readmeText, !text.isEmpty {
+            let title = item.project.readmeFile ?? "README"
+            Button { showReadme = true } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "doc.text").font(.system(size: 11))
+                    Text(verbatim: "README")
+                }
+            }
+            .buttonStyle(PillStyle())
+            .help(title)
+            .popover(isPresented: $showReadme, arrowEdge: .leading) { ReadmeView(title: title, text: text) }
+        }
+    }
+
+    /// 编辑器：显示实际会用的编辑器，弹出列表里可改为跟随全局或另选。
+    private var editorPicker: some View {
+        let global = model.library.preferences.editor ?? Opener.installedEditors.first
+        let shown = item.meta.editor ?? global
+        let auto = String(localized: "跟随全局（\(global?.name ?? String(localized: "未设置"))）")
+        let options: [SettingsChoice<AppRef?, AnyView>.Option] =
+            [.init(value: nil, title: auto, icon: nil)]
+            + editorChoices.map { .init(value: $0, title: $0.name, icon: AppIconView.icon($0)) }
+        return SettingsChoice(title: "编辑器", options: options,
+                              selection: Binding(get: { item.meta.editor }, set: { model.setEditor(item.id, $0) }),
+                              extra: (String(localized: "其他应用…"), { pickingApp = true })) {
+            AnyView(HStack(spacing: 6) {
+                if let shown { Image(nsImage: AppIconView.icon(shown)).resizable().frame(width: 14, height: 14) }
+                Text(shown?.name ?? String(localized: "未设置")).font(.system(size: 12))
+            })
+        }
+        .help(item.meta.editor == nil ? auto : String(localized: "打开方式"))
     }
 
     /// 每个 worktree 一行：分支名 + 复制路径按钮。
@@ -628,24 +641,33 @@ private struct AboutSection: View {
         }
     }
 
-    private var editorPicker: some View {
-        HStack(spacing: 6) {
-            Picker("编辑器", selection: Binding(get: { item.meta.editor }, set: { model.setEditor(item.id, $0) })) {
-                Text("跟随全局（\(model.library.preferences.editor?.name ?? Opener.installedEditors.first?.name ?? String(localized: "未设置"))）").tag(AppRef?.none)
-                Divider()
-                ForEach(editorChoices, id: \.self) { app in
-                    Label { Text(app.name) } icon: { Image(nsImage: AppIconView.icon(app)) }.tag(AppRef?.some(app))
-                }
-            }
-            .labelsHidden().fixedSize().controlSize(.small)
-            Button("其他…") { pickingApp = true }.buttonStyle(.borderless).font(.caption)
-        }
-    }
-
     private var editorChoices: [AppRef] {
         var list = Opener.installedEditors
         if let custom = item.meta.editor, !list.contains(custom) { list.append(custom) }
         return list
+    }
+}
+
+/// 关于区底部的胶囊按钮，和 SettingsChoice 的外观一致。
+private struct PillStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View { PillBody(configuration: configuration) }
+
+    private struct PillBody: View {
+        let configuration: Configuration
+        @State private var hovered = false
+
+        var body: some View {
+            configuration.label
+                .font(.system(size: 12))
+                .foregroundStyle(.primary)
+                .padding(.horizontal, 10)
+                .frame(height: 26)
+                .background(Capsule().fill(Color.primary.opacity(hovered ? 0.1 : 0.06)))
+                .contentShape(Capsule())
+                .scaleEffect(configuration.isPressed ? 0.95 : 1)
+                .animation(.spring(duration: 0.25, bounce: 0.4), value: configuration.isPressed)
+                .onHover { hovered = $0 }
+        }
     }
 }
 
@@ -663,7 +685,7 @@ private struct LanguageBar: View {
 
     var body: some View {
         let items = shares
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 8) {
             GeometryReader { g in
                 let gap: CGFloat = 2
                 let usable = g.size.width - gap * CGFloat(items.count - 1)
@@ -675,8 +697,7 @@ private struct LanguageBar: View {
                 .frame(width: g.size.width, alignment: .leading)
                 .clipShape(Capsule())
             }
-            .frame(height: 6)
-            .padding(.top, 6)
+            .frame(height: 4)
             FlowLayout(spacing: 10) {
                 ForEach(items, id: \.name) { s in
                     HStack(spacing: 4) {
