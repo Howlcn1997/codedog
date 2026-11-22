@@ -505,38 +505,6 @@
     "codedog": {
       "shouldTranslate": false
     },
-    "codedog 会在这些文件夹里寻找项目（最多 5 层），并在文件变化时自动更新。不会移动或修改任何文件。": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "codedog looks for projects in these folders (up to 5 levels deep) and updates automatically when files change. It never moves or modifies any files."
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "codedog 會在這些資料夾裡尋找專案（最多 5 層），並在檔案變動時自動更新。不會移動或修改任何檔案。"
-          }
-        }
-      }
-    },
-    "codedog 去哪里寻找你的项目": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Where codedog looks for your projects"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "codedog 要去哪裡尋找你的專案"
-          }
-        }
-      }
-    },
     "my-app": {
       "shouldTranslate": false
     },
@@ -609,22 +577,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "「在終端機中打開」時使用"
-          }
-        }
-      }
-    },
-    "「自动」会使用本机已安装的第一个编辑器；单个项目也可以在详情面板里另选。": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "“Automatic” uses the first editor installed on this Mac. You can choose a different one for each project in the detail panel."
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "「自動」會使用本機已安裝的第一個編輯器；個別專案也可以在詳細資訊面板裡另外選擇。"
           }
         }
       }
@@ -771,22 +723,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "今天活躍"
-          }
-        }
-      }
-    },
-    "从 GitHub Releases 检查，每天最多一次，不上传任何信息。codedog 没有开发者签名，新版本需要手动下载替换。": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Checks GitHub Releases at most once a day and never uploads any data. codedog isn’t signed by a developer, so new versions must be downloaded and replaced manually."
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "從 GitHub Releases 檢查，每天最多一次，不會上傳任何資訊。codedog 沒有開發者簽名，新版本需要手動下載替換。"
           }
         }
       }
@@ -1105,22 +1041,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "關於"
-          }
-        }
-      }
-    },
-    "关闭主窗口后继续在菜单栏运行，Dock 图标一起隐藏": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Keeps running after you close the window; hides the Dock icon"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "關閉主視窗後繼續在選單列執行，Dock 圖像一併隱藏"
           }
         }
       }
@@ -1605,22 +1525,6 @@
         }
       }
     },
-    "双击项目、按 ↵ 时使用": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Used when you double-click a project or press ↵"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "按兩下專案、按 ↵ 時使用"
-          }
-        }
-      }
-    },
     "发现新版本 %@": {
       "localizations": {
         "en": {
@@ -1974,22 +1878,6 @@
         }
       }
     },
-    "在任何地方按下快捷键呼出启动器：输入名称，↑↓ 选择，←→ 切换操作，↵ 打开。": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Press the shortcut anywhere to show the Launcher: type a name, ↑↓ to select, ←→ to switch actions, ↵ to open."
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "在任何地方按下快速鍵叫出啟動器：輸入名稱，↑↓ 選擇，←→ 切換操作，↵ 打開。"
-          }
-        }
-      }
-    },
     "在右键菜单里选择“隐藏”，可以把不想看到的项目收起来。": {
       "localizations": {
         "en": {
@@ -2018,22 +1906,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "在終端機中打開"
-          }
-        }
-      }
-    },
-    "在终端里快速找到项目": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Find projects quickly from the terminal"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "在終端機裡快速找到專案"
           }
         }
       }
@@ -2150,22 +2022,6 @@
         }
       }
     },
-    "外观、启动方式与全局快捷键": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Appearance, startup and global shortcut"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "外觀、啟動方式與全域快速鍵"
-          }
-        }
-      }
-    },
     "多": {
       "localizations": {
         "en": {
@@ -2210,22 +2066,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "安裝"
-          }
-        }
-      }
-    },
-    "安装到 ~/.local/bin/codedog": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Install to ~/.local/bin/codedog"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "安裝到 ~/.local/bin/codedog"
           }
         }
       }
@@ -2601,22 +2441,6 @@
         }
       }
     },
-    "当前版本 %@": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Current version %@"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "目前版本 %@"
-          }
-        }
-      }
-    },
     "很久没动": {
       "localizations": {
         "en": {
@@ -2869,22 +2693,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "打開遠端儲存庫"
-          }
-        }
-      }
-    },
-    "打开项目时使用的编辑器与终端": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Editor and terminal used to open projects"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "打開專案時使用的編輯器與終端機"
           }
         }
       }
@@ -4105,22 +3913,6 @@
         }
       }
     },
-    "添加一个放代码的文件夹，例如 ~/code": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Add a folder where you keep code, such as ~/code"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "加入一個放程式碼的資料夾，例如 ~/code"
-          }
-        }
-      }
-    },
     "添加已有文件夹…": {
       "localizations": {
         "en": {
@@ -4265,22 +4057,6 @@
         }
       }
     },
-    "点击后按下新的组合键，Esc 取消": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Click, then press a new key combination. Esc to cancel"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "按一下後按下新的組合鍵，Esc 取消"
-          }
-        }
-      }
-    },
     "点击复制路径": {
       "localizations": {
         "en": {
@@ -4309,22 +4085,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "版本 %@"
-          }
-        }
-      }
-    },
-    "版本与更新": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Version and updates"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "版本與更新"
           }
         }
       }
@@ -4405,22 +4165,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "介面語言"
-          }
-        }
-      }
-    },
-    "登录 Mac 后自动运行 codedog": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Open codedog automatically when you log in"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "登入 Mac 後自動執行 codedog"
           }
         }
       }
@@ -4937,22 +4681,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "花費依 Anthropic 公開 API 價格估算（快取寫入以 1.25×/2× 輸入價計），只統計 Claude 模型；訂閱用戶的實際花費會不同。"
-          }
-        }
-      }
-    },
-    "菜单、按钮与提示使用的语言": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Language used for menus, buttons and messages"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "選單、按鈕與提示使用的語言"
           }
         }
       }
@@ -6102,38 +5830,6 @@
         }
       }
     },
-    "不透明": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Opaque"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "不透明"
-          }
-        }
-      }
-    },
-    "能透过文件夹看到里面的文件": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "See the files inside through the folder"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "能透過資料夾看到裡面的檔案"
-          }
-        }
-      }
-    },
     "开始创作": {
       "localizations": {
         "en": {
@@ -6201,22 +5897,6 @@
     "IDE": {
       "shouldTranslate": false
     },
-    "「终端打开」时使用": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Used for “Open in Terminal”"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "「終端機打開」時使用"
-          }
-        }
-      }
-    },
     "App 图标": {
       "localizations": {
         "en": {
@@ -6229,22 +5909,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "App 圖示"
-          }
-        }
-      }
-    },
-    "运行时 Dock 与关于窗口中显示的图标": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Icon shown in the Dock and About window while running"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "執行時 Dock 與關於視窗中顯示的圖示"
           }
         }
       }

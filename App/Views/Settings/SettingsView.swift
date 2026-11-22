@@ -24,15 +24,6 @@ enum SettingsPage: String, CaseIterable, Identifiable {
         case .about: "info.circle"
         }
     }
-    var summary: String {
-        switch self {
-        case .general: String(localized: "外观、启动方式与全局快捷键")
-        case .scan: String(localized: "codedog 去哪里寻找你的项目")
-        case .open: String(localized: "打开项目时使用的编辑器与终端")
-        case .cli: String(localized: "在终端里快速找到项目")
-        case .about: String(localized: "版本与更新")
-        }
-    }
 }
 
 /// 系统设置风格的窗口：悬浮毛玻璃侧栏 + 大标题 + 白色分组卡片。
@@ -46,15 +37,10 @@ struct SettingsView: View {
             sidebar
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(page.title)
-                            .font(.system(size: 26, weight: .bold))
-                            .accessibilityAddTraits(.isHeader)
-                        Text(page.summary)
-                            .font(.system(size: 13))
-                            .foregroundStyle(.secondary)
-                    }
-                    .padding(.bottom, 22)
+                    Text(page.title)
+                        .font(.system(size: 26, weight: .bold))
+                        .accessibilityAddTraits(.isHeader)
+                        .padding(.bottom, 22)
                     detail
                 }
                 .padding(.horizontal, 30)
@@ -171,7 +157,7 @@ private struct GeneralSettingsPage: View {
                         model.setPreferences { $0.appearance = mode.rawValue }
                     }))
                 folderTransparencyRow
-                SettingsRow("App 图标", subtitle: "运行时 Dock 与关于窗口中显示的图标") {
+                SettingsRow("App 图标") {
                     AppIconPicker(selection: Binding(
                         get: { AppIconStyle(rawValue: model.library.preferences.appIcon) ?? .light },
                         set: { style in
@@ -186,13 +172,13 @@ private struct GeneralSettingsPage: View {
             }
 
             SettingsSection("启动") {
-                SettingsRow("常驻菜单栏", subtitle: "关闭主窗口后继续在菜单栏运行，Dock 图标一起隐藏") {
+                SettingsRow("常驻菜单栏") {
                     SettingsSwitch("常驻菜单栏", isOn: Binding(
                         get: { model.library.preferences.menuBarResident },
                         set: { v in model.setPreferences { $0.menuBarResident = v } }))
                 }
                 SettingsRow("登录时启动",
-                            subtitle: loginError.map { .verbatim($0) } ?? (loginNeedsApproval ? "需要在系统设置的登录项中允许 codedog" : "登录 Mac 后自动运行 codedog"),
+                            subtitle: loginError.map { .verbatim($0) } ?? (loginNeedsApproval ? "需要在系统设置的登录项中允许 codedog" : nil),
                             subtitleTone: loginError != nil ? .red : (loginNeedsApproval ? .orange : .secondary)) {
                     if loginNeedsApproval {
                         SettingsButton("打开登录项") { LoginItem.openSystemSettings() }
@@ -201,8 +187,8 @@ private struct GeneralSettingsPage: View {
                 }
             }
 
-            SettingsSection("启动器", footer: "在任何地方按下快捷键呼出启动器：输入名称，↑↓ 选择，←→ 切换操作，↵ 打开。") {
-                SettingsRow("快捷键", subtitle: "点击后按下新的组合键，Esc 取消") {
+            SettingsSection("启动器") {
+                SettingsRow("快捷键") {
                     ShortcutRecorder()
                 }
             }
@@ -217,7 +203,7 @@ private struct GeneralSettingsPage: View {
     /// 文件夹透明度：0% 不透明；调高后能透过文件夹前片看到里面的文件。
     private var folderTransparencyRow: some View {
         let value = model.library.preferences.folderTransparency
-        return SettingsRow("文件夹透明度", subtitle: value == 0 ? "不透明" : "能透过文件夹看到里面的文件") {
+        return SettingsRow("文件夹透明度") {
             Slider(value: Binding(
                 get: { value },
                 set: { v in
@@ -237,7 +223,7 @@ private struct GeneralSettingsPage: View {
         let _ = language // 选择变化时刷新
         let pending = AppLanguage.needsRelaunch
         return SettingsRow("界面语言",
-                           subtitle: pending ? "重新启动 codedog 后生效" : "菜单、按钮与提示使用的语言",
+                           subtitle: pending ? "重新启动 codedog 后生效" : nil,
                            subtitleTone: pending ? .orange : .secondary) {
             if pending {
                 SettingsButton("立即重启", kind: .prominent) { AppLanguage.relaunch() }
@@ -473,11 +459,11 @@ private struct ScanSettingsPage: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            SettingsSection("扫描目录", footer: "codedog 会在这些文件夹里寻找项目（最多 5 层），并在文件变化时自动更新。不会移动或修改任何文件。") {
+            SettingsSection("扫描目录") {
                 SettingsButton("添加…") { picking = true }
             } content: {
                 if model.library.scanRoots.isEmpty {
-                    SettingsRow("还没有扫描目录", subtitle: "添加一个放代码的文件夹，例如 ~/code") {
+                    SettingsRow("还没有扫描目录") {
                         SettingsButton("添加文件夹", kind: .prominent) { picking = true }
                     }
                 } else {
@@ -521,13 +507,13 @@ private struct OpenSettingsPage: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            SettingsSection("默认应用", footer: "「自动」会使用本机已安装的第一个编辑器；单个项目也可以在详情面板里另选。") {
-                appRow("编辑器", subtitle: "双击项目、按 ↵ 时使用",
+            SettingsSection("默认应用") {
+                appRow("编辑器",
                        current: model.library.preferences.editor, choices: Opener.installedEditors,
                        fallback: Opener.installedEditors.first,
                        set: { app in model.setPreferences { $0.editor = app } },
                        pick: { pickingEditor = true })
-                appRow("终端", subtitle: "「终端打开」时使用",
+                appRow("终端",
                        current: model.library.preferences.terminal, choices: Opener.installedTerminals,
                        fallback: KnownApps.defaultTerminal,
                        set: { app in model.setPreferences { $0.terminal = app } },
@@ -542,7 +528,7 @@ private struct OpenSettingsPage: View {
         }
     }
 
-    private func appRow(_ title: LocalizedStringKey, subtitle: LocalizedStringKey, current: AppRef?, choices: [AppRef], fallback: AppRef?,
+    private func appRow(_ title: LocalizedStringKey, current: AppRef?, choices: [AppRef], fallback: AppRef?,
                         set: @escaping (AppRef?) -> Void, pick: @escaping () -> Void) -> some View {
         var list = choices
         if let current, !list.contains(current) { list.append(current) }
@@ -551,7 +537,7 @@ private struct OpenSettingsPage: View {
         let options: [SettingsChoice<AppRef?, AnyView>.Option] =
             [.init(value: nil, title: auto, icon: nil)]
             + list.map { .init(value: $0, title: $0.name, icon: AppIconView.icon($0)) }
-        return SettingsRow(title, subtitle: subtitle) {
+        return SettingsRow(title) {
             SettingsChoice(title: title, options: options,
                            selection: Binding(get: { current }, set: { v in set(v) }),
                            extra: (String(localized: "其他应用…"), pick)) {
@@ -619,11 +605,8 @@ private struct CLISettingsPage: View {
         .task { pathOK = await CLIInstaller.pathContainsLocalBin() }
     }
 
-    private var subtitle: LocalizedStringKey {
-        switch status {
-        case .installed, .notInstalled: "安装到 ~/.local/bin/codedog"
-        case .conflict: "~/.local/bin/codedog 已被其他程序占用"
-        }
+    private var subtitle: LocalizedStringKey? {
+        status == .conflict ? "~/.local/bin/codedog 已被其他程序占用" : nil
     }
 
     private func command(_ cmd: String, _ desc: LocalizedStringKey) -> some View {
@@ -670,7 +653,7 @@ private struct AboutSettingsPage: View {
                 .padding(14)
             }
 
-            SettingsSection("更新", footer: "从 GitHub Releases 检查，每天最多一次，不上传任何信息。codedog 没有开发者签名，新版本需要手动下载替换。") {
+            SettingsSection("更新") {
                 SettingsRow("自动检查新版本") {
                     SettingsSwitch("自动检查新版本", isOn: Binding(
                         get: { model.library.preferences.checkForUpdates },
@@ -688,9 +671,9 @@ private struct AboutSettingsPage: View {
         }
     }
 
-    private var updateSubtitle: LocalizedStringKey {
+    private var updateSubtitle: LocalizedStringKey? {
         if model.isCheckingUpdate { return "正在检查…" }
         if let u = model.availableUpdate { return "有新版本 \(u.version) 可用" }
-        return "当前版本 \(Codedog.version)"
+        return nil
     }
 }
