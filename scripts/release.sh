@@ -21,7 +21,7 @@ if ! xcodebuild -project codedog.xcodeproj -scheme codedog -configuration Releas
   ARCHS="arm64 x86_64" ONLY_ACTIVE_ARCH=NO \
   CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual \
   build > "$LOG" 2>&1; then
-  grep -E "error:" "$LOG" | head -20 >&2
+  grep -E "error:" "$LOG" | head -20 >&2 || true
   tail -20 "$LOG" >&2
   echo "构建失败，完整日志：$LOG" >&2
   exit 1
