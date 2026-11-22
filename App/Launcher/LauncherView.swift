@@ -19,7 +19,14 @@ struct LauncherView: View {
 
     private var results: [(item: ProjectItem, match: SearchMatch)] {
         let visible = model.items.filter { !$0.meta.hidden }
-        return Array(ProjectSearch.search(visible, query: state.query, document: \.searchDocument, by: LibrarySnapshot.defaultOrder).prefix(50))
+        return Array(ProjectSearch.search(visible, query: state.query, document: \.searchDocument, by: Self.byActivity).prefix(50))
+    }
+
+    /// 最近活跃的排最上面；有搜索词时先按匹配程度，同等匹配再按活跃。
+    private static func byActivity(_ a: ProjectItem, _ b: ProjectItem) -> Bool {
+        let la = a.lastActivity ?? .distantPast, lb = b.lastActivity ?? .distantPast
+        if la != lb { return la > lb }
+        return a.project.name.localizedStandardCompare(b.project.name) == .orderedAscending
     }
 
     private func actions(for item: ProjectItem) -> [Action] {
@@ -103,7 +110,7 @@ struct LauncherView: View {
             ScrollView {
                 LazyVStack(spacing: 2) {
                     if state.query.isEmpty {
-                        Text("常用").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                        Text("最近活跃").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
                             .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 12).padding(.top, 6)
                     }
                     ForEach(Array(rows.enumerated()), id: \.element.item.id) { i, row in
@@ -160,25 +167,6 @@ struct LauncherView: View {
     }
 }
 
-/// 半叠放的工具图标：每个图标放在圆形底座里，后一个压住前一个的一半左右。
-private struct ToolStack: View {
-    var tools: [AITool]
-    private let chip: CGFloat = 24
-
-    var body: some View {
-        HStack(spacing: -chip * 0.4) {
-            ForEach(Array(tools.enumerated()), id: \.element) { i, tool in
-                ToolIcon(tool: tool, size: 14)
-                    .frame(width: chip, height: chip)
-                    .background(Circle().fill(Color(nsColor: .windowBackgroundColor)))
-                    .overlay(Circle().strokeBorder(.primary.opacity(0.08), lineWidth: 0.5))
-                    .shadow(color: .black.opacity(0.12), radius: 1.5, x: -1, y: 0.5)
-                    .zIndex(Double(i))
-            }
-        }
-    }
-}
-
 private struct LauncherRow: View {
     var item: ProjectItem
     var match: SearchMatch
@@ -192,11 +180,13 @@ private struct LauncherRow: View {
                     Text(item.project.name).font(.system(size: 14, weight: .medium)).lineLimit(1)
                     if item.meta.favorite { Image(systemName: "star.fill").font(.system(size: 9)).foregroundStyle(.yellow) }
                 }
-                Text(detail).font(.system(size: 11.5)).foregroundStyle(.secondary).lineLimit(1)
+                // 只在搜索命中名称以外的内容时显示命中原因，平时不显示路径
+                if let reason = match.reasons.first, !reason.hasPrefix(String(localized: "名称")) {
+                    Text(reason).font(.system(size: 11.5)).foregroundStyle(.secondary).lineLimit(1)
+                }
             }
             Spacer(minLength: 8)
             StatusPill(item: item)
-            ToolStack(tools: item.tools.prefix(3).map(\.tool))
             Text(Formatting.activity(item.lastActivity))
                 .font(.system(size: 11))
                 .foregroundStyle(.tertiary)
@@ -206,10 +196,5 @@ private struct LauncherRow: View {
         .padding(.vertical, 7)
         .background(selected ? Color.brand.opacity(0.18) : .clear, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         .contentShape(Rectangle())
-    }
-
-    private var detail: String {
-        if let r = match.reasons.first, !r.hasPrefix(String(localized: "名称")) { return r }
-        return Formatting.shortPath(item.id)
     }
 }
