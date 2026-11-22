@@ -1,0 +1,33 @@
+Packages/CodedogCore/Sources/CodedogCore/AI/AITool.swift
+  s_ad861e4cc6652d::t_44d9269dddb204 77-78
+Packages/CodedogCore/Sources/CodedogCore/AI/CodexReader.swift
+  s_ad861e4cc6652d::t_44d9269dddb204 33
+Packages/CodedogCore/Sources/CodedogCore/AI/AIIndex.swift
+  s_ad861e4cc6652d::t_44d9269dddb204 14,112-119,121-125,131,133,139,144-169
+Packages/CodedogCore/Sources/CodedogCore/Actions/AgentLauncher.swift
+  s_ad861e4cc6652d::t_44d9269dddb204 15-21,23-40,46,59-101,104-144
+App/Views/Library/ProjectTable.swift
+  s_ad861e4cc6652d::t_44d9269dddb204 97
+Packages/CodedogCore/Sources/CodedogCore/Actions/CodexDesktop.swift
+  s_ad861e4cc6652d::t_44d9269dddb204 14-26
+App/State/LibraryModel.swift
+  s_ad861e4cc6652d::t_44d9269dddb204 58-59,239,246,250-277,468-470,472,478,482,486
+Packages/CodedogCore/Tests/CodedogCoreTests/AITests.swift
+  s_ad861e4cc6652d::t_44d9269dddb204 79,89,150-180
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.52-trip",
+  "base_commit_sha": "d88fb1f5dc7505994ff5a052ebae994f737fef0c",
+  "prompts": {},
+  "sessions": {
+    "s_ad861e4cc6652d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "888013f7-346b-4666-b946-a47a8cc7ca36",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "w.ning <w.ning@trip.com>"
+    }
+  }
+}
