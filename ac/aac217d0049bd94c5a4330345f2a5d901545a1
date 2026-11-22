@@ -1,0 +1,34 @@
+App/Resources/Assets.xcassets/Repo/git.imageset/git.svg
+  s_ad861e4cc6652d::t_1d71f51919e784 1
+App/Resources/Assets.xcassets/Repo/gitlab.imageset/Contents.json
+  s_ad861e4cc6652d::t_1d71f51919e784 1
+App/Resources/Assets.xcassets/Repo/gitlab.imageset/gitlab.svg
+  s_ad861e4cc6652d::t_1d71f51919e784 1
+App/Views/Detail/ProjectDetailView.swift
+  s_ad861e4cc6652d::t_4beb9c8b3b0150 560-562,565-567,576
+  s_ad861e4cc6652d::t_128761e71fd3da 468,555-556,558-559,563-564,570-575,577-583,587,589,593-596,598-603,605-606,615,621-627
+App/Resources/Assets.xcassets/Repo/github.imageset/Contents.json
+  s_ad861e4cc6652d::t_1d71f51919e784 1
+App/Resources/Assets.xcassets/Repo/git.imageset/Contents.json
+  s_ad861e4cc6652d::t_1d71f51919e784 1
+App/Resources/Assets.xcassets/Repo/Contents.json
+  s_ad861e4cc6652d::t_1d71f51919e784 1
+App/Resources/Assets.xcassets/Repo/github.imageset/github.svg
+  s_ad861e4cc6652d::t_1d71f51919e784 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.52-trip",
+  "base_commit_sha": "acaac217d0049bd94c5a4330345f2a5d901545a1",
+  "prompts": {},
+  "sessions": {
+    "s_ad861e4cc6652d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "888013f7-346b-4666-b946-a47a8cc7ca36",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "w.ning <w.ning@trip.com>"
+    }
+  }
+}
