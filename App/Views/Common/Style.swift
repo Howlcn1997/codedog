@@ -164,11 +164,6 @@ struct ProjectMenu: View {
     var item: ProjectItem
 
     var body: some View {
-        // macOS 的菜单默认只显示 Label 的文字，要显式指定 titleAndIcon 才会带上左边的图标
-        Group { items }.labelStyle(.titleAndIcon)
-    }
-
-    @ViewBuilder private var items: some View {
         OpenWithSections(item: item)
         Divider()
         if item.project.git?.webURL != nil {
@@ -221,10 +216,6 @@ struct OpenWithSections: View {
     var item: ProjectItem
 
     var body: some View {
-        Group { sections }.labelStyle(.titleAndIcon)
-    }
-
-    @ViewBuilder private var sections: some View {
         Section("AI 工具") {
             ForEach(AITool.allCases.filter(\.isAgent), id: \.self) { tool in
                 Button {
