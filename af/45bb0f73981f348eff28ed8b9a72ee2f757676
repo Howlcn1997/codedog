@@ -1,0 +1,20 @@
+App/Views/Detail/ProjectDetailView.swift
+  s_9a8c14b87f8bd4::t_5ddd7906a13972 471,474-497,500,519-520,528,530-532,536,540-541,543-544,547,550,554,558,561,566-599,651-652,654,656-673,688,700
+  s_9a8c14b87f8bd4::t_063db5e1910614 653,655
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.52-trip",
+  "base_commit_sha": "af45bb0f73981f348eff28ed8b9a72ee2f757676",
+  "prompts": {},
+  "sessions": {
+    "s_9a8c14b87f8bd4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "df6a4b82-a567-4c43-a0f0-c3e24fbd2fb1",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "w.ning <w.ning@trip.com>"
+    }
+  }
+}
