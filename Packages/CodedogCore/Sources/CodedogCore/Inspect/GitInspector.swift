@@ -15,6 +15,7 @@ public enum GitInspector {
         async let last = try? ShellRunner.run("git", ["-C", path, "log", "-1", "--format=%cI"], timeout: .seconds(5))
         async let remote = try? ShellRunner.run("git", ["-C", path, "config", "--get", "remote.origin.url"], timeout: .seconds(5))
         async let touched = try? ShellRunner.run("git", ["-C", path, "log", "-8", "--name-only", "--format="], timeout: .seconds(10))
+        async let worktrees = listWorktrees(path: path)
 
         var info = GitInfo()
         // try? 得到 nil 说明命令超时或没能启动（非零退出码不算，比如没有远程时 config 返回 1）
@@ -39,13 +40,45 @@ public enum GitInspector {
             let url = r.stdout.trimmingCharacters(in: .whitespacesAndNewlines)
             info.remote = url.isEmpty ? nil : url
         }
+        info.worktrees = await worktrees
         return (info, complete)
     }
 
-    /// 只刷新工作区状态（分支、未提交文件），用于提交历史没变的项目。
+    /// 只刷新工作区状态（分支、未提交文件、worktree），用于提交历史没变的项目。
     public static func refreshStatus(path: String, _ info: inout GitInfo) async {
-        guard let s = try? await ShellRunner.run("git", ["-C", path, "status", "--porcelain=v1", "--branch", "--untracked-files=normal"], timeout: .seconds(20)), s.ok else { return }
-        applyStatus(s.stdout, to: &info)
+        async let worktrees = listWorktrees(path: path)
+        if let s = try? await ShellRunner.run("git", ["-C", path, "status", "--porcelain=v1", "--branch", "--untracked-files=normal"], timeout: .seconds(20)), s.ok {
+            applyStatus(s.stdout, to: &info)
+        }
+        if let w = await worktrees { info.worktrees = w }
+    }
+
+    /// 附属工作树；命令失败返回 nil（保留旧值）。
+    static func listWorktrees(path: String) async -> [GitWorktree]? {
+        guard let r = try? await ShellRunner.run("git", ["-C", path, "worktree", "list", "--porcelain"], timeout: .seconds(5)), r.ok else { return nil }
+        return parseWorktrees(r.stdout, mainPath: path)
+    }
+
+    /// 解析 `git worktree list --porcelain`：空行分隔的块，第一块是主工作区（跳过），bare 仓库也跳过。
+    static func parseWorktrees(_ text: String, mainPath: String) -> [GitWorktree] {
+        let main = FolderScanner.normalize(mainPath)
+        var result: [GitWorktree] = []
+        for (i, block) in text.components(separatedBy: "\n\n").enumerated() {
+            var wt = GitWorktree(path: "")
+            var bare = false
+            for line in block.split(separator: "\n") {
+                if line.hasPrefix("worktree ") { wt.path = String(line.dropFirst("worktree ".count)) }
+                else if line.hasPrefix("branch ") {
+                    let ref = line.dropFirst("branch ".count)
+                    wt.branch = ref.hasPrefix("refs/heads/") ? String(ref.dropFirst("refs/heads/".count)) : String(ref)
+                }
+                else if line == "bare" { bare = true }
+                else if line.hasPrefix("prunable") { wt.prunable = true }
+            }
+            guard !wt.path.isEmpty, !bare, i > 0 || wt.path != main, FolderScanner.normalize(wt.path) != main else { continue }
+            result.append(wt)
+        }
+        return result
     }
 
     static func applyStatus(_ stdout: String, to info: inout GitInfo) {

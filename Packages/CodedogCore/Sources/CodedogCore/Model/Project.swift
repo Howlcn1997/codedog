@@ -80,6 +80,21 @@ public struct Commit: Codable, Sendable, Hashable {
     }
 }
 
+/// 仓库的附属工作树（`git worktree add` 创建），不含主工作区。
+public struct GitWorktree: Codable, Sendable, Hashable {
+    public var path: String
+    /// 检出的分支；detached HEAD 时为 nil
+    public var branch: String?
+    /// 目录已被删除但还没 `git worktree prune`
+    public var prunable: Bool
+
+    public init(path: String, branch: String? = nil, prunable: Bool = false) {
+        self.path = path
+        self.branch = branch
+        self.prunable = prunable
+    }
+}
+
 public struct GitInfo: Codable, Sendable, Hashable {
     public var branch: String?
     public var dirtyFiles: Int
@@ -93,6 +108,8 @@ public struct GitInfo: Codable, Sendable, Hashable {
     public var changedFiles: [FileRef] = []
     /// 最近几次提交改过的文件（新到旧，相对路径）
     public var recentlyCommittedFiles: [String] = []
+    /// 附属工作树（来自 git worktree list）；可选以兼容旧缓存
+    public var worktrees: [GitWorktree]?
 
     public init(branch: String? = nil, dirtyFiles: Int = 0, remote: String? = nil, lastCommitAt: Date? = nil, recentCommits: [Commit] = [], commitDays: [String: Int] = [:]) {
         self.branch = branch

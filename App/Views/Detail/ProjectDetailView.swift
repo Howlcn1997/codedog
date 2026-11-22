@@ -494,6 +494,9 @@ private struct AboutSection: View {
         rows.append(AnyView(prop("标签") { tags }))
         if let git = item.project.git {
             rows.append(AnyView(prop("仓库") { repo(git) }))
+            if let wts = git.worktrees, !wts.isEmpty {
+                rows.append(AnyView(prop("Worktree") { worktrees(wts) }))
+            }
         }
         rows.append(AnyView(prop("打开方式") { editorPicker }))
         if let readme = item.project.readmeText, !readme.isEmpty {
@@ -560,6 +563,41 @@ private struct AboutSection: View {
                 } else {
                     Text(remote).font(.system(size: 12, design: .monospaced)).foregroundStyle(.secondary)
                         .lineLimit(1).truncationMode(.middle).textSelection(.enabled)
+                }
+            }
+        }
+    }
+
+    private func worktrees(_ wts: [GitWorktree]) -> some View {
+        VStack(alignment: .leading, spacing: 5) {
+            ForEach(wts, id: \.path) { wt in
+                HStack(spacing: 6) {
+                    Image(systemName: "arrow.triangle.branch").font(.system(size: 10)).foregroundStyle(.secondary)
+                    Text(wt.branch ?? String(localized: "游离 HEAD")).font(.system(size: 12, design: .monospaced))
+                        .lineLimit(1)
+                    Button(Formatting.shortPath(wt.path)) {
+                        let editor = model.editor(for: item)
+                        Task { try? await Opener.openInEditor(wt.path, editor: editor) }
+                    }
+                    .buttonStyle(.borderless).font(.caption)
+                    .lineLimit(1).truncationMode(.middle)
+                    .disabled(wt.prunable)
+                    .help("在编辑器中打开")
+                    if wt.prunable {
+                        Text("已删除").font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+                .contextMenu {
+                    Button("在编辑器中打开") {
+                        let editor = model.editor(for: item)
+                        Task { try? await Opener.openInEditor(wt.path, editor: editor) }
+                    }
+                    .disabled(wt.prunable)
+                    Button("在访达中显示") { Opener.revealInFinder(wt.path) }.disabled(wt.prunable)
+                    Button("拷贝路径") {
+                        NSPasteboard.general.clearContents()
+                        NSPasteboard.general.setString(wt.path, forType: .string)
+                    }
                 }
             }
         }

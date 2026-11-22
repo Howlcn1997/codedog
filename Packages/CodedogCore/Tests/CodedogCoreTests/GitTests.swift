@@ -36,6 +36,49 @@ import Testing
         #expect(info.commitDays.values.reduce(0, +) == 1)
         #expect(info.lastCommitAt != nil)
         #expect(info.remote == "git@github.com:me/x.git")
+        #expect(info.worktrees == [])
+    }
+
+    @Test func parseWorktrees() {
+        let text = """
+        worktree /r/main
+        HEAD abc
+        branch refs/heads/master
+
+        worktree /r/main-feature
+        HEAD def
+        branch refs/heads/feature/x
+
+        worktree /r/detached
+        HEAD 123
+        detached
+
+        worktree /r/gone
+        HEAD 456
+        branch refs/heads/old
+        prunable gitdir file points to non-existent location
+
+        """
+        let wts = GitInspector.parseWorktrees(text, mainPath: "/r/main")
+        #expect(wts == [
+            GitWorktree(path: "/r/main-feature", branch: "feature/x"),
+            GitWorktree(path: "/r/detached"),
+            GitWorktree(path: "/r/gone", branch: "old", prunable: true),
+        ])
+    }
+
+    @Test func listsRealWorktrees() async throws {
+        let f = try Fixture()
+        let repo = f.root + "/repo", wt = f.root + "/repo-wt"
+        try f.file("repo/README.md", "hi")
+        let env = ["GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t", "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@t"]
+        _ = try await ShellRunner.run("git", ["init", "-q", "-b", "trunk", repo])
+        _ = try await ShellRunner.run("git", ["-C", repo, "add", "."])
+        _ = try await ShellRunner.run("git", ["-C", repo, "commit", "-qm", "c"], environment: env)
+        _ = try await ShellRunner.run("git", ["-C", repo, "worktree", "add", "-q", "-b", "feat", wt])
+        let info = try #require(await GitInspector.inspect(path: repo))
+        #expect(info.worktrees?.map { FolderScanner.normalize($0.path) } == [FolderScanner.normalize(wt)])
+        #expect(info.worktrees?.first?.branch == "feat")
     }
 
     @Test func incrementalRefreshReusesHistory() async throws {
