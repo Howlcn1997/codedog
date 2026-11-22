@@ -74,6 +74,8 @@ struct ActivitySpark: View {
 /// 状态胶囊：运行中 / 等你回复 / N 个未提交。
 struct StatusPill: View {
     var item: ProjectItem
+    /// 卡片底部已经单独显示未提交数时关掉
+    var showsDirty = true
 
     var body: some View {
         let dirty = item.project.git?.dirtyFiles ?? 0
@@ -81,7 +83,7 @@ struct StatusPill: View {
             pill("运行中", .green, pulse: true)
         } else if item.waiting {
             pill("等你回复", .orange)
-        } else if dirty > 0 {
+        } else if dirty > 0, showsDirty {
             pill("\(dirty) 未提交", .secondary)
         }
     }

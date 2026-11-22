@@ -234,7 +234,19 @@ struct ProjectCard: View {
 
     private var front: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Spacer(minLength: 0)
+            blurb
+            Spacer(minLength: 4)
+            // 活跃度（提交记录）与状态胶囊同一行：左边柱状图，右边胶囊；在上半部空白里垂直居中。
+            HStack(alignment: .center, spacing: 8) {
+                ActivitySpark(item: item, days: 30, color: StackIcon.of(item.project)?.brand ?? .brand)
+                    .scaleEffect(x: 1, y: 0.7, anchor: .center)
+                    .frame(height: 14)
+                    .layoutPriority(-1)
+                Spacer(minLength: 0)
+                StatusPill(item: item, showsDirty: false).scaleEffect(0.9 * labelBoost, anchor: .trailing)
+            }
+            .frame(height: 20)
+            Spacer(minLength: 4)
             HStack(alignment: .bottom, spacing: 10) {
                 VStack(alignment: .leading, spacing: 5) {
                     HStack(spacing: 6) {
@@ -245,15 +257,16 @@ struct ProjectCard: View {
                             Image(systemName: "star.fill").font(.system(size: 10 * labelBoost)).foregroundStyle(.yellow)
                         }
                     }
-                    subtitle
+                    meta
                 }
+                .layoutPriority(1)
                 Spacer(minLength: 0)
                 StackBadge(project: item.project, size: 36 * labelBoost)   // 项目类型放在右下角
             }
         }
         .padding(.horizontal, 16)
         .padding(.bottom, 14)
-        .padding(.top, 30)
+        .padding(.top, 32)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
         .background {
             // 静态半透明填充代替 .ultraThinMaterial：每张卡一个实时背景模糊层，GPU 要持续合成，会拖慢整台电脑。
@@ -271,26 +284,34 @@ struct ProjectCard: View {
         }
     }
 
-    @ViewBuilder private var subtitle: some View {
-        HStack(spacing: 5) {
-            if !item.running.isEmpty {
-                Circle().fill(.green).frame(width: 6 * labelBoost, height: 6 * labelBoost)
-                Text("运行中")
-            } else if item.waiting {
-                Circle().fill(.orange).frame(width: 6 * labelBoost, height: 6 * labelBoost)
-                Text("等你回复")
-            } else if let reason = match.reasons.first, !reason.hasPrefix(String(localized: "名称")) {
-                Text(reason)
-            } else {
-                Text([item.size.map { Formatting.bytes($0.total) }, item.project.git?.branch].compactMap { $0 }.joined(separator: " · "))
+    /// 上半部只在搜索时显示命中原因；平时留空，不显示项目描述。
+    @ViewBuilder private var blurb: some View {
+        if let reason = match.reasons.first, !reason.hasPrefix(String(localized: "名称")) {
+            Label(reason, systemImage: "magnifyingglass")
+                .font(.system(size: 11 * labelBoost, weight: .medium))
+                .foregroundStyle(Color.brand)
+                .lineLimit(2)
+        }
+    }
+
+    /// 固定格式：最近活跃 · 分支 · 未提交数。main / master 不显示，只在非默认分支时提示。
+    private var meta: some View {
+        let dirty = item.project.git?.dirtyFiles ?? 0
+        return HStack(spacing: 0) {
+            if let at = item.project.lastActivity {
+                Text(Formatting.relative(at)).fixedSize()
             }
-            if let dirty = item.project.git?.dirtyFiles, dirty > 0, item.running.isEmpty, !item.waiting {
-                Text("· \(dirty) 未提交").foregroundStyle(.pink)
+            if let branch = item.project.git?.branch, !["main", "master"].contains(branch) {
+                if item.project.lastActivity != nil { Text(" · ").fixedSize() }
+                Text(branch).lineLimit(1).truncationMode(.tail)
+            }
+            if dirty > 0 {
+                Text(" · ").fixedSize()
+                Text("\(dirty) 未提交").foregroundStyle(.pink).fixedSize()
             }
         }
-        .font(.system(size: 10.5 * labelBoost, design: .monospaced))
+        .font(.system(size: 10.5 * labelBoost).monospacedDigit())
         .foregroundStyle(.secondary)
-        .lineLimit(1)
     }
 }
 
