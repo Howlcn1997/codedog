@@ -34,9 +34,11 @@ final class LibraryModel {
         didSet { UserDefaults.standard.set(cardScale, forKey: "cardScale") }
     }
     static let cardScaleRange: ClosedRange<Double> = 0.7...1.6
+    /// 首次启动默认用最小档
+    static let defaultCardScale = cardScaleRange.lowerBound
     private static var storedCardScale: Double {
         let v = UserDefaults.standard.double(forKey: "cardScale")
-        return v == 0 ? 1 : min(max(v, cardScaleRange.lowerBound), cardScaleRange.upperBound)
+        return v == 0 ? defaultCardScale : min(max(v, cardScaleRange.lowerBound), cardScaleRange.upperBound)
     }
     /// 正在查看详情的项目
     var detailID: String?
