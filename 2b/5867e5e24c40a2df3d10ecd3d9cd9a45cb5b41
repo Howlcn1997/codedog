@@ -1,0 +1,19 @@
+project.yml
+  s_70893e1476c72b::t_c54a2efc0dd7c8 11-12
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.52-trip",
+  "base_commit_sha": "2b5867e5e24c40a2df3d10ecd3d9cd9a45cb5b41",
+  "prompts": {},
+  "sessions": {
+    "s_70893e1476c72b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "cf0ccbd4-8ebf-408c-8bce-b60f61943a57",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "w.ning <w.ning@trip.com>"
+    }
+  }
+}
