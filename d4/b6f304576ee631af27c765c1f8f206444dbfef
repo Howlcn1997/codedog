@@ -1,0 +1,21 @@
+scripts/demo-video/compose_demo.py
+  s_688e36ef801cd0::t_495241ada8c08c 252
+  s_688e36ef801cd0::t_35c0fddd927328 1-222,260-275,277-317
+  s_688e36ef801cd0::t_225a3c88056142 223-251,253-259,276
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.52-trip",
+  "base_commit_sha": "d4b6f304576ee631af27c765c1f8f206444dbfef",
+  "prompts": {},
+  "sessions": {
+    "s_688e36ef801cd0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a60f4db5-d438-4c95-bb37-a8bb4937f3df",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "w.ning <w.ning@trip.com>"
+    }
+  }
+}
