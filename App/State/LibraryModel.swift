@@ -349,7 +349,7 @@ final class LibraryModel {
                 if lib.scanRoots.isEmpty { lib.scanRoots = suggested }
                 lib.migratedLegacy = true
             }
-            if legacy != nil { toast = String(localized: "已从旧版 codedog 导入收藏、分类和备注") }
+            if legacy != nil { toast = String(localized: "已从旧版 CodeDog 导入收藏、分类和备注") }
         } catch {
             errorMessage = String(localized: "保存设置失败：\(error.localizedDescription)")
         }

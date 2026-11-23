@@ -1,4 +1,4 @@
-# dmgbuild 配置：scripts/release.sh 调用，传入 -D app=<codedog.app 路径> -D background=<背景图路径>。
+# dmgbuild 配置：scripts/release.sh 调用，传入 -D app=<CodeDog.app 路径> -D background=<背景图路径>。
 # 背景图由 scripts/dmg/make-background.swift 生成；改图标位置时两边一起改。
 import os
 

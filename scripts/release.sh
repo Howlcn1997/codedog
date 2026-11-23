@@ -1,12 +1,12 @@
 #!/bin/bash
-# 构建可发布的 codedog：通用二进制（arm64 + x86_64）、ad-hoc 签名，产出 dmg / zip / SHA256SUMS。
+# 构建可发布的 CodeDog：通用二进制（arm64 + x86_64）、ad-hoc 签名，产出 dmg / zip / SHA256SUMS。
 # 用法：scripts/release.sh            产物在 release/
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
 VERSION=$(sed -nE 's/^ *MARKETING_VERSION: *"?([0-9][^"]*)"?.*/\1/p' project.yml | head -1)
 [[ -n "$VERSION" ]] || { echo "无法从 project.yml 读取 MARKETING_VERSION" >&2; exit 1; }
-echo "==> codedog $VERSION"
+echo "==> CodeDog $VERSION"
 
 command -v xcodegen >/dev/null || { echo "需要 xcodegen：brew install xcodegen" >&2; exit 1; }
 xcodegen generate --quiet
@@ -28,11 +28,11 @@ if ! xcodebuild -project codedog.xcodeproj -scheme codedog -configuration Releas
 fi
 grep -E "^\*\* BUILD" "$LOG"
 
-APP="$DERIVED/Build/Products/Release/codedog.app"
+APP="$DERIVED/Build/Products/Release/CodeDog.app"
 [[ -d "$APP" ]] || { echo "构建失败：找不到 $APP" >&2; exit 1; }
 
 echo "==> 校验"
-for bin in "$APP/Contents/MacOS/codedog" "$APP/Contents/MacOS/codedog-cli"; do
+for bin in "$APP/Contents/MacOS/CodeDog" "$APP/Contents/MacOS/codedog-cli"; do
   archs=$(lipo -archs "$bin")
   [[ "$archs" == *arm64* && "$archs" == *x86_64* ]] || { echo "$bin 不是通用二进制：$archs" >&2; exit 1; }
 done
@@ -43,7 +43,7 @@ plist_version=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" "$
 
 echo "==> 打包"
 mkdir -p release
-NAME="codedog-$VERSION-mac-universal"
+NAME="CodeDog-$VERSION-mac-universal"
 ditto -c -k --keepParent "$APP" "release/$NAME.zip"
 
 # dmg 安装窗口（背景图、图标位置、隐藏工具栏）用 dmgbuild 直接写 .DS_Store，不依赖 Finder，CI 上也稳定
@@ -53,7 +53,7 @@ if [[ ! -x "$DMGENV/bin/dmgbuild" ]]; then
   "$DMGENV/bin/pip" install --quiet --disable-pip-version-check dmgbuild==1.6.1
 fi
 "$DMGENV/bin/dmgbuild" -s scripts/dmg/settings.py -D app="$APP" -D background=scripts/dmg/background.tiff \
-  "codedog $VERSION" "release/$NAME.dmg" 2>&1 | grep -v "deprecated" || true
+  "CodeDog $VERSION" "release/$NAME.dmg" 2>&1 | grep -v "deprecated" || true
 [[ -f "release/$NAME.dmg" ]] || { echo "dmg 打包失败" >&2; exit 1; }
 
 (cd release && shasum -a 256 *.dmg *.zip > SHA256SUMS.txt)

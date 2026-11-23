@@ -7,7 +7,7 @@ struct CodedogApp: App {
     private var model: LibraryModel { delegate.model }
 
     var body: some Scene {
-        Window("codedog", id: "main") {
+        Window("CodeDog", id: "main") {
             RootView()
                 .environment(model)
                 .frame(minWidth: 960, minHeight: 620)

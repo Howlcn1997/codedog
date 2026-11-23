@@ -1,10 +1,10 @@
-# codedog 用户指南
+# CodeDog 用户指南
 
 ## 第一次打开
 
-codedog 会自动寻找常见的代码目录（如 `~/codespace`、`~/Projects`、`~/Developer`），找到后立刻开始扫描。如果你用过旧版 codedog，收藏、标签、备注等会被自动导入。
+CodeDog 会自动寻找常见的代码目录（如 `~/codespace`、`~/Projects`、`~/Developer`），找到后立刻开始扫描。如果你用过旧版 CodeDog，收藏、标签、备注等会被自动导入。
 
-想换扫描目录：**设置 › 扫描**，添加或移除文件夹。codedog 最多向下找 5 层，遇到 `.git`、`package.json`、`go.mod`、`pyproject.toml`、`Cargo.toml`、`*.xcodeproj` 等标志就认定为一个项目，不再往里钻；`node_modules`、`dist`、隐藏目录等会被跳过。
+想换扫描目录：**设置 › 扫描**，添加或移除文件夹。CodeDog 最多向下找 5 层，遇到 `.git`、`package.json`、`go.mod`、`pyproject.toml`、`Cargo.toml`、`*.xcodeproj` 等标志就认定为一个项目，不再往里钻；`node_modules`、`dist`、隐藏目录等会被跳过。
 
 不在扫描目录里的项目：工具栏 **＋ › 添加已有文件夹…**。
 
@@ -54,15 +54,15 @@ codedog 会自动寻找常见的代码目录（如 `~/codespace`、`~/Projects`�
 
 ## 续上 AI 会话
 
-codedog 读取 `~/.claude/projects` 与 `~/.codex/sessions` 里的会话记录（只读），把会话归到所在的项目上。点"续上"时，codedog 会打开终端执行 `claude --resume <会话>` 或 `codex resume <会话>`。
+CodeDog 读取 `~/.claude/projects` 与 `~/.codex/sessions` 里的会话记录（只读），把会话归到所在的项目上。点"续上"时，CodeDog 会打开终端执行 `claude --resume <会话>` 或 `codex resume <会话>`。
 
-- 第一次使用时 macOS 会询问是否允许 codedog 控制"终端"，请允许。
+- 第一次使用时 macOS 会询问是否允许 CodeDog 控制"终端"，请允许。
 - 默认终端在 设置 › 打开方式 中选择；目前 Terminal 与 iTerm2 支持自动执行命令，其他终端会用系统终端代替。
 - "等你回复"：AI 的最后一条消息已经结束、你在 48 小时内还没有回复。
 
 ## 清理磁盘
 
-codedog 在后台统计每个项目的大小，区分源码与可再生目录：`node_modules`、`.venv`、`venv`、`Pods`、`.next`、`.nuxt`、`.turbo`、`.parcel-cache`，以及 Rust 项目的 `target`。
+CodeDog 在后台统计每个项目的大小，区分源码与可再生目录：`node_modules`、`.venv`、`venv`、`Pods`、`.next`、`.nuxt`、`.turbo`、`.parcel-cache`，以及 Rust 项目的 `target`。
 
 - 单个项目：项目面板 › 磁盘 › 清理依赖与缓存。
 - 批量：侧栏 **占空间** › 清理…，勾选要清理的项目。
@@ -71,7 +71,7 @@ codedog 在后台统计每个项目的大小，区分源码与可再生目录：
 
 ## 菜单栏与后台
 
-设置 › 通用 › **常驻菜单栏** 打开后，关闭主窗口时 codedog 留在菜单栏（Dock 图标随之隐藏），随时可以用快捷键呼出启动器。菜单栏菜单里有等你回复的项目和最近打开的项目。
+设置 › 通用 › **常驻菜单栏** 打开后，关闭主窗口时 CodeDog 留在菜单栏（Dock 图标随之隐藏），随时可以用快捷键呼出启动器。菜单栏菜单里有等你回复的项目和最近打开的项目。
 
 **登录时启动** 也在 设置 › 通用。
 
@@ -91,7 +91,7 @@ codedog add .            # 把当前目录加入 codedog
 
 ## 更新
 
-codedog 每天检查一次 GitHub Releases，有新版本时在侧栏底部和菜单栏提示，点击即打开下载页（也可以在 设置 › 通用 › 更新 中手动检查或关闭）。因为没有开发者签名，新版本需要手动下载替换，替换后执行一次 `xattr -dr com.apple.quarantine /Applications/codedog.app`。
+CodeDog 每天检查一次 GitHub Releases，有新版本时在侧栏底部和菜单栏提示，点击即打开下载页（也可以在 设置 › 通用 › 更新 中手动检查或关闭）。因为没有开发者签名，新版本需要手动下载替换，替换后执行一次 `xattr -dr com.apple.quarantine /Applications/CodeDog.app`。
 
 ## 数据在哪里
 

@@ -49,7 +49,7 @@ struct MenuBarContent: View {
         }
         .keyboardShortcut(",")
         Divider()
-        Button("退出 codedog") { NSApp.terminate(nil) }
+        Button("退出 CodeDog") { NSApp.terminate(nil) }
             .keyboardShortcut("q")
     }
 }

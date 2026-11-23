@@ -133,8 +133,8 @@ private struct QuitButton: View {
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
         .animation(.easeOut(duration: 0.15), value: hovering)
-        .help("退出 codedog")
-        .accessibilityLabel("退出 codedog")
+        .help("退出 CodeDog")
+        .accessibilityLabel("退出 CodeDog")
     }
 }
 
@@ -178,7 +178,7 @@ private struct GeneralSettingsPage: View {
                         set: { v in model.setPreferences { $0.menuBarResident = v } }))
                 }
                 SettingsRow("登录时启动",
-                            subtitle: loginError.map { .verbatim($0) } ?? (loginNeedsApproval ? "需要在系统设置的登录项中允许 codedog" : nil),
+                            subtitle: loginError.map { .verbatim($0) } ?? (loginNeedsApproval ? "需要在系统设置的登录项中允许 CodeDog" : nil),
                             subtitleTone: loginError != nil ? .red : (loginNeedsApproval ? .orange : .secondary)) {
                     if loginNeedsApproval {
                         SettingsButton("打开登录项") { LoginItem.openSystemSettings() }
@@ -223,7 +223,7 @@ private struct GeneralSettingsPage: View {
         let _ = language // 选择变化时刷新
         let pending = AppLanguage.needsRelaunch
         return SettingsRow("界面语言",
-                           subtitle: pending ? "重新启动 codedog 后生效" : nil,
+                           subtitle: pending ? "重新启动 CodeDog 后生效" : nil,
                            subtitleTone: pending ? .orange : .secondary) {
             if pending {
                 SettingsButton("立即重启", kind: .prominent) { AppLanguage.relaunch() }
@@ -645,7 +645,7 @@ private struct AboutSettingsPage: View {
                         .resizable().scaledToFit().frame(width: 52, height: 52)
                         .accessibilityHidden(true)
                     VStack(alignment: .leading, spacing: 3) {
-                        Text("codedog").font(.system(size: 15, weight: .semibold))
+                        Text("CodeDog").font(.system(size: 15, weight: .semibold))
                         Text("版本 \(Codedog.version)").font(.system(size: 11)).foregroundStyle(.secondary)
                     }
                     Spacer()

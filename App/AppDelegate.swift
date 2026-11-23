@@ -27,7 +27,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         installZoomKeys()
         NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: nil, queue: .main) { note in
-            let isMain = (note.object as? NSWindow)?.title == "codedog"
+            let isMain = (note.object as? NSWindow)?.title == "CodeDog"
             MainActor.assumeIsolated {
                 guard isMain, AppDelegate.shared.model.library.preferences.menuBarResident else { return }
                 // 主窗口关闭后只留菜单栏图标
@@ -40,7 +40,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func installZoomKeys() {
         NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
             let mods = event.modifierFlags.intersection([.command, .option, .control])
-            guard mods == .command, NSApp.keyWindow?.title == "codedog",
+            guard mods == .command, NSApp.keyWindow?.title == "CodeDog",
                   let ch = event.charactersIgnoringModifiers else { return event }
             let step: Int? = switch ch {
             case "=", "+": 1

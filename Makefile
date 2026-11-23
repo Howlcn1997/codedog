@@ -1,5 +1,5 @@
 DERIVED := build/DerivedData
-APP := $(DERIVED)/Build/Products/Debug/codedog.app
+APP := $(DERIVED)/Build/Products/Debug/CodeDog.app
 
 .PHONY: project build test run dist clean
 

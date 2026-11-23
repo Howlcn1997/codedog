@@ -37,7 +37,7 @@ enum DebugSnapshot {
                     NSApp.setActivationPolicy(.regular)
                     NSApp.activate(ignoringOtherApps: true)
                     NSRunningApplication.current.activate(options: [.activateAllWindows])
-                    if let w = NSApp.windows.first(where: { $0.title == "codedog" }) {
+                    if let w = NSApp.windows.first(where: { $0.title == "CodeDog" }) {
                         w.deminiaturize(nil)
                         w.makeKeyAndOrderFront(nil)
                         w.orderFrontRegardless()
@@ -115,7 +115,7 @@ enum DebugSnapshot {
     }
 
     static func capture(to path: String) {
-        guard let window = NSApp.windows.first(where: { $0.isVisible && $0.title == "codedog" }) ?? NSApp.windows.first(where: \.isVisible),
+        guard let window = NSApp.windows.first(where: { $0.isVisible && $0.title == "CodeDog" }) ?? NSApp.windows.first(where: \.isVisible),
               let view = window.contentView?.superview ?? window.contentView,
               let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds) else { return }
         view.cacheDisplay(in: view.bounds, to: rep)
@@ -137,7 +137,7 @@ final class ScrollBench: NSObject {
     var wokeAt: CFTimeInterval = 0
 
     static func run(label: String) async {
-        guard let window = NSApp.windows.first(where: { $0.isVisible && $0.title == "codedog" }),
+        guard let window = NSApp.windows.first(where: { $0.isVisible && $0.title == "CodeDog" }),
               let content = window.contentView,
               let sv = allScrollViews(content).max(by: { ($0.documentView?.frame.height ?? 0) < ($1.documentView?.frame.height ?? 0) })
         else { log("[bench] no scroll view, windows=\(NSApp.windows.map { "\($0.title):\($0.isVisible)" })"); return }

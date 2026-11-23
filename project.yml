@@ -37,10 +37,10 @@ targets:
           destination: executables
     settings:
       base:
-        PRODUCT_NAME: codedog
+        PRODUCT_NAME: CodeDog
         PRODUCT_BUNDLE_IDENTIFIER: dev.codedog.desktop
         GENERATE_INFOPLIST_FILE: YES
-        INFOPLIST_KEY_CFBundleDisplayName: codedog
+        INFOPLIST_KEY_CFBundleDisplayName: CodeDog
         INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.developer-tools
         INFOPLIST_KEY_NSHumanReadableCopyright: ""
         INFOPLIST_KEY_NSDesktopFolderUsageDescription: 查找你放在桌面上的项目。

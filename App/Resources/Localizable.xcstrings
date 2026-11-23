@@ -10,18 +10,18 @@
     "%@ token": {
       "shouldTranslate": false
     },
-    "%@ 已存在且不是 codedog 安装的，为了安全不会覆盖。": {
+    "%@ 已存在且不是 CodeDog 安装的，为了安全不会覆盖。": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ already exists and wasn’t installed by codedog, so it won’t be overwritten for safety."
+            "value": "%@ already exists and wasn’t installed by CodeDog, so it won’t be overwritten for safety."
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ 已存在且不是 codedog 安裝的，為了安全不會覆寫。"
+            "value": "%@ 已存在且不是 CodeDog 安裝的，為了安全不會覆寫。"
           }
         }
       }
@@ -501,6 +501,9 @@
           }
         }
       }
+    },
+    "CodeDog": {
+      "shouldTranslate": false
     },
     "codedog": {
       "shouldTranslate": false
@@ -1750,18 +1753,18 @@
         }
       }
     },
-    "告诉 codedog 你的代码放在哪里": {
+    "告诉 CodeDog 你的代码放在哪里": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tell codedog Where Your Code Lives"
+            "value": "Tell CodeDog Where Your Code Lives"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "告訴 codedog 你的程式碼放在哪裡"
+            "value": "告訴 CodeDog 你的程式碼放在哪裡"
           }
         }
       }
@@ -2151,18 +2154,18 @@
         }
       }
     },
-    "已从旧版 codedog 导入收藏、分类和备注": {
+    "已从旧版 CodeDog 导入收藏、分类和备注": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Imported favorites, categories and notes from the old version of codedog"
+            "value": "Imported favorites, categories and notes from the old version of CodeDog"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "已從舊版 codedog 匯入收藏、分類和備註"
+            "value": "已從舊版 CodeDog 匯入收藏、分類和備註"
           }
         }
       }
@@ -3127,19 +3130,19 @@
         }
       }
     },
-    "无法控制终端，请在系统设置 › 隐私与安全性 › 自动化 中允许 codedog。": {
+    "无法控制终端，请在系统设置 › 隐私与安全性 › 自动化 中允许 CodeDog。": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Can’t control Terminal. Allow codedog in System Settings › Privacy & Security › Automation."
+            "value": "Can’t control Terminal. Allow CodeDog in System Settings › Privacy & Security › Automation."
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "無法控制終端機，請在「系統設定」›「隱私權與安全性」›「自動化」中允許 codedog。"
+            "value": "無法控制終端機，請在「系統設定」›「隱私權與安全性」›「自動化」中允許 CodeDog。"
           }
         }
       }
@@ -5393,18 +5396,18 @@
         }
       }
     },
-    "退出 codedog": {
+    "退出 CodeDog": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Quit codedog"
+            "value": "Quit CodeDog"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "結束 codedog"
+            "value": "結束 CodeDog"
           }
         }
       }
@@ -5425,18 +5428,18 @@
         }
       }
     },
-    "选择一个或多个文件夹，codedog 会自动找到里面的项目。": {
+    "选择一个或多个文件夹，CodeDog 会自动找到里面的项目。": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Choose one or more folders, and codedog will find the projects inside automatically."
+            "value": "Choose one or more folders, and CodeDog will find the projects inside automatically."
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "選擇一個或多個資料夾，codedog 會自動找到裡面的專案。"
+            "value": "選擇一個或多個資料夾，CodeDog 會自動找到裡面的專案。"
           }
         }
       }
@@ -5473,18 +5476,18 @@
         }
       }
     },
-    "通过 codedog 打开的项目会出现在这里。": {
+    "通过 CodeDog 打开的项目会出现在这里。": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Projects you open with codedog appear here."
+            "value": "Projects you open with CodeDog appear here."
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "透過 codedog 打開的專案會出現在這裡。"
+            "value": "透過 CodeDog 打開的專案會出現在這裡。"
           }
         }
       }
@@ -5537,18 +5540,18 @@
         }
       }
     },
-    "重新启动 codedog 后生效": {
+    "重新启动 CodeDog 后生效": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Takes effect after restarting codedog"
+            "value": "Takes effect after restarting CodeDog"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "重新啟動 codedog 後生效"
+            "value": "重新啟動 CodeDog 後生效"
           }
         }
       }
@@ -5633,18 +5636,18 @@
         }
       }
     },
-    "需要在系统设置的登录项中允许 codedog": {
+    "需要在系统设置的登录项中允许 CodeDog": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Allow codedog in Login Items in System Settings"
+            "value": "Allow CodeDog in Login Items in System Settings"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "需要在「系統設定」的登入項目中允許 codedog"
+            "value": "需要在「系統設定」的登入項目中允許 CodeDog"
           }
         }
       }

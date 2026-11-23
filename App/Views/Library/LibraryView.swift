@@ -107,8 +107,8 @@ struct NoRootsView: View {
 
     var body: some View {
         VStack(spacing: 28) {
-            EmptyStateView("告诉 codedog 你的代码放在哪里", symbol: "folder.badge.plus",
-                           message: "选择一个或多个文件夹，codedog 会自动找到里面的项目。") {
+            EmptyStateView("告诉 CodeDog 你的代码放在哪里", symbol: "folder.badge.plus",
+                           message: "选择一个或多个文件夹，CodeDog 会自动找到里面的项目。") {
                 Button("选择文件夹…", systemImage: "folder") { picking = true }
                     .buttonStyle(.glassProminent)
                     .tint(.brand)
@@ -195,7 +195,7 @@ struct LibraryEmptyState: View {
         case .smart(.waiting):
             return ("没有在等你回复的 AI", "bubble.left.and.text.bubble.right", "AI 助手停下来等你确认时，项目会出现在这里。", .orange)
         case .smart(.recent):
-            return ("最近两周没有打开过项目", "clock.arrow.circlepath", "通过 codedog 打开的项目会出现在这里。", .brand)
+            return ("最近两周没有打开过项目", "clock.arrow.circlepath", "通过 CodeDog 打开的项目会出现在这里。", .brand)
         case .smart(.dirty) where !ranged:
             return ("所有改动都已提交", "checkmark.circle", "没有项目有未提交的改动。", .green)
         case .smart(.large) where !ranged:

@@ -1,6 +1,6 @@
-<p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/icon-dark.png"><img src="docs/assets/icon.png" width="112" alt="codedog"></picture></p>
+<p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/icon-dark.png"><img src="docs/assets/icon.png" width="112" alt="CodeDog"></picture></p>
 
-<h1 align="center">codedog</h1>
+<h1 align="center">CodeDog</h1>
 
 <p align="center">看见所有项目，最快打开它。<br>原生 macOS 应用：自动发现你电脑上的代码项目，关联 Claude Code / Codex 会话，一键续上。</p>
 
@@ -10,7 +10,7 @@
 
 ## 它能做什么
 
-- **自动发现项目**：选好放代码的文件夹，codedog 自动找到里面的项目（Git、Node、Go、Python、Rust、Swift、Java 等），文件变化时增量更新。不移动、不修改任何文件。
+- **自动发现项目**：选好放代码的文件夹，CodeDog 自动找到里面的项目（Git、Node、Go、Python、Rust、Swift、Java 等），文件变化时增量更新。不移动、不修改任何文件。
 - **今日脉搏**：一眼看到哪些项目有 AI 正在运行、哪些 AI 已经答完在等你回复、哪些还有未提交的改动、本周动过哪些。
 - **AI 会话一键续上**：读取本机 Claude Code 与 Codex 的会话记录，列出每个项目最近的会话，点"续上"就在终端里接着聊（`claude --resume` / `codex resume`）。
 - **活跃圆点图与用量**：近一年的提交与 AI 回复按天汇成圆点图；按模型统计 token，并按公开 API 价格估算 Claude 花费。
@@ -22,11 +22,11 @@
 
 ## 安装
 
-1. 从 [Releases](https://github.com/Howlcn1997/codedog/releases/latest) 下载 `codedog-<版本>-mac-universal.dmg`，把 codedog 拖进"应用程序"。
-2. codedog 没有 Apple 开发者签名。首次打开如果提示"已损坏"或"无法验证开发者"，在终端执行：
+1. 从 [Releases](https://github.com/Howlcn1997/codedog/releases/latest) 下载 `CodeDog-<版本>-mac-universal.dmg`，把 CodeDog 拖进"应用程序"。
+2. CodeDog 没有 Apple 开发者签名。首次打开如果提示"已损坏"或"无法验证开发者"，在终端执行：
 
    ```sh
-   xattr -dr com.apple.quarantine /Applications/codedog.app
+   xattr -dr com.apple.quarantine /Applications/CodeDog.app
    ```
 
    只对确认来自本仓库 Releases 的应用执行这条命令。
@@ -35,7 +35,7 @@
 
 ### 从旧版（0.x，Electron）升级
 
-直接用新版替换 `/Applications/codedog.app` 即可。首次启动会自动导入旧版的收藏、分组与标签（合并为"标签"）、备注、项目专属编辑器和全局偏好，旧数据文件 `projects.json` 只读不改。旧版的"项目组"目录会作为一个项目出现，仍然可以打开。
+直接用新版替换 `/Applications/CodeDog.app` 即可。首次启动会自动导入旧版的收藏、分组与标签（合并为"标签"）、备注、项目专属编辑器和全局偏好，旧数据文件 `projects.json` 只读不改。旧版的"项目组"目录会作为一个项目出现，仍然可以打开。
 
 新版不再提供导入/移动/克隆项目、依赖安装、环境检测、导出备份等功能，原因见[重写计划](docs/swiftui-rewrite-plan.md#2-功能取舍)。
 
